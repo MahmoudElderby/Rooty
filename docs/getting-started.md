@@ -1,27 +1,76 @@
 # Getting started
 
-This guide takes Rooty from installation to a first offline investigation, then points to production setup.
+Rooty's first-time journey has two steps: install the project skills, then let the active AI agent guide setup.
 
 ## Prerequisites
 
 - Node.js 20 or newer
-- An empty sandbox project for the demo
-- Codex, Claude Code, Cursor, or another skill-aware AI host for live investigations
+- Codex, Claude Code, or Cursor
+- A software project folder
 
-Rooty has no runtime npm dependencies.
+Provider runtimes and credentials are not prerequisites for installation. The setup agent identifies them later and explains why each is needed.
 
-## Install the CLI
+## Install inside the project
 
 ```console
-npm install --global rooty-investigator
-rooty help
+npx rooty-investigator install
 ```
 
-The package installs both `rooty` and the compatibility alias `investigator`.
+If the documentation locations are already known:
 
-## Run the offline vertical slice
+```console
+npx rooty-investigator install --docs "README.md,docs,architecture"
+```
 
-The bundled snapshot and MCP server contain synthetic ticket, documentation, log, trace, database-history, and deployment evidence. No external service or credential is used.
+Installation creates project-scoped copies of `rooty-setup`, `rooty-mcp-builder`, and `root-cause-investigator` under `.agents/skills/` and `.claude/skills/`. It also creates:
+
+```text
+.rooty/
+├── install-manifest.json
+└── project-context.json
+```
+
+The manifest fingerprints Rooty-owned files so reinstall can update unchanged files without overwriting developer modifications. Project context stores only confirmed documentation paths.
+
+Installation does not scan the source tree, execute a package, pull an image, start OAuth, collect credentials, or configure MCP servers.
+
+## Start agent-led setup
+
+Open the project in Codex, Cursor, or Claude and ask:
+
+```text
+Set up Rooty for this project.
+```
+
+The setup skill:
+
+1. Confirms or asks for documentation paths.
+2. Reads relevant documentation as a navigation reference.
+3. Checks current source/configuration only where needed.
+4. Identifies mandatory data and observability providers.
+5. Treats ticketing as optional.
+6. Proposes exact read-only MCP configuration for the active host.
+7. Requests approval for writes, execution, packages, containers, or OAuth.
+8. Shows missing credential bindings and verifies harmless reads.
+
+Documentation is never accepted as proof. Material findings are checked against current code, configuration, or runtime evidence. Rooty stores no generated project map or documentation summary.
+
+## Check installation
+
+```console
+npx rooty-investigator context show
+npx rooty-investigator doctor
+```
+
+Change confirmed documentation locations with:
+
+```console
+npx rooty-investigator context set-docs --paths "README.md,docs"
+```
+
+## Try the offline evidence pipeline
+
+The bundled snapshot contains synthetic evidence and requires no production credentials:
 
 ```console
 rooty init --host all --demo --project /path/to/sandbox-project
@@ -29,46 +78,9 @@ rooty run ROOTY-101 \
   --project /path/to/sandbox-project \
   --snapshot /path/to/Rooty/evals/mock-sources/confirmed-timeout.json \
   --case-dir /path/to/rooty-case-demo
-rooty report \
-  --project /path/to/sandbox-project \
-  --case-dir /path/to/rooty-case-demo
+rooty report --project /path/to/sandbox-project --case-dir /path/to/rooty-case-demo
 ```
 
-The case directory contains:
+This frozen-snapshot path creates deterministic evidence artifacts. It does not orchestrate live provider calls; the configured AI host performs live investigations.
 
-```text
-rooty-case-demo/
-├── case.json          # Normalized case state and computed assessment
-├── evidence.ndjson    # Append-only, hash-chained evidence ledger
-└── report.md          # Deterministic investigation report
-```
-
-Case data must live outside the investigated project. Rooty rejects both direct and symlink-resolved paths inside the project before creating files.
-
-## Verify the kit
-
-```console
-rooty doctor --package-only
-rooty eval
-```
-
-Package-only doctor checks the installed skill, connector recipes, bundled MCP server, replay suite, evidence location policy, and Git exclusions. It does not claim that a production project is ready.
-
-## Understand the two MVP paths
-
-Rooty currently has two related execution paths:
-
-1. **Live host-driven investigation.** The configured AI host loads Rooty's skill and directly queries activated MCP connectors. Findings are returned in the host conversation.
-2. **Frozen-snapshot artifact pipeline.** `rooty run --snapshot ...` creates deterministic case files, evidence ledgers, reports, and inputs for the reviewed-memory workflow.
-
-Automatic capture of a live host conversation into the persisted case pipeline is not implemented in this MVP. Do not describe `rooty run` as a live provider orchestrator.
-
-## Connect a real project
-
-Continue with [Project and connector setup](setup.md). The production journey is:
-
-```text
-discover → validate → configure → provide credentials → initialize host → doctor → investigate
-```
-
-For the investigation method itself, read [Investigating an incident](investigation.md).
+Continue with [Project and MCP setup](setup.md) or [Investigating an incident](investigation.md).

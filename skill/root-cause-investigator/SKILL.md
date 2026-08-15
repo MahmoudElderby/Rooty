@@ -18,11 +18,17 @@ Answer one question: what causal chain produced the user-visible behavior, and w
 
 Read [references/evidence-standard.md](references/evidence-standard.md) before recording evidence. Read [references/investigation-workflow.md](references/investigation-workflow.md) for the full state machine. Read [references/source-catalog-schema.md](references/source-catalog-schema.md) when resolving evidence providers. Read [references/report-schema.md](references/report-schema.md) before reporting.
 
+## Use project documentation as orientation
+
+If `.rooty/project-context.json` exists, read only the confirmed `documentation.paths` relevant to the incident before mapping the expected flow. Use those documents to locate likely business rules, components, communication paths, source areas, data stores, telemetry, and identifiers.
+
+Treat documentation as a reference, never as proof. Verify every material statement against current source, configuration, or runtime evidence. When documentation conflicts with current evidence, record the conflict and follow the current evidence. Do not generate or persist a project map, documentation index, embedding, cached summary, inferred architecture, or conclusion.
+
 ## Investigate
 
 1. Create a case ID and an append-only evidence ledger. Verify workspace and connector access are read-only.
 2. Fetch the ticket. Preserve ticket claims as `REPORTED`; extract environment, event time and timezone, identifiers, expected/observed behavior, scope, links, and attachments without inventing values.
-3. Map the expected execution path and invariant at each boundary from code and documentation.
+3. Map the expected execution path and invariant at each boundary, using confirmed documentation for orientation and current code/configuration for verification.
 4. Build testable hypotheses with predicted evidence. Make every costly query test one prediction or named gap.
 5. Pivot from strongest identifiers outward: trace/request ID, entity plus bounded event time, actor plus endpoint and time, fingerprint, then aggregate comparison.
 6. Normalize time to UTC while preserving original timezone. Record event time separately from retrieval or ingestion time.

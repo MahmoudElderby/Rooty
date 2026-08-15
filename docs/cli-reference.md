@@ -9,7 +9,45 @@ investigator help
 
 Both commands invoke the same CLI. Options use `--name value` or `--name=value`. `--project` defaults to the current working directory.
 
-The CLI never writes credential values. Generated configuration contains public endpoints, placeholders, and environment-variable references.
+The CLI never writes credential values. The primary journey is installation and context management; the active AI agent performs project discovery and MCP setup.
+
+## `rooty install`
+
+Install Rooty's project-scoped skills and context files.
+
+```text
+rooty install [--project PATH] [--docs PATH,...] [--json]
+```
+
+`rooty setup` is an alias. The command copies all three skills to `.agents/skills/` and `.claude/skills/`, writes `.rooty/install-manifest.json`, and creates or preserves `.rooty/project-context.json`.
+
+| Option | Meaning |
+|---|---|
+| `--project` | Existing project folder; defaults to the current folder |
+| `--docs` | Comma-separated confirmed documentation files/folders |
+| `--json` | Emit the structured result |
+
+Installation is idempotent. It refuses filesystem roots, symlinked installation paths, unavailable documentation paths, and modified or unowned skill-file conflicts. It does not scan project source or execute provider setup.
+
+## `rooty context`
+
+Display confirmed documentation paths:
+
+```text
+rooty context show [--project PATH] [--json]
+```
+
+Replace the path list:
+
+```text
+rooty context set-docs --paths PATH,... [--project PATH] [--json]
+```
+
+Only path strings are persisted. Rooty does not generate a project map, index, embedding, or documentation summary.
+
+## Advanced compatibility commands
+
+The commands below support the frozen-snapshot pipeline and the previous deterministic connector workflow. They remain available but are not the intended first-time setup UX.
 
 ## `rooty init`
 
@@ -89,7 +127,7 @@ rooty doctor [--project PATH] [--json] [--package-only]
 | `--json` | Emits the full structured result |
 | `--package-only` | Checks the installed kit without requiring project source/activation readiness |
 
-Normal mode exits non-zero on any failed check. Package-only mode still fails unsafe package checks; only missing project registry and activation are downgraded to warnings.
+For an agent-led installation, normal mode validates the install manifest, skill fingerprints, documentation context, and package safety. For a legacy connector project, it retains the strict source-registry and activation checks. Package-only mode checks the distributed kit.
 
 ## `rooty run`
 

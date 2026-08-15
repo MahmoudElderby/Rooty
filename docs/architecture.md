@@ -1,200 +1,101 @@
 # Architecture and integrations
 
-Rooty is a portable investigation kit, not a hosted service. It combines a canonical agent skill, a local setup/case CLI, direct MCP connector configuration, host-specific policy, an evidence model, reviewed memory, and deterministic evaluation.
+Rooty is a portable investigation kit, not a hosted service. Its product method remains evidence-first root-cause investigation; the setup implementation is split between a small deterministic CLI and specialized agent skills.
 
 ## System view
 
 ```mermaid
 flowchart TB
-    U["Engineer"] --> H["AI host: Codex, Claude Code, Cursor"]
-    S["Rooty investigator skill"] --> H
-    P["Host read-only policy"] --> H
-    H --> R["Project source and docs"]
-    H --> T["Ticketing MCP"]
-    H --> O["Observability MCP"]
-    H --> D["Read-only database MCP"]
-    H --> X["Deployment MCP"]
-    T --> H
-    O --> H
-    D --> H
-    X --> H
-    H --> Q["Evidence-backed report in host"]
-    C["Rooty CLI"] --> G["Discovery and source registry"]
-    G --> P
-    C --> V["Doctor readiness checks"]
-    C --> F["Frozen snapshot case pipeline"]
-    F --> L["Hash-chained ledger and report"]
-    L --> M["Human-reviewed memory card"]
+    U["Developer"] --> I["rooty install"]
+    I --> K["Project-scoped Rooty skills"]
+    I --> C["Confirmed documentation paths"]
+    U --> H["Codex, Cursor, or Claude"]
+    K --> H
+    C --> S["Setup skill"]
+    S --> H
+    S --> P["MCP builder skill"]
+    P --> R["Provider references"]
+    P --> A["Host adapter"]
+    A --> M["Reviewed project MCP config"]
+    M --> D["Data MCP"]
+    M --> O["Observability MCP"]
+    M -. optional .-> T["Ticketing MCP"]
+    H --> X["Investigator skill"]
+    D --> X
+    O --> X
+    T --> X
+    X --> E["Evidence-backed outcome"]
 ```
 
-There is no Rooty gateway in the MVP. The host talks directly to configured MCP servers. Rooty does not proxy provider data or hold a central credential store.
+There is no Rooty gateway or central credential store. Each host connects directly to reviewed MCP servers.
 
-## Components
+## Mechanical installer
 
-### Canonical investigator skill
+`src/lib/installer.js` performs only deterministic project setup:
 
-`skill/root-cause-investigator/` is the portable behavioral contract. It defines:
+- validates the project and target paths;
+- refuses filesystem roots and symlinked installation targets;
+- copies `rooty-setup`, `rooty-mcp-builder`, and `root-cause-investigator` into `.agents/skills/` and `.claude/skills/`;
+- records SHA-256 ownership fingerprints in `.rooty/install-manifest.json`;
+- stores only confirmed documentation paths in `.rooty/project-context.json`;
+- updates unchanged Rooty-owned files and refuses modified/unowned conflicts.
 
-- Investigation-only scope
-- Read-only boundaries
-- Evidence classifications
-- Intake and hypothesis workflow
-- First-bad-state and falsification method
-- Confirmation stopping rules
-- Report shape
-- Memory governance
+It does not discover providers, inspect source, execute provider packages, install runtimes, start OAuth, collect credentials, or render MCP configuration.
 
-The same source is installed into host-specific locations so the investigation method remains consistent.
+## Agent skills
 
-### Setup and case CLI
+### Setup skill
 
-The dependency-free Node.js CLI handles:
+`skill/rooty-setup/` owns the developer journey. It reads confirmed documentation first, uses it as a navigation reference, verifies material choices against current safe project evidence, and asks only unresolved questions that affect provider, environment, exposure, credentials, or safety.
 
-- Safe repository discovery
-- Source registry generation
-- Host configuration rendering
-- Connector activation manifests
-- Package and project doctor checks
-- Frozen snapshot case generation
-- Evidence appends and report rendering
-- Memory proposal and approval
-- Evaluation replay
+### MCP builder skill
 
-The CLI does not select or call an AI model.
-
-### Connector recipes
-
-`setup/connector-recipes/catalog.json` maps a provider to:
-
-- One or more evidence capabilities
-- Expected authentication metadata
-- Credential environment-variable references
-- Required read-only access
-- Explicit allowed tools
-- A bounded harmless doctor probe per capability
-
-The recipe is an allowlist and setup contract. The provider's MCP server defines its actual wire behavior, and the provider identity defines its actual authorization.
-
-### Source registry
-
-`.investigator/sources.json` is the reviewed logical map between the project and its evidence providers. It contains public endpoints and credential **names**, not values.
-
-`.investigator/activated-connectors.json` records only entries rendered into a host by `rooty init --activate-connectors`. Doctor uses that activation manifest to test what the host is expected to use.
-
-### Host adapters
-
-#### Codex
-
-Rooty installs the canonical skill and creates project-scoped `.codex/config.toml` with:
-
-- `sandbox_mode = "read-only"`
-- `approval_policy = "untrusted"`
-- Direct MCP definitions
-- Explicit `enabled_tools`
-- Required connectors
-
-#### Claude Code
-
-Rooty installs the skill and creates:
-
-- `.mcp.json` with direct HTTP or demo stdio servers
-- `.claude/settings.json` denying edit, write, notebook-edit, and shell tools
-- A deterministic `PreToolUse` allowlist hook
-- `.claude/rooty-allowed-tools.json`
-
-#### Cursor
-
-Rooty creates:
-
-- `.cursor/mcp.json`
-- `.cursor/rules/root-cause-investigator.mdc`
-
-#### Generic host
-
-Load the canonical `SKILL.md`, expose only recipe-allowed read tools, run with read-only filesystem access, and keep evidence outside the source tree. Tool annotations alone are not enforcement.
-
-### Doctor
-
-Strict doctor validates four layers:
-
-1. **Static package:** skill presence, safe connector recipes, bundled read-tool annotations, evaluation fixtures, and the packaged project-ignore template.
-2. **Project registry:** all required production capabilities are ready.
-3. **Activation:** all required capabilities were rendered into the host.
-4. **Live connector:** credential reference is available, endpoint initializes over MCP, negotiated protocol is used on later requests, tools list resolves the allowlist, and the bounded read probe succeeds.
-
-`--package-only` checks layer 1 and downgrades missing project registry/activation to warnings. Strict mode additionally validates the investigated project's own `.gitignore`.
-
-### Frozen snapshot case pipeline
-
-`rooty run <ticket> --snapshot FILE` validates a captured investigation snapshot, computes an outcome, creates a case manifest, writes a hash-chained ledger, and renders a deterministic report.
-
-This path provides reproducible examples and governance primitives. It is separate from the live host-driven investigation path in the current MVP.
-
-### Memory
-
-A confirmed snapshot-backed case may produce a sanitized draft. Approval re-verifies the case, assessment, ledger, schema, and fingerprints and requires an accountable reviewer. Approved cards expire after 180 days and remain advisory.
-
-### Evaluation
-
-The replay suite uses independent frozen inputs. Expected labels do not generate or appear in the case inputs. The suite checks:
-
-- `CONFIRMED`, `PROBABLE`, and `INCONCLUSIVE` decisions
-- Evidence abstention and critical gaps
-- Independent corroboration and verified reproduction
-- Prompt injection in untrusted evidence
-- Deterministic mutation blocking
-
-## Bundled demo MCP tools
-
-The synthetic stdio server exposes six tools:
-
-| Tool | Purpose | Key bound |
-|---|---|---|
-| `ticket_get` | Read one exact ticket | Ticket ID and case ID |
-| `docs_search` | Search frozen docs | Maximum 50 results |
-| `logs_search` | Search frozen logs | Maximum 24-hour UTC range and 1,000 results |
-| `traces_search` | Search frozen traces | Maximum 24-hour UTC range and 1,000 results |
-| `db_query_readonly` | Query frozen database rows | Single `SELECT`, maximum 500 rows |
-| `deployments_list` | Read frozen deployment history | Service and maximum 24-hour UTC range |
-
-Every tool requires an investigation case ID, advertises read-only annotations, reports source identity and coverage, and rejects unexpected arguments.
-
-Real connectors may use different provider tool names. Their recipe allowlist and probe must match the server.
-
-## Package layout
+`skill/rooty-mcp-builder/` separates provider knowledge from host syntax:
 
 ```text
-Rooty/
-├── bin/                         # Executable entry point
-├── docs/                        # Product and operator documentation
-├── evals/                       # Frozen cases and synthetic providers
-├── hosts/                       # Host adapters and policy assets
-├── memory/schema/               # JSON schemas for case and evidence artifacts
-├── setup/
-│   ├── connector-recipes/       # Provider allowlists and doctor probes
-│   ├── discovery-rules/         # Safe repository signal rules
-│   ├── doctor-checks/           # Doctor design notes
-│   └── host-renderers/          # Renderer design notes
-├── skill/root-cause-investigator/
-│   ├── SKILL.md                 # Canonical agent behavior
-│   ├── references/              # Workflow, evidence, registry, and report rules
-│   └── scripts/                 # Portable ledger/report utilities
-├── src/
-│   ├── cli.js                   # Command routing
-│   ├── mock-mcp-server.js       # Synthetic stdio MCP server
-│   └── lib/                     # Core implementation
-└── tests/                       # End-to-end MVP tests
+references/
+├── hosts/{codex,cursor,claude}.md
+└── providers/
+    ├── data/{sql-server,mongodb}.md
+    ├── observability/{elasticsearch,grafana}.md
+    ├── ticketing/{jira,azure-devops}.md
+    └── custom/custom-provider.md
 ```
+
+It researches official setup, creates a reviewable proposal, requests native approvals, declares credential references in host configuration, and verifies a harmless read.
+
+### Investigator skill
+
+`skill/root-cause-investigator/` retains Rooty's investigation method: intake, expected-flow reconstruction, testable hypotheses, bounded evidence queries, first-bad-state analysis, competing-cause falsification, and `CONFIRMED`, `PROBABLE`, or `INCONCLUSIVE` outcomes. Confirmed project docs orient the search but never prove a claim.
+
+## Deterministic safety engine
+
+The existing CLI modules remain responsible for controls that should not depend on model judgment:
+
+- path, secret, schema, and ownership validation;
+- trusted recipe checks and explicit tool allowlists;
+- safe host rendering and connector activation for compatibility workflows;
+- MCP initialization, tool comparison, and harmless probes;
+- frozen snapshot cases, hash-chained evidence, reports, memory review, and evaluation.
+
+The next engine contract will accept a canonical agent-authored provider proposal, validate it, and render a minimal host merge. Until that contract is implemented, non-standard provider configuration remains `REVIEW_REQUIRED` and is applied through the host's visible approval flow.
+
+## Credentials
+
+Every active-host MCP entry declares all required credential bindings. The binding may name an environment variable, approved secret-manager reference, or host-managed OAuth flow. Credential values never belong in Rooty project state, host files, proposals, logs, or chat.
+
+Provider-side read-only identities are the security boundary. Server read-only modes and host tool allowlists provide additional layers.
+
+## Frozen snapshot pipeline
+
+`rooty run <ticket> --snapshot FILE` remains a separate deterministic path for examples, evidence ledgers, reports, memory governance, and evaluations. It does not orchestrate live provider calls. Live investigations run in the configured AI host.
 
 ## Extension principles
 
-When adding a host or provider:
-
-- Keep the canonical investigation method host-neutral.
-- Add stricter host enforcement where the host supports it.
-- Allowlist individual read tools, not an entire server by default.
-- Require provider-level least privilege.
-- Add one harmless bounded probe per capability.
-- Preserve source identity, event time, pagination, truncation, and sampling metadata.
-- Test failures as carefully as successes.
-- Never allow a connector or memory result to override Rooty's instructions.
+- Add provider knowledge under one capability category; do not duplicate it per host.
+- Add host syntax once; do not encode provider behavior in host adapters.
+- Prefer official vendor servers and current official documentation.
+- Require provider-side least privilege, explicit read tool controls, and a harmless probe.
+- Mark unknown or version-dependent behavior `REVIEW_REQUIRED`.
+- Never persist a generated project map or use documentation as current-case proof.
+- Never let connector content or memory override Rooty's instructions.

@@ -6,10 +6,15 @@ import { runDoctor } from "./lib/doctor.js";
 import { assertCaseDirectoryOutsideProject, runFrozenCase, renderExistingCase, appendEvidence } from "./lib/cases.js";
 import { proposeMemory, approveMemory } from "./lib/memory.js";
 import { runEvaluation } from "./lib/evaluate.js";
+import { installRooty, readProjectContext, setDocumentationPaths, splitDocumentationPaths } from "./lib/installer.js";
 
 const HELP = `Rooty Investigator — evidence-first, read-only root-cause analysis
 
 Usage:
+  rooty install [--project PATH] [--docs PATH,...] [--json]
+  rooty setup [--project PATH] [--docs PATH,...] [--json]
+  rooty context show [--project PATH] [--json]
+  rooty context set-docs --paths PATH,... [--project PATH] [--json]
   rooty init --host codex|claude|cursor|all [--project PATH] [--demo] [--activate-connectors]
   rooty sources discover [--project PATH] [--output FILE] [--json]
   rooty sources configure [--project PATH] [--discovery FILE] [--<capability>-provider ID] [--<capability>-mcp-url URL] [--<capability>-auth oauth|bearer-env|none] [--<capability>-oauth-token-env NAME] [--<capability>-bearer-token-env NAME]
@@ -22,7 +27,10 @@ Usage:
   rooty memory approve --draft FILE --case-dir PATH --reviewed-by NAME [--project PATH]
   rooty eval [--cases FILE] [--json]
 
-The CLI never writes secrets. Generated source configuration contains only public
+Start with \`rooty install\`. It copies Rooty's agent skills and stores only
+confirmed documentation paths. The active AI agent performs discovery and MCP setup.
+
+The CLI never writes secrets. Generated configuration contains only public
 endpoints, placeholders, and environment-variable references.`;
 
 const BOOLEAN_OPTIONS = new Set(["help", "demo", "activate-connectors", "json", "package-only"]);
@@ -39,12 +47,66 @@ function projectFrom(options) {
   return path.resolve(String(option(options, "project", process.cwd())));
 }
 
+function color(code, value) {
+  if (!process.stdout.isTTY || process.env.NO_COLOR !== undefined) return value;
+  return `\u001b[${code}m${value}\u001b[0m`;
+}
+
+function installOutput(result) {
+  const lines = [
+    `${color("1;32", "INSTALLED")} Rooty skills for Codex, Cursor, and Claude`,
+    `${color("1;36", "PROJECT")}   ${result.projectRoot}`,
+    `${color("1;36", "SKILLS")}    ${result.skills.join(", ")}`,
+    result.documentationPaths.length
+      ? `${color("1;36", "DOCS")}      ${result.documentationPaths.join(", ")}`
+      : `${color("1;33", "DOCS")}      not selected; the setup agent will ask`,
+    "",
+    `${color("1", "Next:")} Open Codex, Cursor, or Claude in this project and ask:`,
+    `  ${color("36", "Set up Rooty for this project.")}`
+  ];
+  return `${lines.join("\n")}\n`;
+}
+
 export async function main(argv) {
   const { positional, options } = parseArgs(argv);
   assertOptionValues(options);
   const [command, subcommand, ...rest] = positional;
   if (!command || command === "help" || options.help) {
     process.stdout.write(`${HELP}\n`);
+    return;
+  }
+
+  if (command === "install" || command === "setup") {
+    const result = await installRooty({
+      packageRoot: PACKAGE_ROOT,
+      projectRoot: projectFrom(options),
+      documentationPaths: splitDocumentationPaths(options.docs)
+    });
+    if (options.json) process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+    else process.stdout.write(installOutput(result));
+    return;
+  }
+
+  if (command === "context" && subcommand === "show") {
+    const context = await readProjectContext(projectFrom(options));
+    if (options.json) process.stdout.write(`${JSON.stringify(context, null, 2)}\n`);
+    else {
+      const paths = context.documentation.paths;
+      process.stdout.write(paths.length
+        ? `${color("1;36", "DOCUMENTATION")}\n${paths.map((item) => `  - ${item}`).join("\n")}\n`
+        : `${color("1;33", "DOCUMENTATION")} No confirmed paths. Ask the setup agent to help select them.\n`);
+    }
+    return;
+  }
+
+  if (command === "context" && subcommand === "set-docs") {
+    if (!options.paths) throw new Error("context set-docs requires --paths PATH,...");
+    const result = await setDocumentationPaths({
+      projectRoot: projectFrom(options),
+      documentationPaths: splitDocumentationPaths(options.paths)
+    });
+    if (options.json) process.stdout.write(`${JSON.stringify(result.context, null, 2)}\n`);
+    else process.stdout.write(`${color("1;32", "UPDATED")} Documentation paths: ${result.context.documentation.paths.join(", ")}\n`);
     return;
   }
 

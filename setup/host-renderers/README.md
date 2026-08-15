@@ -1,3 +1,5 @@
 # Host renderers
 
-The dependency-free renderers live in `src/lib/hosts.js`. They install one canonical skill and create Codex, Claude Code, or Cursor configuration without copying credential values. OAuth and bearer credentials are emitted only as environment-variable references, and the activation manifest retains the same references for `doctor`. Existing host files are never overwritten.
+The first-time installer does not render MCP configuration. It copies all three Rooty skills to `.agents/skills/` and `.claude/skills/`; the active setup agent selects one host, prepares a minimal provider proposal, shows the exact target/diff, and requests native approval.
+
+The existing dependency-free renderers in `src/lib/hosts.js` remain an advanced compatibility engine. The next renderer contract will accept a canonical validated proposal and merge `.codex/config.toml`, `.cursor/mcp.json`, or `.mcp.json` without copying credential values or replacing unrelated entries.

@@ -16,7 +16,49 @@ rooty doctor --package-only
 
 Use `--json` when you need exact check names and machine-readable output.
 
-## Source discovery and configuration
+## Agent-led installation and setup
+
+### `EPERM: operation not permitted, opendir 'C:\Config.Msi'`
+
+Cause: an older discovery command recursively walked a broad Windows location or was run with the wrong project path.
+
+Resolution: use the new installer from the actual project folder:
+
+```console
+cd C:\path\to\project
+npx rooty-investigator install
+```
+
+The installer does not recursively scan the project. The setup agent later reads confirmed documentation and only targeted source/configuration. Never use a drive root as `--project` or as a documentation path.
+
+### `Cannot approve MCP plan; unresolved: observability`
+
+This belongs to the older CLI planning workflow. In the agent-led journey, ask `Set up Rooty for this project.` The setup skill explains the unresolved observability choice, checks documentation and current configuration, then asks one focused question if the provider still cannot be determined.
+
+Rooty is not investigation-ready until one data provider and one observability provider pass a harmless read. Ticketing may be omitted.
+
+### `Refusing to overwrite modified or unowned skill file`
+
+Rooty's install manifest no longer matches a target skill file. Review the reported file. Preserve intentional developer changes elsewhere, but do not silently merge them into Rooty-owned skill code. Restore the packaged version or move the customized skill to a different name, then rerun `rooty install`.
+
+The installer preflights all target files before writing, so a conflict does not leave a partial update.
+
+### Documentation is missing or wrong
+
+Inspect and replace the confirmed locations:
+
+```console
+rooty context show
+rooty context set-docs --paths "README.md,docs"
+```
+
+Choose specific documentation files or folders. Filesystem roots and the project root are rejected as too broad. Rooty stores only paths and does not generate a documentation map.
+
+### A credential is reported missing
+
+Read the setup agent's credential table. It should name the binding, provider, exact host config path, and resolution action without printing a value. Supply the value through the approved environment, secret manager, or host OAuth flow, restart/reload the MCP server when required, and rerun the harmless probe.
+
+## Advanced source discovery and configuration
 
 ### `Unresolved capabilities`
 
@@ -51,7 +93,7 @@ Resolution: remove the credential from the URL and use OAuth or a bearer environ
 
 Discovery intentionally skips secret-named paths, oversized files, unsupported types, symlinks, and structured configuration with apparent credential values. Move only non-sensitive provider documentation into a safe project Markdown file, or configure the provider explicitly. Never weaken discovery to scan live secrets.
 
-## Host initialization
+## Advanced host initialization
 
 ### Initialization created a folder named `true`
 
@@ -90,10 +132,10 @@ Rooty prevents an empty host installation. Choose one supported journey:
 
 Check:
 
-- The project was initialized for the correct host.
-- The host opened the same project directory passed to `--project`.
-- The canonical skill exists under `.agents/skills/root-cause-investigator`.
-- The host-specific skill/rule and MCP files exist.
+- `rooty install` completed in the project the host opened.
+- All three skills exist under `.agents/skills/` for Codex/Cursor or `.claude/skills/` for Claude.
+- Codex/Cursor started within the repository path that contains `.agents/skills/`.
+- The host-specific MCP configuration exists after the setup proposal was approved.
 - The host was restarted or reloaded after configuration.
 - Strict doctor passes from the environment that launches the host.
 

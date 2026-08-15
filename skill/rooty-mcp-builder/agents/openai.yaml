@@ -1,0 +1,4 @@
+interface:
+  display_name: "Rooty MCP Builder"
+  short_description: "Build reviewed read-only MCP access"
+  default_prompt: "Use $rooty-mcp-builder to configure a read-only MCP provider."
