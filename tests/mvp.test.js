@@ -441,8 +441,8 @@ test("package is publishable under rooty, retains the alias, includes docs, and 
   const manifest = await readJson(path.join(ROOT, "package.json"));
   assert.notEqual(manifest.private, true);
   assert.match(manifest.version, /^\d+\.\d+\.\d+$/);
-  assert.equal(manifest.bin.rooty, "./bin/investigator.js");
-  assert.equal(manifest.bin.investigator, "./bin/investigator.js");
+  assert.equal(manifest.bin.rooty, "bin/investigator.js");
+  assert.equal(manifest.bin.investigator, "bin/investigator.js");
   assert.ok(manifest.files.includes("docs/"));
   assert.equal(manifest.files.includes("rooty-how-it-works.gif"), false);
   const gif = await readFile(path.join(ROOT, "rooty-how-it-works.gif"));

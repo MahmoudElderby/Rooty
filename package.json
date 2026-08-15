@@ -19,8 +19,8 @@
   },
   "type": "module",
   "bin": {
-    "rooty": "./bin/investigator.js",
-    "investigator": "./bin/investigator.js"
+    "rooty": "bin/investigator.js",
+    "investigator": "bin/investigator.js"
   },
   "files": [
     "bin/",
