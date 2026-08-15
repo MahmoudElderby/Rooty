@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rooty.dev/schemas/mcp-plan-v1.json",
+  "type": "object",
+  "required": ["schema_version", "state", "servers"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "state": { "enum": ["proposed", "approved", "generated", "verified", "blocked"] },
+    "approved_digest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "servers": { "type": "array", "items": { "type": "object", "required": ["id", "capabilities", "recipe", "transport", "resources", "credential_references", "allowed_tools"], "properties": { "id": { "type": "string" }, "capabilities": { "type": "array", "items": { "type": "string" } }, "recipe": { "type": "string" }, "transport": { "enum": ["stdio", "http"] }, "resources": { "type": "array", "items": { "type": "string" } }, "credential_references": { "type": "array", "items": { "type": "string" } }, "allowed_tools": { "type": "array", "items": { "type": "string" } } } } }
+  }
+}

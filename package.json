@@ -1,6 +1,6 @@
 {
   "name": "rooty-investigator",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Portable, read-only root-cause investigation skill and setup CLI",
   "keywords": [
     "ai-agent",
@@ -33,7 +33,7 @@
     "src/"
   ],
   "scripts": {
-    "test": "node --test tests/*.test.js",
+    "test": "node tests/mvp.test.js",
     "eval": "node bin/investigator.js eval",
     "doctor": "node bin/investigator.js doctor --package-only"
   },

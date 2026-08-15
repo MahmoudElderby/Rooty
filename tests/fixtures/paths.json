@@ -1,0 +1,12 @@
+{
+  "posix": {
+    "project": "/work/acme",
+    "evidence": "/work/acme/services/orders/Orders.csproj",
+    "relative": "services/orders/Orders.csproj"
+  },
+  "windows": {
+    "project": "C:\\work\\acme",
+    "evidence": "C:\\work\\acme\\services\\orders\\Orders.csproj",
+    "relative": "services/orders/Orders.csproj"
+  }
+}

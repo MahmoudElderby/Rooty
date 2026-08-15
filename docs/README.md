@@ -25,10 +25,12 @@ These guides cover the end-user journey, under-the-hood state machine, evidence 
 ## I extend or maintain Rooty
 
 1. [Architecture and integrations](architecture.md)
-2. [CLI reference](cli-reference.md)
-3. [Troubleshooting](troubleshooting.md)
+2. [Automatic MCP setup requirements](automatic-mcp-setup-requirements.md)
+3. [Automatic MCP setup implementation plan](automatic-mcp-setup-implementation-plan.md)
+4. [CLI reference](cli-reference.md)
+5. [Troubleshooting](troubleshooting.md)
 
-The architecture guide explains component boundaries, host adapters, connector recipes, doctor, the snapshot pipeline, and extension principles.
+The architecture guide explains current component boundaries, host adapters, connector recipes, doctor, the snapshot pipeline, and extension principles. The automatic MCP setup documents define the approved requirements and phased plan for the next implementation; they do not describe current CLI behavior yet.
 
 ## Core principle
 

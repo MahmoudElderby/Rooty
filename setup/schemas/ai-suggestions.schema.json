@@ -1,0 +1,7 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rooty.dev/schemas/ai-suggestions-v1.json",
+  "type": "object",
+  "required": ["schema_version", "suggestions"],
+  "properties": { "schema_version": { "const": 1 }, "suggestions": { "type": "array", "items": { "type": "object", "required": ["classification", "provider", "evidence"], "properties": { "classification": { "const": "AI_SUGGESTED" }, "provider": { "enum": ["mssql", "elasticsearch", "jira"] }, "evidence": { "type": "array", "minItems": 1, "items": { "type": "object", "required": ["path", "signal"], "properties": { "path": { "type": "string" }, "signal": { "type": "string" } } } } } } }
+}

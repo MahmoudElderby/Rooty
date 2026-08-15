@@ -17,10 +17,97 @@ import { approveMemory, proposeMemory } from "../src/lib/memory.js";
 import { configureSources, discoverSources, listSources } from "../src/lib/sources.js";
 import { pathExists, readJson, writeJson } from "../src/lib/core.js";
 import { main } from "../src/cli.js";
+import { approvalDigest, canonicalSetupJson, detectProjectMode, readProjectSetup, stableResourceId, validateAiSuggestions, validateCredentialRequirements, validateMcpPlan, validateResourceInventory } from "../src/lib/setup-model.js";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const SNAPSHOT = path.join(ROOT, "evals/mock-sources/confirmed-timeout.json");
 const EVALS = path.join(ROOT, "evals/cases/replay-cases.json");
+
+test("cross-platform path fixtures normalize evidence paths without host dependence", async () => {
+  const fixtures = await readJson(path.join(ROOT, "tests/fixtures/paths.json"));
+  assert.equal(path.posix.relative(fixtures.posix.project, fixtures.posix.evidence), fixtures.posix.relative);
+  assert.equal(path.win32.relative(fixtures.windows.project, fixtures.windows.evidence).replaceAll("\\", "/"), fixtures.windows.relative);
+});
+
+test("version-1 public contracts remain recorded during automatic setup migration", async () => {
+  const contract = await readJson(path.join(ROOT, "tests/fixtures/v1-contract.json"));
+  assert.equal(contract.schema_version, 1);
+  assert.ok(contract.cli_commands.includes("sources configure"));
+  assert.equal(contract.registry.schema_version, 1);
+  assert.ok(contract.host_files.includes(".codex/config.toml"));
+  assert.ok(contract.doctor_checks.includes("source-registry"));
+});
+
+function phaseOneInventory() {
+  return {
+    schema_version: 2,
+    resources: [{
+      id: "orders-db-123456789abc",
+      kind: "database",
+      provider: "mssql",
+      service: "orders-api",
+      service_root: "services/orders",
+      environment: "production",
+      confidence: "high",
+      classification: "DETECTED",
+      credential_references: ["ORDERS_DB_CONNECTION"],
+      evidence: [{ path: "services/orders/Orders.csproj", signal: "Microsoft.EntityFrameworkCore.SqlServer" }]
+    }],
+    capability_bindings: { database: ["orders-db-123456789abc"], observability: [], ticketing: [] }
+  };
+}
+
+function phaseOnePlan() {
+  return {
+    schema_version: 1,
+    state: "proposed",
+    servers: [{
+      id: "rooty-databases",
+      capabilities: ["database"],
+      recipe: "mssql-dab",
+      transport: "stdio",
+      resources: ["orders-db-123456789abc"],
+      command: "dab",
+      args: ["start", "--mcp-stdio"],
+      credential_references: ["ORDERS_DB_CONNECTION"],
+      allowed_tools: ["describe_entities", "read_records", "aggregate_records"]
+    }]
+  };
+}
+
+test("phase-1 setup models are stable, strict, secret-free, and detect stale approval", () => {
+  const inventory = phaseOneInventory();
+  const plan = phaseOnePlan();
+  assert.equal(validateResourceInventory(inventory), inventory);
+  assert.equal(validateMcpPlan(plan, inventory), plan);
+  assert.equal(canonicalSetupJson(inventory), canonicalSetupJson(structuredClone(inventory)));
+  const identity = { provider: "mssql", serviceRoot: "services/orders", logicalName: "OrdersDb", environment: "production" };
+  assert.equal(stableResourceId(identity), stableResourceId(structuredClone(identity)));
+  const approved = { ...plan, state: "approved" };
+  approved.approved_digest = approvalDigest(inventory, approved);
+  validateMcpPlan(approved, inventory);
+  assert.throws(() => validateMcpPlan({ ...approved, servers: [{ ...approved.servers[0], allowed_tools: [...approved.servers[0].allowed_tools, "another_read"] }] }, inventory), /stale/);
+  assert.throws(() => validateResourceInventory({ ...inventory, resources: [{ ...inventory.resources[0], service_root: "../outside" }] }), /project-relative/);
+  assert.throws(() => validateResourceInventory({ ...inventory, resources: [{ ...inventory.resources[0], connection: "Server=db;User Id=sa;Password=hunter2" }] }), /credential/);
+  assert.throws(() => validateMcpPlan({ ...plan, servers: [{ ...plan.servers[0], allowed_tools: ["delete_records"] }] }, inventory), /mutation-capable/);
+});
+
+test("phase-1 credential and AI contracts accept references and reject unsafe suggestions", () => {
+  validateCredentialRequirements({ schema_version: 1, requirements: [{ name: "ES_API_KEY", connector: "rooty-elastic", required: true, secret: true, resolution: "environment" }] });
+  validateAiSuggestions({ schema_version: 1, suggestions: [{ classification: "AI_SUGGESTED", provider: "elasticsearch", evidence: [{ path: "deploy/elastic.yaml", signal: "Elasticsearch 8.19.15 observability cluster" }] }] });
+  assert.throws(() => validateCredentialRequirements({ schema_version: 1, requirements: [{ name: "actual-secret", connector: "x", required: true, secret: true, resolution: "environment" }] }), /Invalid/);
+  assert.throws(() => validateAiSuggestions({ schema_version: 1, suggestions: [{ classification: "AI_SUGGESTED", provider: "elasticsearch", evidence: [{ path: "../secret.env", signal: "cluster" }] }] }), /project-relative/);
+});
+
+test("phase-1 compatibility facade loads version-1 projects without migration", async () => {
+  const projectRoot = await tempDirectory("rooty-v1-compat");
+  const contract = await readJson(path.join(ROOT, "tests/fixtures/v1-contract.json"));
+  await writeJson(path.join(projectRoot, ".investigator/sources.json"), contract.registry);
+  assert.equal((await detectProjectMode(projectRoot)).mode, "legacy-v1");
+  const loaded = await readProjectSetup(projectRoot);
+  assert.equal(loaded.mode, "legacy-v1");
+  assert.deepEqual(loaded.sources, contract.registry);
+});
 
 async function tempDirectory(name) {
   return mkdtemp(path.join(os.tmpdir(), `${name}-`));

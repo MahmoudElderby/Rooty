@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "cli_commands": ["init", "sources discover", "sources configure", "sources list", "doctor", "run", "evidence add", "report", "memory propose", "memory approve", "eval"],
+  "registry": {
+    "schema_version": 1,
+    "service": "legacy-service",
+    "environments": {
+      "production": {
+        "capabilities": {
+          "database": {
+            "provider": "rooty-snapshot",
+            "status": "ready-for-host-rendering",
+            "required_access": "read-only",
+            "endpoint": "http://127.0.0.1:9876/mcp",
+            "auth": "none",
+            "allowed_tools": ["db_query_readonly"],
+            "doctor_probe": { "tool": "db_query_readonly", "arguments": { "sql": "SELECT 1", "row_limit": 1 } }
+          }
+        }
+      }
+    }
+  },
+  "host_files": [".codex/config.toml", ".mcp.json", ".claude/settings.json", ".cursor/mcp.json"],
+  "doctor_checks": ["skill", "connector-recipes", "source-registry", "mcp-tools", "mcp-startup", "replay-suite", "case-location", "gitignore"]
+}

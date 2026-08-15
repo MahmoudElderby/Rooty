@@ -290,7 +290,9 @@ function probeBundledConnector(serverFile) {
       else resolve(value);
     }
     child.stderr.on("data", (chunk) => { stderr += chunk.toString(); });
-    child.on("error", (error) => finish(error));
+    child.on("error", (error) => finish(error?.code === "EPERM" || error?.code === "EACCES"
+      ? new Error(`Execution environment denied the bundled connector process (${error.code}); verify process-execution policy or sandbox permissions`)
+      : error));
     child.stdout.on("data", (chunk) => {
       buffer += chunk.toString();
       const newline = buffer.indexOf("\n");
