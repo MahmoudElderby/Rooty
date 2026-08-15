@@ -25,6 +25,8 @@ rooty sources discover --project /path/to/project
 Discovery scans up to 10,000 files of at most 1 MB each. It skips:
 
 - `.git`, `node_modules`, build output, virtual environments, and existing Rooty runtime state
+- Generated AI-host directories such as `.agents`, `.claude`, `.codex`, and `.cursor`
+- Common compiled/build directories such as `bin`, `obj`, `target`, and `TestResults`
 - Symlinks
 - Secret-named paths such as `.env`, `secrets.*`, credentials, token, key, or vault files
 - Structured configuration that appears to contain non-placeholder credential values
@@ -43,6 +45,8 @@ Current discovery rules recognize:
 | Deployments | Argo CD, Kubernetes, Helm |
 
 If discovery finds nothing, explicitly select a provider during configuration. That mapping is recorded as `USER_CONFIGURED`.
+
+When two providers have the same highest confidence, Rooty records both as candidates and requires an explicit selection. It never chooses between equal candidates.
 
 ## 2. Configure all required capabilities
 
@@ -185,6 +189,8 @@ Generated files:
 | Project safety | Creates `.gitignore` when absent or appends missing Rooty runtime exclusions |
 
 Use `--host all` to render every included adapter. Use `--demo` to add the bundled local synthetic connector.
+
+Do not run a bare `rooty init`. Rooty requires either `--demo` or a complete production registry with `--activate-connectors`.
 
 Rooty deliberately refuses to overwrite any existing host target. Back up and merge existing host configuration, then rerun initialization only when the target paths are clear.
 

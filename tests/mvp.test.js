@@ -16,6 +16,7 @@ import { callReadTool, TOOLS } from "../src/lib/mcp.js";
 import { approveMemory, proposeMemory } from "../src/lib/memory.js";
 import { configureSources, discoverSources, listSources } from "../src/lib/sources.js";
 import { pathExists, readJson, writeJson } from "../src/lib/core.js";
+import { main } from "../src/cli.js";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const SNAPSHOT = path.join(ROOT, "evals/mock-sources/confirmed-timeout.json");
@@ -168,6 +169,13 @@ test("case output inside the investigated project is rejected before creating fi
   assert.equal(await pathExists(forbidden), false);
 });
 
+test("CLI rejects missing option values instead of treating them as a true path", async () => {
+  await assert.rejects(
+    () => main(["init", "--host", "codex", "--project"]),
+    /--project requires a value/
+  );
+});
+
 test("tampering with an evidence ledger is detected", async () => {
   const projectRoot = await tempDirectory("rooty-project");
   const caseDir = path.join(await tempDirectory("rooty-cases"), "tamper");
@@ -218,6 +226,34 @@ test("discovery skips secret-named and credential-bearing structured files", asy
   assert.ok(discovery.warnings.some((warning) => warning.includes("secrets.yaml")));
   assert.ok(discovery.warnings.some((warning) => warning.includes("secrets.production.yaml")));
   assert.ok(discovery.warnings.some((warning) => warning.includes("config.json")));
+});
+
+test("discovery skips generated agent and build output directories", async () => {
+  const projectRoot = await tempDirectory("rooty-generated-discovery");
+  await mkdir(path.join(projectRoot, ".cursor", "skills"), { recursive: true });
+  await mkdir(path.join(projectRoot, "service", "obj"), { recursive: true });
+  await writeFile(path.join(projectRoot, ".cursor", "skills", "SKILL.md"), "Use Datadog and DD_API_KEY.\n", "utf8");
+  await writeFile(path.join(projectRoot, "service", "obj", "project.assets.json"), '{"provider":"mysql"}\n', "utf8");
+  await writeFile(path.join(projectRoot, "README.md"), "Production observability uses Grafana.\n", "utf8");
+  const discovery = await discoverSources({ packageRoot: ROOT, projectRoot });
+  assert.ok(discovery.detections.some((item) => item.provider === "grafana"));
+  assert.equal(discovery.detections.some((item) => item.provider === "datadog"), false);
+  assert.equal(discovery.detections.some((item) => item.provider === "mysql"), false);
+});
+
+test("equal-confidence provider candidates require explicit user selection", async () => {
+  const projectRoot = await tempDirectory("rooty-ambiguous-discovery");
+  await writeFile(path.join(projectRoot, "README.md"), "Services use both PostgreSQL and MySQL.\n", "utf8");
+  const configured = await configureSources({
+    packageRoot: ROOT,
+    projectRoot,
+    endpoints: { database: "https://mcp.example.test/database" }
+  });
+  const database = configured.registry.environments.production.capabilities.database;
+  assert.equal(database.provider, "unconfigured");
+  assert.equal(database.status, "needs-user-input");
+  assert.deepEqual(database.candidate_providers.sort(), ["mysql", "postgres"]);
+  assert.ok(configured.unresolved.includes("database.provider"));
 });
 
 test("discovery, host rendering, and activation preserve read-only controls", async () => {

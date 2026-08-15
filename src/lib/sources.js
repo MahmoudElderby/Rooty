@@ -2,7 +2,10 @@ import { opendir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { assertNoEmbeddedSecrets, isoNow, normalizeEnvironment, pathExists, readJson, writeJson } from "./core.js";
 
-const SKIP_DIRECTORIES = new Set([".git", "node_modules", ".investigator", "dist", "build", "coverage", ".next", ".venv"]);
+const SKIP_DIRECTORIES = new Set([
+  ".git", ".agents", ".claude", ".codex", ".cursor", ".idea", ".investigator", ".next", ".venv", ".vs",
+  "bin", "build", "coverage", "dist", "node_modules", "obj", "packages", "target", "TestResults"
+]);
 const TEXT_EXTENSIONS = new Set([".md", ".mdx", ".txt", ".json", ".yaml", ".yml", ".toml", ".tf", ".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".py", ".go", ".rs", ".java", ".kt", ".xml", ".properties", ".env.example"]);
 const MAX_FILES = 10_000;
 const MAX_FILE_BYTES = 1_000_000;
@@ -98,7 +101,7 @@ export async function discoverSources({ packageRoot, projectRoot, output }) {
   };
   const outputFile = output ?? path.join(projectRoot, ".investigator/discovery.json");
   await writeJson(outputFile, result);
-  return result;
+  return { ...result, output_file: outputFile };
 }
 
 function validateEndpoint(value, capability) {
@@ -151,21 +154,26 @@ export async function configureSources({ packageRoot, projectRoot, discoveryFile
   for (const capability of capabilities) {
     const candidates = discovery.detections.filter((item) => item.capability === capability);
     const requestedProvider = providers[capability];
+    const sortedCandidates = candidates.sort((left, right) => Number(right.confidence) - Number(left.confidence));
+    const ambiguous = !requestedProvider &&
+      sortedCandidates.length > 1 &&
+      Number(sortedCandidates[0].confidence) === Number(sortedCandidates[1].confidence);
     const selected = requestedProvider
-      ? candidates.find((item) => item.provider === requestedProvider) ?? {
+      ? sortedCandidates.find((item) => item.provider === requestedProvider) ?? {
           capability,
           provider: requestedProvider,
           confidence: 1,
           repository_classification: "REPORTED",
           evidence: ["explicit-provider-selection"]
         }
-      : candidates.sort((left, right) => Number(right.confidence) - Number(left.confidence))[0];
+      : ambiguous ? undefined : sortedCandidates[0];
     if (!selected) {
       const endpoint = endpoints[capability] ? validateEndpoint(endpoints[capability], capability) : undefined;
       configured[capability] = {
         provider: "unconfigured",
         status: "needs-user-input",
         required_access: "read-only",
+        ...(ambiguous ? { candidate_providers: sortedCandidates.map((item) => item.provider) } : {}),
         ...(endpoint ? { endpoint } : {})
       };
       unresolved.push(`${capability}.provider`);

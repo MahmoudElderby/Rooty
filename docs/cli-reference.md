@@ -31,15 +31,17 @@ rooty init --host codex|claude|cursor|all
 
 Initialization always installs `.agents/skills/root-cause-investigator`. Existing target paths cause a hard failure; Rooty never merges or overwrites host configuration.
 
+Initialization requires an explicit journey: `--demo` for the offline demo, or `--activate-connectors` after all five production source capabilities are ready. Rooty refuses an empty initialization that would produce a host with no usable evidence connectors.
+
 ## `rooty sources discover`
 
 Scan safe project files for known evidence-provider signals.
 
 ```text
-rooty sources discover [--project PATH] [--output FILE]
+rooty sources discover [--project PATH] [--output FILE] [--json]
 ```
 
-Default output is `.investigator/discovery.json` inside the project. A custom output path is resolved from the current CLI working directory.
+Default output is `.investigator/discovery.json` inside the project. A custom output path is resolved from the current CLI working directory. The default console output is a short candidate summary; use `--json` for the complete discovery document, including skipped-file details.
 
 ## `rooty sources configure`
 

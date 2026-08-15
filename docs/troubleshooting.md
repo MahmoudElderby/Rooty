@@ -53,6 +53,20 @@ Discovery intentionally skips secret-named paths, oversized files, unsupported t
 
 ## Host initialization
 
+### Initialization created a folder named `true`
+
+Rooty 0.1.0 accepted `--project` without a following path and converted the boolean flag into the literal directory name `true`. Upgrade to 0.1.1 or newer; missing option values are then rejected before any files are created.
+
+If the accidental `true` directory contains only Rooty-generated `.agents`, host configuration, and Rooty ignore entries, it may be removed after inspection. Never delete it without first confirming that it contains no user files.
+
+Correct demo usage from inside the target project is:
+
+```console
+rooty init --host codex --demo --project .
+```
+
+For production, complete discovery and configuration first, then use `--activate-connectors`.
+
 ### `Refusing to overwrite existing host paths`
 
 Cause: one or more generated targets already exist.
@@ -64,6 +78,13 @@ Resolution: inspect the listed paths. Back up and manually merge any existing ho
 Cause: `--activate-connectors` was omitted or no source entry was ready.
 
 Resolution: complete source configuration, then initialize in a clean target with `--activate-connectors`. If host files already exist, merge them manually rather than deleting unknown user configuration.
+
+### `Choose a setup mode` or `Source registry is not ready`
+
+Rooty prevents an empty host installation. Choose one supported journey:
+
+- Offline evaluation: `rooty init --host <host> --demo --project <path>`
+- Production: discover, configure every required source, then run `rooty init --host <host> --project <path> --activate-connectors`
 
 ### The AI host does not see Rooty
 

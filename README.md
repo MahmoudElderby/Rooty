@@ -97,7 +97,7 @@ rooty report --project /path/to/sandbox-project --case-dir /path/to/rooty-case-d
 rooty sources discover --project /path/to/project
 ```
 
-Rooty scans bounded, non-secret text files and writes `.investigator/discovery.json`. Repository detections remain `INFERRED`; review them before activation.
+Rooty scans bounded, non-secret source and documentation files, skips generated AI-host and build-output directories, and writes `.investigator/discovery.json`. Repository detections remain `INFERRED`; review them before activation. Equal-confidence provider candidates require an explicit choice.
 
 ### 2. Configure direct MCP connectors
 

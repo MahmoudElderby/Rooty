@@ -11,7 +11,7 @@ const HELP = `Rooty Investigator — evidence-first, read-only root-cause analys
 
 Usage:
   rooty init --host codex|claude|cursor|all [--project PATH] [--demo] [--activate-connectors]
-  rooty sources discover [--project PATH] [--output FILE]
+  rooty sources discover [--project PATH] [--output FILE] [--json]
   rooty sources configure [--project PATH] [--discovery FILE] [--<capability>-provider ID] [--<capability>-mcp-url URL] [--<capability>-auth oauth|bearer-env|none] [--<capability>-oauth-token-env NAME] [--<capability>-bearer-token-env NAME]
   rooty sources list <service> --environment <name> [--project PATH]
   rooty doctor [--project PATH] [--json] [--package-only]
@@ -25,12 +25,23 @@ Usage:
 The CLI never writes secrets. Generated source configuration contains only public
 endpoints, placeholders, and environment-variable references.`;
 
+const BOOLEAN_OPTIONS = new Set(["help", "demo", "activate-connectors", "json", "package-only"]);
+
+function assertOptionValues(options) {
+  for (const [key, value] of Object.entries(options)) {
+    if (value === true && !BOOLEAN_OPTIONS.has(key)) {
+      throw new Error(`--${key} requires a value`);
+    }
+  }
+}
+
 function projectFrom(options) {
   return path.resolve(String(option(options, "project", process.cwd())));
 }
 
 export async function main(argv) {
   const { positional, options } = parseArgs(argv);
+  assertOptionValues(options);
   const [command, subcommand, ...rest] = positional;
   if (!command || command === "help" || options.help) {
     process.stdout.write(`${HELP}\n`);
@@ -55,7 +66,20 @@ export async function main(argv) {
       projectRoot: projectFrom(options),
       output: options.output ? path.resolve(String(options.output)) : undefined
     });
-    process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+    if (options.json) process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+    else {
+      process.stdout.write(`Discovery complete for ${result.project}: scanned ${result.scanned_files} safe files.\n`);
+      if (result.detections.length === 0) process.stdout.write("Candidates: none; provider selection is required for every capability.\n");
+      else {
+        process.stdout.write("Candidates (not yet validated):\n");
+        for (const detection of result.detections) {
+          process.stdout.write(`  ${detection.capability.padEnd(14)} ${detection.provider} (${Math.round(Number(detection.confidence) * 100)}%, ${detection.evidence.length} source file(s))\n`);
+        }
+      }
+      process.stdout.write(`Skipped sensitive/unreadable files: ${result.warnings.length}; details are in the discovery file.\n`);
+      process.stdout.write(`Discovery file: ${result.output_file}\n`);
+      process.stdout.write("Next: validate the candidates, then run `rooty sources configure --project <path> ...`.\n");
+    }
     return;
   }
 

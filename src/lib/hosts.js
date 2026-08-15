@@ -98,11 +98,23 @@ async function ensureProjectGitignore(packageRoot, projectRoot, files) {
 
 export async function initializeHosts({ packageRoot, projectRoot, host, demo = false, activateConnectors = false }) {
   if (!HOSTS.has(host)) throw new Error(`Unsupported host: ${host}`);
+  if (!demo && !activateConnectors) {
+    throw new Error("Choose a setup mode: use --demo for the offline demo, or complete `rooty sources discover` and `rooty sources configure` before using --activate-connectors");
+  }
   const requested = host === "all" ? ["codex", "claude", "cursor"] : [host];
   const files = [];
   const sourcesFile = path.join(projectRoot, ".investigator/sources.json");
   const registry = await pathExists(sourcesFile) ? await readJson(sourcesFile) : undefined;
   const availableEntries = mcpEntries(registry);
+  if (activateConnectors) {
+    if (!registry) throw new Error("Source registry is missing; run `rooty sources discover` and `rooty sources configure` before production initialization");
+    const required = ["ticketing", "documentation", "observability", "database", "deployments"];
+    const capabilities = registry.environments?.production?.capabilities ?? {};
+    const unresolved = required.filter((capability) => capabilities[capability]?.status !== "ready-for-host-rendering");
+    if (unresolved.length > 0) {
+      throw new Error(`Source registry is not ready; resolve these capabilities before activation: ${unresolved.join(", ")}`);
+    }
+  }
   const entries = activateConnectors ? availableEntries : [];
   const canonicalSkill = path.join(projectRoot, ".agents/skills/root-cause-investigator");
   const intendedTargets = [canonicalSkill];
