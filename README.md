@@ -1,85 +1,255 @@
 # Rooty
 
-Rooty is a portable, evidence-first root-cause investigator. It combines an Agent Skill, a dependency-free setup and case CLI, secure read-only connector recipes, host adapters, an append-only evidence ledger, reviewed case memory, and a 15-case replay suite.
+> Evidence-first root-cause investigation for AI coding agents.
 
-Rooty reports why an incident happened. It does not patch code, mutate tickets or production systems, perform mitigation, or approve its own memory.
+[![Node.js 20+](https://img.shields.io/badge/Node.js-20%2B-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![npm package](https://img.shields.io/badge/npm-rooty--investigator-CB3837?logo=npm)](https://www.npmjs.com/package/rooty-investigator)
 
-![Rooty investigation walkthrough](./rooty-how-it-works.gif)
+Rooty gives Codex, Claude Code, Cursor, and other AI hosts a disciplined way to investigate incidents across source code, tickets, documentation, logs, traces, databases, and deployment history. It follows evidence to the earliest verified divergence, tests competing explanations, and reports a root cause only when the proof is strong enough.
+
+Rooty investigates. It does **not** patch code, change data, mutate tickets, deploy, mitigate, or approve its own memory.
+
+![Rooty investigation walkthrough](https://raw.githubusercontent.com/MahmoudElderby/Rooty/main/rooty-how-it-works.gif)
+
+## Why Rooty exists
+
+Most coding agents see only the repository. Production failures rarely live in only one place: the ticket describes the symptom, code describes the intended path, traces show the executed path, logs expose failures, database history reveals state, and deployments establish what changed.
+
+Rooty connects those sources into one read-only investigation workflow:
+
+```mermaid
+flowchart LR
+    A["Ticket or user report"] --> B["Map expected flow"]
+    B --> C["Form testable hypotheses"]
+    C --> D["Query read-only evidence sources"]
+    D --> E["Find first bad state"]
+    E --> F["Falsify competing causes"]
+    F --> G{"Evidence threshold"}
+    G -->|Complete| H["CONFIRMED"]
+    G -->|Best fit, proof missing| I["PROBABLE"]
+    G -->|Insufficient or conflicting| J["INCONCLUSIVE"]
+    H --> K["Human-reviewed learning draft"]
+```
+
+## What you get
+
+| Component | Purpose |
+|---|---|
+| Investigator skill | A portable, versioned investigation method shared across AI hosts |
+| Source discovery | Detects likely ticketing, documentation, observability, database, and deployment providers from safe project files |
+| Connector configuration | Converts validated provider choices, MCP URLs, and credential environment-variable names into a source registry |
+| Host adapters | Generates read-only Codex, Claude Code, and Cursor configuration |
+| Doctor | Verifies the kit, auth references, MCP negotiation, tool allowlists, and harmless live read probes |
+| Evidence model | Separates `REPORTED`, `OBSERVED`, `INFERRED`, `HYPOTHESIS`, and `UNKNOWN` claims |
+| Case artifacts | Produces a hash-chained evidence ledger, case state, and deterministic report for snapshot-backed cases |
+| Learning workflow | Promotes only verified `CONFIRMED` cases through explicit human review and 180-day expiry |
+| Evaluation suite | Replays 15 frozen cases, including abstention, prompt injection, and mutation attempts |
 
 ## Requirements
 
 - Node.js 20 or newer
-- Read-only identities for every real evidence provider
-- OAuth, environment-variable references, OS credential storage, or an approved secret manager; never repository secrets
+- An AI host: Codex, Claude Code, Cursor, or a host that can load the canonical skill
+- Direct MCP endpoints for the evidence providers you want Rooty to use
+- Provider identities and database roles that are read-only at the enforcement layer
+- OAuth access tokens, bearer tokens, or an approved secret manager exposed through environment variables
 
-No npm packages are required.
+Rooty has no runtime npm dependencies and no gateway in the MVP. Each host connects directly to the configured MCP endpoints.
 
-Install the public CLI package, or run it directly from this checkout:
+## Install
 
 ```console
 npm install --global rooty-investigator
 rooty help
 ```
 
-`investigator` remains available as a compatibility alias.
+The compatibility command `investigator` is installed alongside `rooty`.
 
-## Quick start
+To work from the repository:
 
 ```console
-rooty sources discover --project /path/to/project
-rooty sources configure --project /path/to/project \
-  --ticketing-provider atlassian --documentation-provider atlassian \
-  --observability-provider datadog --database-provider postgres --deployments-provider argocd \
-  --ticketing-mcp-url https://mcp.example.internal/atlassian \
-  --documentation-mcp-url https://mcp.example.internal/atlassian \
-  --observability-mcp-url https://mcp.example.internal/observability --observability-auth oauth \
-  --database-mcp-url https://mcp.example.internal/database --database-auth oauth \
-  --deployments-mcp-url https://mcp.example.internal/deployments --deployments-auth oauth
-rooty init --host codex --project /path/to/project --activate-connectors
-rooty doctor --project /path/to/project
+git clone https://github.com/MahmoudElderby/Rooty.git
+cd Rooty
+npm test
+npm run doctor
 ```
 
-Discovery scans only bounded non-secret text files, skips secret-named and credential-bearing structured files, and classifies repository-derived mappings as `INFERRED`. Explicit `--<capability>-provider` selections allow a fully manual setup when discovery finds nothing and are recorded as `USER_CONFIGURED`. Configuration writes `.investigator/sources.json` with public MCP endpoints and credential environment-variable names, not credential values. Supported auth modes are `oauth`, `bearer-env`, and unauthenticated loopback only. Review unresolved mappings and validate them with the owning team before rerunning `init` with `--activate-connectors`.
+## Try the offline demo
 
-Activation writes `.investigator/activated-connectors.json`. `doctor` then verifies authentication availability, MCP initialization, `tools/list`, and a configured harmless read probe for every activated connector; any unreachable or unauthorized activated connector fails health.
-
-For the fully offline vertical slice:
+The demo uses synthetic evidence and the bundled read-only MCP server. It does not need production credentials.
 
 ```console
 rooty init --host all --demo --project /path/to/sandbox-project
-rooty run ROOTY-101 --project . --snapshot evals/mock-sources/confirmed-timeout.json --case-dir ../rooty-case-demo
-rooty memory propose --project . --case-dir ../rooty-case-demo
-rooty memory approve --project . --case-dir ../rooty-case-demo --draft .investigator/memory/drafts/INV-20260815-DEMO0001.json --reviewed-by team-payments
-rooty eval
+rooty run ROOTY-101 \
+  --project /path/to/sandbox-project \
+  --snapshot /path/to/Rooty/evals/mock-sources/confirmed-timeout.json \
+  --case-dir /path/to/rooty-case-demo
+rooty report --project /path/to/sandbox-project --case-dir /path/to/rooty-case-demo
 ```
 
-The bundled MCP server serves frozen synthetic ticket, documentation, log, trace, database-history, and deployment evidence. Its six tools are read-only, require case IDs, bound time windows and result sizes, reject mutation-named tools, and reject non-`SELECT` SQL. Real database safety must also use a dedicated read-only role or replica, read-only transactions, timeouts, and server-side limits.
+`rooty run` is the MVP's deterministic **frozen-snapshot runner**. It is used for demonstrations, artifact generation, and evaluation; it does not orchestrate live provider calls.
 
-## CLI
+## Configure a real project
+
+### 1. Discover likely evidence sources
+
+```console
+rooty sources discover --project /path/to/project
+```
+
+Rooty scans bounded, non-secret text files and writes `.investigator/discovery.json`. Repository detections remain `INFERRED`; review them before activation.
+
+### 2. Configure direct MCP connectors
+
+Supply the provider, MCP URL, and auth mode for each required capability:
+
+```console
+rooty sources configure --project /path/to/project \
+  --ticketing-provider atlassian \
+  --ticketing-mcp-url https://mcp.example.internal/atlassian \
+  --ticketing-auth oauth \
+  --documentation-provider atlassian \
+  --documentation-mcp-url https://mcp.example.internal/atlassian \
+  --documentation-auth oauth \
+  --observability-provider datadog \
+  --observability-mcp-url https://mcp.example.internal/observability \
+  --observability-auth oauth \
+  --database-provider postgres \
+  --database-mcp-url https://mcp.example.internal/database \
+  --database-auth oauth \
+  --deployments-provider argocd \
+  --deployments-mcp-url https://mcp.example.internal/deployments \
+  --deployments-auth oauth
+```
+
+Rooty writes references such as `ROOTY_ATLASSIAN_MCP_OAUTH_TOKEN`; it never writes token values. Complete setup details, bearer-token examples, and supported recipes are in the [setup guide](docs/setup.md).
+
+### 3. Make credentials available
+
+Obtain tokens through each provider's approved flow, then expose them to the AI host process:
+
+```console
+export ROOTY_ATLASSIAN_MCP_OAUTH_TOKEN="..."
+export ROOTY_DATADOG_MCP_OAUTH_TOKEN="..."
+export ROOTY_POSTGRES_MCP_OAUTH_TOKEN="..."
+export ROOTY_ARGOCD_MCP_OAUTH_TOKEN="..."
+```
+
+On PowerShell, use `$env:VARIABLE_NAME = "..."`. Do not place values in `.investigator/sources.json`, host configuration, or Git.
+
+### 4. Install the host adapter and activate connectors
+
+```console
+rooty init --host codex --project /path/to/project --activate-connectors
+```
+
+Use `claude`, `cursor`, or `all` instead of `codex` when appropriate. Rooty refuses to overwrite existing host files; review or merge existing configuration first.
+
+### 5. Verify readiness
+
+```console
+rooty doctor --project /path/to/project
+```
+
+A healthy result means all five capabilities are configured and activated, credential references are available, every MCP server initializes, allowed tools resolve, and every harmless read probe succeeds.
+
+### 6. Investigate from your AI host
+
+Open the configured project in the host and ask:
 
 ```text
-rooty init --host codex|claude|cursor|all [--project PATH] [--demo] [--activate-connectors]
-rooty sources discover [--project PATH] [--output FILE]
-rooty sources configure [--project PATH] [--discovery FILE] [--<capability>-provider ID] [--<capability>-mcp-url URL] [--<capability>-auth oauth|bearer-env|none]
-rooty sources list <service> --environment production [--project PATH]
-rooty doctor [--project PATH] [--json]
-rooty run <ticket> --snapshot FILE [--project PATH] [--case-dir PATH]
-rooty evidence add --case-dir PATH --file FILE [--project PATH]
-rooty report --case-dir PATH [--project PATH]
-rooty memory propose --case-dir PATH [--project PATH]
-rooty memory approve --draft FILE --case-dir PATH --reviewed-by NAME [--project PATH]
-rooty eval [--json]
+Investigate PAY-123. Root cause only.
+Do not propose or apply fixes. Validate every assumption with current-case evidence.
 ```
 
-Case output defaults to a sibling `.rooty-cases` directory so evidence does not modify the investigated source tree. Explicit case directories are rejected before creation when they are lexically or symlink-resolved inside the investigated project.
+Rooty will extract missing pivots, map the relevant request/data path, query the narrowest useful evidence, identify the first bad state, test alternatives, and return `CONFIRMED`, `PROBABLE`, or `INCONCLUSIVE` with evidence references and explicit gaps.
 
-`CONFIRMED` requires at least three causal steps with distinct `OBSERVED` support, independent source/type corroboration, OBSERVED-only elimination of every material alternative, and no critical evidence gap. A ticket assertion or one observation reused across steps cannot satisfy the rule.
+See [Investigating an incident](docs/investigation.md) for the full end-user and internal journey.
+
+## Evidence and outcomes
+
+Rooty never treats all statements equally:
+
+| Classification | Meaning |
+|---|---|
+| `REPORTED` | A ticket, user, or attachment says it happened |
+| `OBSERVED` | A cited source, query, trace, or history record directly shows it |
+| `INFERRED` | A conclusion derived from observations, with references |
+| `HYPOTHESIS` | A testable explanation with predicted evidence |
+| `UNKNOWN` | Evidence is missing, inaccessible, expired, sampled, truncated, or contradictory |
+
+`CONFIRMED` requires an established first bad state, distinct observed support for each material causal link, observed elimination of material alternatives, no critical gap, and either independent corroboration or a verified reproduction. Otherwise Rooty must downgrade to `PROBABLE` or `INCONCLUSIVE`.
+
+## Memory and learning
+
+Rooty learns reusable investigation shortcuts—not unreviewed conclusions or raw production data.
+
+```console
+rooty memory propose \
+  --project /path/to/project \
+  --case-dir /path/to/confirmed-case
+
+rooty memory approve \
+  --project /path/to/project \
+  --case-dir /path/to/confirmed-case \
+  --draft /path/to/project/.investigator/memory/drafts/INV-....json \
+  --reviewed-by team-payments
+```
+
+Only a currently verified `CONFIRMED` case can become a draft. Approval re-verifies the source case and evidence hash chain, requires a human or accountable team, rejects sensitive fields, and sets an expiry. Approved memory may suggest pivots and hypotheses in a later case; it can never prove the new case.
+
+Read [Memory and learning](docs/memory-and-learning.md) for lifecycle and governance details.
+
+## Supported hosts and provider recipes
+
+| Area | Included in the MVP |
+|---|---|
+| Hosts | Codex, Claude Code, Cursor, and a generic skill-based integration path |
+| Ticketing/docs | Atlassian recipes |
+| Observability | Datadog, Grafana, Sentry recipes |
+| Databases | PostgreSQL and MySQL read-only recipes |
+| Deployments | Argo CD and Kubernetes recipes |
+| Demo | Bundled synthetic snapshot provider |
+
+A recipe defines expected capabilities, allowed read tools, auth references, and a doctor probe. It does not install a third-party MCP server or make a provider account read-only. See [Architecture and integrations](docs/architecture.md).
 
 ## Safety model
 
-The canonical skill defines evidence discipline and stopping rules. Host adapters add read-only filesystem policy and MCP tool allowlists. Connector recipes require least-privilege auth references. The database and provider identity remains the actual enforcement boundary; MCP annotations are metadata only.
+Rooty uses defense in depth:
 
-Ticket descriptions, documentation, logs, database values, prior cases, and connector output are untrusted data. Prompt-like text inside them is never executable instruction. Approved memory suggests hypotheses and pivots but cannot confirm a current incident.
+- Read-only agent instructions and host policies
+- Explicit MCP tool allowlists
+- HTTPS-only remote endpoints; unauthenticated access is loopback-only
+- Credential names in files, credential values outside files
+- Bounded log/trace windows, result limits, and `SELECT`-only demo database queries
+- Case evidence stored outside the investigated source tree
+- Append-only, hash-chained evidence ledgers
+- Prompt-injection resistance for tickets, docs, logs, database text, memory, and connector output
+- Human approval before reusable memory promotion
+
+The provider identity, database role or replica, and infrastructure policy remain the real security boundary. Read [Security and threat model](docs/security.md) before connecting Rooty to production.
+
+## MVP scope and current limits
+
+- Rooty does not include a gateway; hosts connect directly to MCP servers.
+- Rooty discovers provider signals, but a human must validate mappings and provide MCP URLs and auth references.
+- Rooty does not implement provider OAuth browser flows or persist credentials.
+- Live investigations are performed by the configured AI host using the installed skill and connectors.
+- The CLI's persisted case/ledger/memory pipeline currently consumes frozen investigation snapshots; automatic capture of a live host conversation into that pipeline is not yet implemented.
+- Rooty produces investigation findings only. Remediation belongs to a separate workflow and owner.
+
+## Documentation
+
+- [Documentation home](docs/README.md)
+- [Getting started](docs/getting-started.md)
+- [Project and connector setup](docs/setup.md)
+- [Investigating an incident](docs/investigation.md)
+- [Evidence and reporting](docs/evidence-and-reporting.md)
+- [Memory and learning](docs/memory-and-learning.md)
+- [Architecture and integrations](docs/architecture.md)
+- [Security and threat model](docs/security.md)
+- [CLI reference](docs/cli-reference.md)
+- [Troubleshooting](docs/troubleshooting.md)
 
 ## Development
 
@@ -89,4 +259,10 @@ npm run doctor
 npm run eval
 ```
 
-The project uses only Node.js standard-library modules. The 15-case evaluation loads captured agent investigations from independent frozen input files; expected labels never generate or appear inside those inputs. It includes confirmation/abstention cases, two embedded prompt-injection cases, and deterministic mutation attempts. Tests also cover discovery/configuration, all host adapters, live and unreachable HTTP MCP probes, source safety, hash-chained ledgers, deterministic reporting, source-verified memory review, bounded queries, mutation blocking, and the portable skill scripts.
+`npm run doctor` checks package health without requiring project connectors. A normal `rooty doctor --project ...` is the strict production-readiness gate.
+
+The project uses only Node.js standard-library modules. The 15-case evaluation covers confirmed, probable, and inconclusive outcomes; evidence abstention; prompt injection; bounded source access; and blocked mutation attempts.
+
+## License
+
+[MIT](LICENSE) © 2026 Rooty contributors.

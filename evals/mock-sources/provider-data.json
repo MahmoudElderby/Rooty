@@ -17,7 +17,7 @@
     { "event_time": "2026-08-14T11:04:15Z", "service.name": "payments-api", "service.version": "8f13c7a", "trace_id": "4bf92f3577b34da6a3ce929d0e0e4736", "message": "authorization deadline exceeded" }
   ],
   "traces": [
-    { "trace_id": "4bf92f3577b34da6a3ce929d0e0e4736", "span": "authorization", "duration_ms": 3000, "status": "DEADLINE_EXCEEDED" }
+    { "event_time": "2026-08-14T11:04:15Z", "trace_id": "4bf92f3577b34da6a3ce929d0e0e4736", "span": "authorization", "duration_ms": 3000, "status": "DEADLINE_EXCEEDED" }
   ],
   "database_rows": [
     { "payment_id": "pay_42", "state": "created", "event_time": "2026-08-14T11:04:12Z" }

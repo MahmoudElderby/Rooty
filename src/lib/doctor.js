@@ -6,7 +6,9 @@ import { runEvaluation } from "./evaluate.js";
 import { TOOLS } from "./mcp.js";
 import { assertNoEmbeddedSecrets, pathExists, readJson } from "./core.js";
 
-export async function runDoctor({ packageRoot, projectRoot, connectorTimeoutMs = 3000 }) {
+const REQUIRED_CAPABILITIES = ["ticketing", "documentation", "observability", "database", "deployments"];
+
+export async function runDoctor({ packageRoot, projectRoot, connectorTimeoutMs = 3000, requireActivatedConnectors = true }) {
   const checks = [];
   const add = (status, name, message) => checks.push({ status, name, message });
   const canonical = path.join(projectRoot, ".agents/skills/root-cause-investigator/SKILL.md");
@@ -33,14 +35,16 @@ export async function runDoctor({ packageRoot, projectRoot, connectorTimeoutMs =
     try {
       const sources = await readJson(sourcesFile);
       assertNoEmbeddedSecrets(sources, "sources");
-      const unresolved = Object.entries(sources.environments?.production?.capabilities ?? {})
-        .filter(([, value]) => value.status !== "ready-for-host-rendering")
-        .map(([key]) => key);
-      add(unresolved.length ? "WARN" : "PASS", "source-registry", unresolved.length ? `Unresolved capabilities: ${unresolved.join(", ")}` : "All capabilities have connector references");
+      const capabilities = sources.environments?.production?.capabilities ?? {};
+      const unresolved = REQUIRED_CAPABILITIES.filter((capability) => capabilities[capability]?.status !== "ready-for-host-rendering");
+      for (const [capability, value] of Object.entries(capabilities)) {
+        if (value.status !== "ready-for-host-rendering" && !unresolved.includes(capability)) unresolved.push(capability);
+      }
+      add(unresolved.length && requireActivatedConnectors ? "FAIL" : unresolved.length ? "WARN" : "PASS", "source-registry", unresolved.length ? `Unresolved capabilities: ${unresolved.join(", ")}` : "All capabilities have connector references");
     } catch (error) {
       add("FAIL", "source-registry", error.message);
     }
-  } else add("WARN", "source-registry", "Run `rooty sources discover` and `rooty sources configure`");
+  } else add(requireActivatedConnectors ? "FAIL" : "WARN", "source-registry", "Run `rooty sources discover` and `rooty sources configure`");
 
   const unsafeTools = TOOLS.filter((tool) => tool.annotations?.readOnlyHint !== true || tool.annotations?.destructiveHint !== false || /(create|update|delete|write|execute|rollback)/i.test(tool.name));
   if (unsafeTools.length) add("FAIL", "mcp-tools", `Unsafe tools: ${unsafeTools.map((tool) => tool.name).join(", ")}`);
@@ -58,13 +62,19 @@ export async function runDoctor({ packageRoot, projectRoot, connectorTimeoutMs =
     try {
       const activation = await readJson(activationFile);
       assertNoEmbeddedSecrets(activation, "activated-connectors");
-      const connectorChecks = await Promise.all((activation.connectors ?? []).map((connector) => doctorConnectorChecks(connector, connectorTimeoutMs)));
-      if (connectorChecks.length === 0) add("WARN", "activated-connectors", "Activation manifest contains no connectors");
-      else for (const group of connectorChecks) checks.push(...group);
+      const connectors = activation.connectors ?? [];
+      const connectorChecks = await Promise.all(connectors.map((connector) => doctorConnectorChecks(connector, connectorTimeoutMs)));
+      if (connectorChecks.length === 0) add(requireActivatedConnectors ? "FAIL" : "WARN", "activated-connectors", "Activation manifest contains no connectors");
+      else {
+        const activatedCapabilities = new Set(connectors.map((connector) => connector.capability));
+        const missing = REQUIRED_CAPABILITIES.filter((capability) => !activatedCapabilities.has(capability));
+        add(missing.length && requireActivatedConnectors ? "FAIL" : missing.length ? "WARN" : "PASS", "activated-connectors-coverage", missing.length ? `Capabilities are not activated: ${missing.join(", ")}` : "All required capabilities are activated");
+        for (const group of connectorChecks) checks.push(...group);
+      }
     } catch (error) {
       add("FAIL", "activated-connectors", error.message);
     }
-  } else add("WARN", "activated-connectors", "No production connectors are activated");
+  } else add(requireActivatedConnectors ? "FAIL" : "WARN", "activated-connectors", "No production connectors are activated");
 
   try {
     const evaluation = await runEvaluation({ casesFile: path.join(packageRoot, "evals/cases/replay-cases.json") });
@@ -117,7 +127,12 @@ async function doctorConnectorChecks(connector, timeoutMs) {
     }
     add("PASS", "authentication", "Unauthenticated loopback MCP is configured; the live read probe will verify access");
   } else if (connector.auth === "oauth") {
-    add("PASS", "authentication", `${connector.auth} is configured; the live read probe will verify access`);
+    const variable = connector.oauth_access_token_env_var;
+    if (!variable || !process.env[variable]) {
+      add("FAIL", "authentication", `OAuth access-token environment variable is unavailable: ${variable ?? "<missing>"}`);
+      return checks;
+    }
+    add("PASS", "authentication", `OAuth access token is available through ${variable}`);
   } else {
     add("FAIL", "authentication", `Unsupported or unconfigured auth mode: ${connector.auth ?? "<missing>"}`);
     return checks;
@@ -171,6 +186,8 @@ class HttpMcpClient {
       capabilities: {},
       clientInfo: { name: "rooty-doctor", version: "0.1.0" }
     });
+    if (!result?.protocolVersion) throw new Error("MCP initialize did not negotiate a protocol version");
+    this.protocolVersion = result.protocolVersion;
     await this.notify("notifications/initialized", {});
     return result;
   }
@@ -199,7 +216,13 @@ class HttpMcpClient {
       accept: "application/json, text/event-stream"
     };
     if (this.sessionId) headers["mcp-session-id"] = this.sessionId;
-    if (this.connector.auth === "bearer-env") headers.authorization = `Bearer ${process.env[this.connector.bearer_token_env_var]}`;
+    if (this.protocolVersion) headers["mcp-protocol-version"] = this.protocolVersion;
+    const credentialVariable = this.connector.auth === "bearer-env"
+      ? this.connector.bearer_token_env_var
+      : this.connector.auth === "oauth"
+        ? this.connector.oauth_access_token_env_var
+        : undefined;
+    if (credentialVariable) headers.authorization = `Bearer ${process.env[credentialVariable]}`;
     let response;
     try {
       response = await fetch(this.connector.endpoint, {

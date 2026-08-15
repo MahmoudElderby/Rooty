@@ -40,6 +40,7 @@ function renderCodex(packageRoot, entries, demo) {
       `url = ${tomlString(entry.endpoint)}`,
       ...(entry.auth === "oauth" ? ["auth = \"oauth\""] : []),
       ...(entry.auth === "bearer-env" ? [`bearer_token_env_var = ${tomlString(entry.bearer_token_env_var)}`] : []),
+      ...(entry.auth === "oauth" && entry.oauth_access_token_env_var ? [`bearer_token_env_var = ${tomlString(entry.oauth_access_token_env_var)}`] : []),
       `enabled_tools = [${entry.allowed_tools.map(tomlString).join(", ")}]`,
       "enabled = true",
       "required = true",
@@ -60,10 +61,11 @@ function renderJsonHosts(packageRoot, entries, demo) {
     };
   }
   for (const entry of entries) {
+    const tokenEnv = entry.auth === "bearer-env" ? entry.bearer_token_env_var : entry.oauth_access_token_env_var;
     servers[entry.name] = {
       type: "http",
       url: entry.endpoint,
-      ...(entry.auth === "bearer-env" ? { headers: { Authorization: `Bearer \${${entry.bearer_token_env_var}}` } } : {})
+      ...(tokenEnv ? { headers: { Authorization: `Bearer \${${tokenEnv}}` } } : {})
     };
   }
   return { mcpServers: servers };
@@ -138,6 +140,7 @@ export async function initializeHosts({ packageRoot, projectRoot, host, demo = f
         endpoint: entry.endpoint,
         auth: entry.auth,
         ...(entry.bearer_token_env_var ? { bearer_token_env_var: entry.bearer_token_env_var } : {}),
+        ...(entry.oauth_access_token_env_var ? { oauth_access_token_env_var: entry.oauth_access_token_env_var } : {}),
         allowed_tools: entry.allowed_tools,
         doctor_probe: entry.doctor_probe
       }))

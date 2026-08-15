@@ -32,7 +32,19 @@ export function assessCase(snapshot) {
   const observedSourceSystems = new Set([...chainObservedIds].map((id) => evidenceById.get(id)?.source_system).filter(Boolean));
   const observedSourceTypes = new Set([...chainObservedIds].map((id) => evidenceById.get(id)?.source_type).filter(Boolean));
   const independentlyCorroborated = observedSourceSystems.size >= 2 || observedSourceTypes.size >= 2;
-  const chainComplete = chain.length >= 3 && chainReferencesObserved && distinctEvidencePerStep && independentlyCorroborated;
+  const reproduction = analysis.reproduction ?? {};
+  const reproductionRefs = Array.isArray(reproduction.evidence_refs) ? [...new Set(reproduction.evidence_refs)] : [];
+  const reproduciblyVerified = reproduction.status === "reproduced" &&
+    reproductionRefs.length >= 2 &&
+    reproductionRefs.every((id) => observed.has(id) && chainObservedIds.has(id));
+  const corroborationSatisfied = independentlyCorroborated || reproduciblyVerified;
+  const firstBadState = String(analysis.first_bad_state ?? "").trim();
+  const firstBadStateEstablished = firstBadState.length > 0 && !/^(?:unknown|not established|n\/a)$/i.test(firstBadState);
+  const chainComplete = chain.length >= 2 &&
+    chainReferencesObserved &&
+    distinctEvidencePerStep &&
+    firstBadStateEstablished &&
+    corroborationSatisfied;
   const competitors = analysis.competing_hypotheses ?? [];
   const alternativesTested = competitors.length > 0 && competitors.every((hypothesis) =>
     ["eliminated", "contradicted"].includes(hypothesis.status) &&
@@ -49,6 +61,9 @@ export function assessCase(snapshot) {
     chain_references_observed: chainReferencesObserved,
     distinct_evidence_per_step: distinctEvidencePerStep,
     independently_corroborated: independentlyCorroborated,
+    reproducibly_verified: reproduciblyVerified,
+    corroboration_satisfied: corroborationSatisfied,
+    first_bad_state_established: firstBadStateEstablished,
     alternatives_tested: alternativesTested,
     critical_gaps: criticalGaps.map((gap) => gap.description),
     observed_support_count: supportCount,

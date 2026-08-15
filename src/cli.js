@@ -12,9 +12,9 @@ const HELP = `Rooty Investigator — evidence-first, read-only root-cause analys
 Usage:
   rooty init --host codex|claude|cursor|all [--project PATH] [--demo] [--activate-connectors]
   rooty sources discover [--project PATH] [--output FILE]
-  rooty sources configure [--project PATH] [--discovery FILE] [--<capability>-provider ID] [--<capability>-mcp-url URL]
+  rooty sources configure [--project PATH] [--discovery FILE] [--<capability>-provider ID] [--<capability>-mcp-url URL] [--<capability>-auth oauth|bearer-env|none] [--<capability>-oauth-token-env NAME] [--<capability>-bearer-token-env NAME]
   rooty sources list <service> --environment <name> [--project PATH]
-  rooty doctor [--project PATH] [--json]
+  rooty doctor [--project PATH] [--json] [--package-only]
   rooty run <ticket> --snapshot FILE [--project PATH] [--case-dir PATH]
   rooty evidence add --case-dir PATH --file FILE [--project PATH]
   rooty report --case-dir PATH [--project PATH]
@@ -65,6 +65,7 @@ export async function main(argv) {
     const providers = Object.fromEntries(capabilities.filter((capability) => options[`${capability}-provider`]).map((capability) => [capability, String(options[`${capability}-provider`])]));
     const auth = Object.fromEntries(capabilities.filter((capability) => options[`${capability}-auth`]).map((capability) => [capability, String(options[`${capability}-auth`])]));
     const bearerTokenEnv = Object.fromEntries(capabilities.filter((capability) => options[`${capability}-bearer-token-env`]).map((capability) => [capability, String(options[`${capability}-bearer-token-env`])]));
+    const oauthTokenEnv = Object.fromEntries(capabilities.filter((capability) => options[`${capability}-oauth-token-env`]).map((capability) => [capability, String(options[`${capability}-oauth-token-env`])]));
     const result = await configureSources({
       packageRoot: PACKAGE_ROOT,
       projectRoot: projectFrom(options),
@@ -72,7 +73,8 @@ export async function main(argv) {
       endpoints,
       providers,
       auth,
-      bearerTokenEnv
+      bearerTokenEnv,
+      oauthTokenEnv
     });
     process.stdout.write(`Wrote ${result.file}; unresolved: ${result.unresolved.join(", ") || "none"}\n`);
     return;
@@ -91,7 +93,11 @@ export async function main(argv) {
   }
 
   if (command === "doctor") {
-    const result = await runDoctor({ packageRoot: PACKAGE_ROOT, projectRoot: projectFrom(options) });
+    const result = await runDoctor({
+      packageRoot: PACKAGE_ROOT,
+      projectRoot: projectFrom(options),
+      requireActivatedConnectors: !options["package-only"]
+    });
     if (options.json) process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
     else {
       for (const check of result.checks) process.stdout.write(`${check.status.padEnd(4)} ${check.name}: ${check.message}\n`);

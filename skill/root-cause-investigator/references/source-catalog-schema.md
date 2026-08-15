@@ -2,7 +2,7 @@
 
 Resolve evidence through a validated service registry with: schema version, canonical service, aliases, owners, UTC default, environments, telemetry providers/datasets/service names/retention, database engine/access/history source, deployment provider/application, ticket projects, sensitivity policy, correlation fields, and credential environment-variable names.
 
-Store logical references only. Never store tokens, passwords, connection strings, private keys, raw logs, or customer payloads.
+Store logical references only. OAuth connectors use `oauth_access_token_env_var`; bearer connectors use `bearer_token_env_var`. Never store tokens, passwords, connection strings, private keys, raw logs, or customer payloads.
 
 When a registry is incomplete:
 

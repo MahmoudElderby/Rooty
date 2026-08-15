@@ -26,4 +26,6 @@ Walk boundaries in order and compare expected versus observed values. Identify t
 - `PROBABLE`: one explanation best fits observed evidence, but explicitly named critical corroboration is missing.
 - `INCONCLUSIVE`: evidence is unavailable, expired, sampled, contradictory, or insufficient to prefer a causal explanation.
 
+When confirmation relies on reproduction instead of independent source/type corroboration, record `analysis.reproduction.status` as `reproduced` and cite at least two distinct `OBSERVED` evidence IDs in `analysis.reproduction.evidence_refs`. A claimed reproduction without those current-case observations does not satisfy the stopping rule.
+
 Do not report numeric confidence. State proven, inferred, missing, and what evidence would change the outcome.

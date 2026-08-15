@@ -62,6 +62,27 @@ test("one observation reused across causal steps and REPORTED alternative eviden
   assert.equal(assessment.alternatives_tested, false);
 });
 
+test("explicitly reproduced observed behavior can confirm without a second source system", async () => {
+  const captured = await readJson(path.join(ROOT, "evals/cases/inputs/EVAL-001.json"));
+  const reproduced = structuredClone(captured);
+  reproduced.evidence = reproduced.evidence
+    .filter((item) => ["E1", "E2", "E3"].includes(item.evidence_id))
+    .map((item) => item.classification === "OBSERVED" ? { ...item, source_type: "trace", source_system: "single-trace-backend" } : item);
+  reproduced.analysis.causal_chain = [
+    { step: "The failing trigger was captured during reproduction.", evidence_refs: ["E2"] },
+    { step: "The first bad state recurred in a second reproduced observation.", evidence_refs: ["E3"] }
+  ];
+  reproduced.analysis.reproduction = { status: "reproduced", evidence_refs: ["E2", "E3"] };
+  reproduced.analysis.competing_hypotheses = [{ statement: "Alternative path", status: "eliminated", evidence_refs: ["E3"] }];
+  const assessment = assessCase(reproduced);
+  assert.equal(assessment.status, "CONFIRMED");
+  assert.equal(assessment.independently_corroborated, false);
+  assert.equal(assessment.reproducibly_verified, true);
+  assert.equal(assessment.corroboration_satisfied, true);
+  reproduced.analysis.reproduction.evidence_refs = ["E1", "E3"];
+  assert.notEqual(assessCase(reproduced).status, "CONFIRMED");
+});
+
 test("vertical slice creates a hash-chained ledger, deterministic report, and source-verified memory", async () => {
   const projectRoot = await tempDirectory("rooty-project");
   const caseDir = path.join(await tempDirectory("rooty-cases"), "demo");
@@ -182,6 +203,7 @@ test("manual providers configure every capability when discovery finds nothing",
     assert.equal(source.status, "ready-for-host-rendering");
     assert.equal(source.mapping_status, "USER_CONFIGURED");
     assert.ok(source.doctor_probe?.tool);
+    assert.match(source.oauth_access_token_env_var, /^ROOTY_[A-Z0-9_]+_MCP_OAUTH_TOKEN$/);
   }
 });
 
@@ -230,14 +252,17 @@ test("discovery, host rendering, and activation preserve read-only controls", as
   assert.match(codex, /enabled = true/);
   assert.match(codex, /required = true/);
   assert.doesNotMatch(codex, /enabled = false/);
+  assert.match(codex, /bearer_token_env_var = "ROOTY_DATADOG_MCP_OAUTH_TOKEN"/);
   const activation = await readJson(path.join(projectRoot, ".investigator/activated-connectors.json"));
   assert.equal(activation.connectors.length, 5);
   assert.ok(activation.connectors.every((entry) => entry.doctor_probe?.tool));
+  assert.ok(activation.connectors.every((entry) => entry.oauth_access_token_env_var));
   const claude = await readJson(path.join(projectRoot, ".claude/settings.json"));
   assert.ok(claude.permissions.deny.includes("Edit"));
   assert.ok(claude.hooks.PreToolUse);
   const claudeMcp = await readJson(path.join(projectRoot, ".mcp.json"));
   assert.equal(claudeMcp.mcpServers.rooty_observability.type, "http");
+  assert.equal(claudeMcp.mcpServers.rooty_observability.headers.Authorization, "Bearer ${ROOTY_DATADOG_MCP_OAUTH_TOKEN}");
   const cursor = await readJson(path.join(projectRoot, ".cursor/mcp.json"));
   assert.ok(cursor.mcpServers.rooty_demo);
   const hookFile = path.join(projectRoot, ".claude/hooks/rooty-readonly.mjs");
@@ -253,6 +278,15 @@ test("mock MCP runtime enforces its advertised schemas and read-only semantics",
   assert.ok(TOOLS.every((tool) => tool.annotations.readOnlyHint && !tool.annotations.destructiveHint));
   const ticket = await callReadTool("ticket_get", { case_id: "INV-TEST-001", ticket_id: "ROOTY-101" });
   assert.equal(ticket.data.id, "ROOTY-101");
+  const matchingLog = await callReadTool("logs_search", { case_id: "INV-TEST-001", from: "2026-08-14T11:00:00Z", to: "2026-08-14T12:00:00Z", query: "authorization deadline" });
+  assert.equal(matchingLog.data.length, 1);
+  const wrongWindow = await callReadTool("logs_search", { case_id: "INV-TEST-001", from: "2035-08-14T11:00:00Z", to: "2035-08-14T12:00:00Z", query: "authorization" });
+  assert.deepEqual(wrongWindow.data, []);
+  assert.equal(wrongWindow.event_time_coverage, "2035-08-14T11:00:00Z/2035-08-14T12:00:00Z");
+  const wrongQuery = await callReadTool("traces_search", { case_id: "INV-TEST-001", from: "2026-08-14T11:00:00Z", to: "2026-08-14T12:00:00Z", query: "impossible-status" });
+  assert.deepEqual(wrongQuery.data, []);
+  const inactiveDeployment = await callReadTool("deployments_list", { case_id: "INV-TEST-001", service: "payments-api", from: "2026-08-13T11:00:00Z", to: "2026-08-13T12:00:00Z" });
+  assert.deepEqual(inactiveDeployment.data, []);
   await assert.rejects(() => callReadTool("logs_search", { case_id: "INV-TEST-001", from: "2026-08-01T00:00:00Z", to: "2026-08-01T01:00:00Z" }), /query is required/);
   await assert.rejects(() => callReadTool("db_query_readonly", { case_id: "INV-TEST-001", sql: "SELECT 1", row_limit: 5000 }), /row_limit must be at most 500/);
   await assert.rejects(() => callReadTool("logs_search", { case_id: "INV-TEST-001", from: "2026-08-01T00:00:00Z", to: "2026-08-03T00:00:00Z", query: "*" }), /at most 24 hours/);
@@ -270,6 +304,10 @@ test("bundled stdio MCP server initializes and lists only read tools", async () 
 test("doctor fails every unreachable activated connector", async () => {
   const projectRoot = await tempDirectory("rooty-doctor-unreachable");
   const capabilities = ["ticketing", "documentation", "observability", "database", "deployments"];
+  await writeReadySourceRegistry(projectRoot, capabilities);
+  const tokenVariable = "ROOTY_UNREACHABLE_TEST_MCP_OAUTH_TOKEN";
+  const previousToken = process.env[tokenVariable];
+  process.env[tokenVariable] = "test-token";
   await writeJson(path.join(projectRoot, ".investigator/activated-connectors.json"), {
     schema_version: 1,
     connectors: capabilities.map((capability) => ({
@@ -278,58 +316,92 @@ test("doctor fails every unreachable activated connector", async () => {
       provider: "unreachable-test",
       endpoint: `https://unreachable.invalid/${capability}`,
       auth: "oauth",
+      oauth_access_token_env_var: tokenVariable,
       allowed_tools: ["safe_read"],
       doctor_probe: { tool: "safe_read", arguments: { limit: 1 } }
     }))
   });
-  const result = await runDoctor({ packageRoot: ROOT, projectRoot, connectorTimeoutMs: 200 });
-  assert.equal(result.ok, false);
-  for (const capability of capabilities) {
-    assert.equal(result.checks.find((check) => check.name === `rooty_${capability}-initialize`)?.status, "FAIL");
+  try {
+    const result = await runDoctor({ packageRoot: ROOT, projectRoot, connectorTimeoutMs: 200 });
+    assert.equal(result.ok, false);
+    for (const capability of capabilities) {
+      assert.equal(result.checks.find((check) => check.name === `rooty_${capability}-authentication`)?.status, "PASS");
+      assert.equal(result.checks.find((check) => check.name === `rooty_${capability}-initialize`)?.status, "FAIL");
+    }
+  } finally {
+    if (previousToken === undefined) delete process.env[tokenVariable];
+    else process.env[tokenVariable] = previousToken;
   }
 });
 
 test("doctor verifies auth, initialize, tool listing, and a harmless read for an activated connector", async () => {
-  const fake = await startFakeHttpMcp();
+  const tokenVariable = "ROOTY_DOCTOR_TEST_MCP_OAUTH_TOKEN";
+  const previousToken = process.env[tokenVariable];
+  process.env[tokenVariable] = "doctor-test-token";
+  const fake = await startFakeHttpMcp({ expectedAuthorization: "Bearer doctor-test-token" });
   try {
     const projectRoot = await tempDirectory("rooty-doctor-live");
+    const capabilities = ["ticketing", "documentation", "observability", "database", "deployments"];
+    await writeReadySourceRegistry(projectRoot, capabilities);
     await writeJson(path.join(projectRoot, ".investigator/activated-connectors.json"), {
       schema_version: 1,
-      connectors: [{
-        name: "rooty_test",
-        capability: "observability",
+      connectors: capabilities.map((capability) => ({
+        name: `rooty_${capability}`,
+        capability,
         provider: "test",
         endpoint: fake.endpoint,
-        auth: "none",
+        auth: "oauth",
+        oauth_access_token_env_var: tokenVariable,
         allowed_tools: ["safe_read"],
         doctor_probe: { tool: "safe_read", arguments: { limit: 1 } }
-      }]
+      }))
     });
     const result = await runDoctor({ packageRoot: ROOT, projectRoot, connectorTimeoutMs: 1000 });
     assert.equal(result.ok, true, JSON.stringify(result.checks));
     for (const phase of ["authentication", "initialize", "tools-list", "read-probe"]) {
-      assert.equal(result.checks.find((check) => check.name === `rooty_test-${phase}`)?.status, "PASS");
+      assert.equal(result.checks.find((check) => check.name === `rooty_observability-${phase}`)?.status, "PASS");
     }
-    assert.deepEqual(fake.methods, ["initialize", "notifications/initialized", "tools/list", "tools/call"]);
+    for (const method of ["initialize", "notifications/initialized", "tools/list", "tools/call"]) {
+      assert.equal(fake.methods.filter((candidate) => candidate === method).length, capabilities.length);
+    }
   } finally {
     fake.server.close();
     await once(fake.server, "close");
+    if (previousToken === undefined) delete process.env[tokenVariable];
+    else process.env[tokenVariable] = previousToken;
   }
 });
 
+test("doctor distinguishes production readiness from package-only health", async () => {
+  const projectRoot = await tempDirectory("rooty-doctor-readiness");
+  const strict = await runDoctor({ packageRoot: ROOT, projectRoot });
+  assert.equal(strict.ok, false);
+  assert.equal(strict.checks.find((check) => check.name === "source-registry")?.status, "FAIL");
+  assert.equal(strict.checks.find((check) => check.name === "activated-connectors")?.status, "FAIL");
+  const packageOnly = await runDoctor({ packageRoot: ROOT, projectRoot, requireActivatedConnectors: false });
+  assert.equal(packageOnly.ok, true, JSON.stringify(packageOnly.checks));
+  assert.equal(packageOnly.checks.find((check) => check.name === "source-registry")?.status, "WARN");
+  assert.equal(packageOnly.checks.find((check) => check.name === "activated-connectors")?.status, "WARN");
+  await writeReadySourceRegistry(projectRoot, ["observability"]);
+  const partial = await runDoctor({ packageRoot: ROOT, projectRoot });
+  assert.equal(partial.ok, false);
+  assert.match(partial.checks.find((check) => check.name === "source-registry")?.message, /ticketing/);
+});
+
 test("doctor verifies package health and starts the bundled connector", async () => {
-  const result = await runDoctor({ packageRoot: ROOT, projectRoot: ROOT });
+  const result = await runDoctor({ packageRoot: ROOT, projectRoot: ROOT, requireActivatedConnectors: false });
   assert.equal(result.ok, true, JSON.stringify(result.checks));
   assert.equal(result.checks.find((check) => check.name === "mcp-startup").status, "PASS");
   assert.equal(result.checks.find((check) => check.name === "replay-suite").status, "PASS");
 });
 
-test("package is publishable under rooty, retains the alias, and includes the GIF", async () => {
+test("package is publishable under rooty, retains the alias, includes docs, and excludes the GitHub-only GIF", async () => {
   const manifest = await readJson(path.join(ROOT, "package.json"));
   assert.notEqual(manifest.private, true);
   assert.equal(manifest.bin.rooty, "./bin/investigator.js");
   assert.equal(manifest.bin.investigator, "./bin/investigator.js");
-  assert.ok(manifest.files.includes("rooty-how-it-works.gif"));
+  assert.ok(manifest.files.includes("docs/"));
+  assert.equal(manifest.files.includes("rooty-how-it-works.gif"), false);
   const gif = await readFile(path.join(ROOT, "rooty-how-it-works.gif"));
   assert.match(gif.subarray(0, 6).toString("ascii"), /^GIF8[79]a$/);
 });
@@ -367,13 +439,21 @@ function rpcOnce(request) {
   });
 }
 
-async function startFakeHttpMcp() {
+async function startFakeHttpMcp({ expectedAuthorization } = {}) {
   const methods = [];
   const server = createServer(async (request, response) => {
     let body = "";
     for await (const chunk of request) body += chunk.toString();
     const message = JSON.parse(body);
     methods.push(message.method);
+    if (expectedAuthorization && request.headers.authorization !== expectedAuthorization) {
+      response.writeHead(401).end();
+      return;
+    }
+    if (message.method !== "initialize" && request.headers["mcp-protocol-version"] !== "2025-11-25") {
+      response.writeHead(400).end("missing negotiated MCP protocol header");
+      return;
+    }
     if (message.method === "notifications/initialized") {
       response.writeHead(202).end();
       return;
@@ -394,6 +474,18 @@ async function startFakeHttpMcp() {
   await once(server, "listening");
   const address = server.address();
   return { server, methods, endpoint: `http://127.0.0.1:${address.port}/mcp` };
+}
+
+async function writeReadySourceRegistry(projectRoot, capabilities) {
+  await writeJson(path.join(projectRoot, ".investigator/sources.json"), {
+    schema_version: 1,
+    service: path.basename(projectRoot),
+    environments: {
+      production: {
+        capabilities: Object.fromEntries(capabilities.map((capability) => [capability, { status: "ready-for-host-rendering" }]))
+      }
+    }
+  });
 }
 
 function runProcess(command, args) {

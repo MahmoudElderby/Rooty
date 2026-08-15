@@ -27,7 +27,8 @@ export async function runEvaluation({ casesFile }) {
     const unsupported = assessment.status === "CONFIRMED" && (
       !assessment.chain_complete ||
       !assessment.distinct_evidence_per_step ||
-      !assessment.independently_corroborated ||
+      !assessment.corroboration_satisfied ||
+      !assessment.first_bad_state_established ||
       !assessment.alternatives_tested ||
       assessment.critical_gaps.length > 0
     );

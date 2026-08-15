@@ -2,6 +2,21 @@
   "name": "rooty-investigator",
   "version": "0.1.0",
   "description": "Portable, read-only root-cause investigation skill and setup CLI",
+  "keywords": [
+    "ai-agent",
+    "debugging",
+    "incident-investigation",
+    "mcp",
+    "root-cause-analysis"
+  ],
+  "homepage": "https://github.com/MahmoudElderby/Rooty#readme",
+  "bugs": {
+    "url": "https://github.com/MahmoudElderby/Rooty/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MahmoudElderby/Rooty.git"
+  },
   "type": "module",
   "bin": {
     "rooty": "./bin/investigator.js",
@@ -9,18 +24,18 @@
   },
   "files": [
     "bin/",
+    "docs/",
     "evals/",
     "hosts/",
     "memory/",
     "setup/",
     "skill/",
-    "src/",
-    "rooty-how-it-works.gif"
+    "src/"
   ],
   "scripts": {
     "test": "node --test tests/*.test.js",
     "eval": "node bin/investigator.js eval",
-    "doctor": "node bin/investigator.js doctor"
+    "doctor": "node bin/investigator.js doctor --package-only"
   },
   "engines": {
     "node": ">=20"

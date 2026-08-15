@@ -116,10 +116,18 @@ function validateEndpoint(value, capability) {
   return parsed.toString();
 }
 
-function resolveAuth(requested, bearerTokenEnv, recipe, endpoint, capability) {
+function resolveAuth(requested, bearerTokenEnv, oauthTokenEnv, recipe, endpoint, capability) {
   const selected = requested ?? (recipe.auth === "oauth" ? "oauth" : undefined);
   if (!selected) return { auth: "unconfigured", issue: `${capability}.auth` };
   if (!["oauth", "bearer-env", "none"].includes(selected)) throw new Error(`Invalid ${capability} auth mode: ${selected}`);
+  if (selected === "oauth") {
+    const providerName = recipe.id.toUpperCase().replace(/[^A-Z0-9]+/g, "_");
+    const variable = oauthTokenEnv ?? `ROOTY_${providerName}_MCP_OAUTH_TOKEN`;
+    if (!/^[A-Z][A-Z0-9_]{2,127}$/.test(variable)) {
+      throw new Error(`${capability} OAuth requires a valid --${capability}-oauth-token-env environment-variable name`);
+    }
+    return { auth: selected, oauth_access_token_env_var: variable };
+  }
   if (selected === "none") {
     const hostname = new URL(endpoint).hostname;
     if (!["localhost", "127.0.0.1", "::1"].includes(hostname)) throw new Error(`${capability} may use auth=none only with a loopback MCP URL`);
@@ -131,7 +139,7 @@ function resolveAuth(requested, bearerTokenEnv, recipe, endpoint, capability) {
   return { auth: selected };
 }
 
-export async function configureSources({ packageRoot, projectRoot, discoveryFile, endpoints = {}, auth = {}, bearerTokenEnv = {}, providers = {} }) {
+export async function configureSources({ packageRoot, projectRoot, discoveryFile, endpoints = {}, auth = {}, bearerTokenEnv = {}, oauthTokenEnv = {}, providers = {} }) {
   const targetDiscovery = discoveryFile ?? path.join(projectRoot, ".investigator/discovery.json");
   const discovery = await pathExists(targetDiscovery)
     ? await readJson(targetDiscovery)
@@ -173,7 +181,7 @@ export async function configureSources({ packageRoot, projectRoot, discoveryFile
     const endpointValue = endpoints[capability] ?? reusedEndpoint;
     const endpoint = endpointValue ? validateEndpoint(endpointValue, capability) : undefined;
     if (!endpoint) unresolved.push(`${capability}.endpoint`);
-    const authResult = endpoint ? resolveAuth(auth[capability], bearerTokenEnv[capability], recipe, endpoint, capability) : { auth: "unconfigured" };
+    const authResult = endpoint ? resolveAuth(auth[capability], bearerTokenEnv[capability], oauthTokenEnv[capability], recipe, endpoint, capability) : { auth: "unconfigured" };
     if (authResult.issue) unresolved.push(authResult.issue);
     configured[capability] = {
       provider: recipe.id,
@@ -181,6 +189,7 @@ export async function configureSources({ packageRoot, projectRoot, discoveryFile
       required_access: "read-only",
       auth: authResult.auth,
       ...(authResult.bearer_token_env_var ? { bearer_token_env_var: authResult.bearer_token_env_var } : {}),
+      ...(authResult.oauth_access_token_env_var ? { oauth_access_token_env_var: authResult.oauth_access_token_env_var } : {}),
       ...(endpoint ? { endpoint } : {}),
       endpoint_env_reference: recipe.endpoint_env,
       credential_env: recipe.credential_env ?? [],
