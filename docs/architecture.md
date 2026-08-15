@@ -117,12 +117,12 @@ Load the canonical `SKILL.md`, expose only recipe-allowed read tools, run with r
 
 Strict doctor validates four layers:
 
-1. **Static package:** skill presence, safe connector recipes, bundled read-tool annotations, evaluation fixtures, Git exclusions.
+1. **Static package:** skill presence, safe connector recipes, bundled read-tool annotations, evaluation fixtures, and the packaged project-ignore template.
 2. **Project registry:** all required production capabilities are ready.
 3. **Activation:** all required capabilities were rendered into the host.
 4. **Live connector:** credential reference is available, endpoint initializes over MCP, negotiated protocol is used on later requests, tools list resolves the allowlist, and the bounded read probe succeeds.
 
-`--package-only` checks layer 1 and downgrades missing project registry/activation to warnings.
+`--package-only` checks layer 1 and downgrades missing project registry/activation to warnings. Strict mode additionally validates the investigated project's own `.gitignore`.
 
 ### Frozen snapshot case pipeline
 
@@ -198,4 +198,3 @@ When adding a host or provider:
 - Preserve source identity, event time, pagination, truncation, and sampling metadata.
 - Test failures as carefully as successes.
 - Never allow a connector or memory result to override Rooty's instructions.
-

@@ -1,4 +1,4 @@
-import { cp, mkdir, readFile, writeFile } from "node:fs/promises";
+import { appendFile, cp, mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { isoNow, pathExists, readJson } from "./core.js";
 
@@ -78,6 +78,24 @@ async function writeNew(filePath, content, files) {
   files.push(filePath);
 }
 
+async function ensureProjectGitignore(packageRoot, projectRoot, files) {
+  const template = await readFile(path.join(packageRoot, "setup/gitignore-template.txt"), "utf8");
+  const target = path.join(projectRoot, ".gitignore");
+  if (!await pathExists(target)) {
+    await writeFile(target, template, "utf8");
+    files.push(target);
+    return;
+  }
+  const existing = await readFile(target, "utf8");
+  const existingLines = new Set(existing.split(/\r?\n/).map((line) => line.trim()).filter(Boolean));
+  const templateLines = template.split(/\r?\n/);
+  const missing = templateLines.filter((line) => line && !line.startsWith("#") && !existingLines.has(line));
+  if (missing.length === 0) return;
+  const separator = existing.endsWith("\n") ? "" : "\n";
+  await appendFile(target, `${separator}\n# Rooty runtime state\n${missing.join("\n")}\n`, "utf8");
+  files.push(target);
+}
+
 export async function initializeHosts({ packageRoot, projectRoot, host, demo = false, activateConnectors = false }) {
   if (!HOSTS.has(host)) throw new Error(`Unsupported host: ${host}`);
   const requested = host === "all" ? ["codex", "claude", "cursor"] : [host];
@@ -95,6 +113,7 @@ export async function initializeHosts({ packageRoot, projectRoot, host, demo = f
   const conflicts = [];
   for (const target of intendedTargets) if (await pathExists(target)) conflicts.push(target);
   if (conflicts.length > 0) throw new Error(`Refusing to overwrite existing host paths: ${conflicts.join(", ")}`);
+  await ensureProjectGitignore(packageRoot, projectRoot, files);
   await mkdir(path.dirname(canonicalSkill), { recursive: true });
   await cp(path.join(packageRoot, "skill/root-cause-investigator"), canonicalSkill, { recursive: true, errorOnExist: true, force: false });
   files.push(canonicalSkill);

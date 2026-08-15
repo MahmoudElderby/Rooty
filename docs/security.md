@@ -92,7 +92,7 @@ Real MCP connectors must implement equivalent or stronger controls. A recipe all
 
 Host adapters configure read-only behavior where supported. Persisted case data must live outside the investigated source tree. Rooty rejects lexical and symlink-resolved in-project case paths.
 
-This prevents an investigation from changing the repository and reduces the chance of committing incident evidence. Runtime case and draft paths are included in `.gitignore`.
+This prevents an investigation from changing the repository and reduces the chance of committing incident evidence. During initialization, Rooty creates or extends the project's `.gitignore` with its runtime case, discovery, and draft paths. Strict doctor verifies the project exclusions, while package-only doctor verifies the shipped template.
 
 Do not place raw production evidence in the Rooty repository. Apply your organization's retention, encryption, access-control, and deletion policies to external case storage.
 
@@ -139,4 +139,3 @@ Approved memory remains hypothesis input, not current-case evidence.
 ## Reporting a security issue
 
 Do not open a public issue containing credentials, customer data, production logs, or exploitable details. Contact the repository owner privately through an agreed security channel. Add a dedicated `SECURITY.md` with your final disclosure address before broad public adoption.
-

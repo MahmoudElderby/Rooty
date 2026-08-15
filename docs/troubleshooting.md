@@ -204,7 +204,10 @@ npm pack --dry-run --json
 
 Confirm `docs/` is present and `rooty-how-it-works.gif` is absent from the tarball. The GIF remains in Git and the README uses its absolute GitHub URL.
 
+### Package-only doctor reports a missing `.gitignore` inside the npm installation
+
+Upgrade to `rooty-investigator@0.1.1` or newer. Version `0.1.0` incorrectly read the repository-only `.gitignore`; newer versions validate the packaged `setup/gitignore-template.txt`.
+
 ### Evaluation reports unsupported confirmations
 
 A captured input produced `CONFIRMED` without satisfying the stopping rule. Inspect the case's causal links, distinct observed support, first bad state, alternative elimination, critical gaps, and corroboration/reproduction evidence. Fix the input or assessment logic; never relax the expected outcome to conceal missing proof.
-

@@ -7,6 +7,12 @@ import { TOOLS } from "./mcp.js";
 import { assertNoEmbeddedSecrets, pathExists, readJson } from "./core.js";
 
 const REQUIRED_CAPABILITIES = ["ticketing", "documentation", "observability", "database", "deployments"];
+const REQUIRED_GITIGNORE_ENTRIES = [
+  ".investigator/discovery.json",
+  ".investigator/cases/",
+  ".investigator/memory/drafts/",
+  ".rooty-cases/"
+];
 
 export async function runDoctor({ packageRoot, projectRoot, connectorTimeoutMs = 3000, requireActivatedConnectors = true }) {
   const checks = [];
@@ -88,11 +94,19 @@ export async function runDoctor({ packageRoot, projectRoot, connectorTimeoutMs =
   if (await pathExists(caseRoot)) add("FAIL", "case-location", "Case data is inside the source tree; move it outside before investigating");
   else add("PASS", "case-location", "No investigation evidence is stored in the source tree");
 
+  const ignoreFile = requireActivatedConnectors
+    ? path.join(projectRoot, ".gitignore")
+    : path.join(packageRoot, "setup/gitignore-template.txt");
   try {
-    const ignore = await readFile(path.join(packageRoot, ".gitignore"), "utf8");
-    add(ignore.includes(".investigator/cases") ? "PASS" : "FAIL", "gitignore", "runtime evidence and drafts are excluded from Git");
+    const ignore = await readFile(ignoreFile, "utf8");
+    const lines = new Set(ignore.split(/\r?\n/).map((line) => line.trim()).filter(Boolean));
+    const missing = REQUIRED_GITIGNORE_ENTRIES.filter((entry) => !lines.has(entry));
+    if (missing.length > 0) add("FAIL", "gitignore", `Missing Rooty exclusions in ${ignoreFile}: ${missing.join(", ")}`);
+    else add("PASS", "gitignore", requireActivatedConnectors
+      ? "Project excludes Rooty runtime evidence and drafts from Git"
+      : "Packaged project gitignore template covers Rooty runtime evidence and drafts");
   } catch (error) {
-    add("FAIL", "gitignore", error.message);
+    add("FAIL", "gitignore", `Cannot validate Rooty Git exclusions at ${ignoreFile}: ${error.message}`);
   }
 
   return { ok: !checks.some((check) => check.status === "FAIL"), checks };

@@ -1,6 +1,6 @@
 {
   "name": "rooty-investigator",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Portable, read-only root-cause investigation skill and setup CLI",
   "keywords": [
     "ai-agent",

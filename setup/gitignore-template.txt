@@ -1,0 +1,5 @@
+# Rooty runtime state
+.investigator/discovery.json
+.investigator/cases/
+.investigator/memory/drafts/
+.rooty-cases/

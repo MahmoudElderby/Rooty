@@ -182,10 +182,13 @@ Generated files:
 | Claude Code | `.claude/skills/root-cause-investigator/`, `.mcp.json`, `.claude/settings.json`, read-only hook and allowlist |
 | Cursor | `.cursor/mcp.json`, `.cursor/rules/root-cause-investigator.mdc` |
 | Activated project | `.investigator/activated-connectors.json` |
+| Project safety | Creates `.gitignore` when absent or appends missing Rooty runtime exclusions |
 
 Use `--host all` to render every included adapter. Use `--demo` to add the bundled local synthetic connector.
 
 Rooty deliberately refuses to overwrite any existing host target. Back up and merge existing host configuration, then rerun initialization only when the target paths are clear.
+
+Initialization preserves existing `.gitignore` content and appends only missing Rooty runtime paths. Strict doctor validates those project exclusions; package-only doctor validates the shipped template instead.
 
 ## 6. Run the readiness gate
 

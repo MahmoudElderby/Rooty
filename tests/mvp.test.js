@@ -244,8 +244,14 @@ test("discovery, host rendering, and activation preserve read-only controls", as
   assert.equal(listed.capabilities.database.required_access, "read-only");
 
   await assert.rejects(() => configureSources({ packageRoot: ROOT, projectRoot, endpoints: { ticketing: "https://user:password@mcp.example.test/" } }), /must not embed credentials/);
+  await writeFile(path.join(projectRoot, ".gitignore"), "dist/\n", "utf8");
   const initialized = await initializeHosts({ packageRoot: ROOT, projectRoot, host: "all", demo: true, activateConnectors: true });
   assert.ok(initialized.files.length >= 8);
+  const projectIgnore = await readFile(path.join(projectRoot, ".gitignore"), "utf8");
+  assert.match(projectIgnore, /^dist\//m);
+  for (const entry of [".investigator/discovery.json", ".investigator/cases/", ".investigator/memory/drafts/", ".rooty-cases/"]) {
+    assert.ok(projectIgnore.split(/\r?\n/).includes(entry), `missing project exclusion: ${entry}`);
+  }
   const codex = await readFile(path.join(projectRoot, ".codex/config.toml"), "utf8");
   assert.match(codex, /sandbox_mode = "read-only"/);
   assert.match(codex, /enabled_tools/);
@@ -398,12 +404,15 @@ test("doctor verifies package health and starts the bundled connector", async ()
 test("package is publishable under rooty, retains the alias, includes docs, and excludes the GitHub-only GIF", async () => {
   const manifest = await readJson(path.join(ROOT, "package.json"));
   assert.notEqual(manifest.private, true);
+  assert.match(manifest.version, /^\d+\.\d+\.\d+$/);
   assert.equal(manifest.bin.rooty, "./bin/investigator.js");
   assert.equal(manifest.bin.investigator, "./bin/investigator.js");
   assert.ok(manifest.files.includes("docs/"));
   assert.equal(manifest.files.includes("rooty-how-it-works.gif"), false);
   const gif = await readFile(path.join(ROOT, "rooty-how-it-works.gif"));
   assert.match(gif.subarray(0, 6).toString("ascii"), /^GIF8[79]a$/);
+  const ignoreTemplate = await readFile(path.join(ROOT, "setup/gitignore-template.txt"), "utf8");
+  assert.match(ignoreTemplate, /\.investigator\/memory\/drafts\//);
 });
 
 test("skill ledger validator accepts generated ledger", async () => {
@@ -477,6 +486,11 @@ async function startFakeHttpMcp({ expectedAuthorization } = {}) {
 }
 
 async function writeReadySourceRegistry(projectRoot, capabilities) {
+  await writeFile(
+    path.join(projectRoot, ".gitignore"),
+    await readFile(path.join(ROOT, "setup/gitignore-template.txt"), "utf8"),
+    "utf8"
+  );
   await writeJson(path.join(projectRoot, ".investigator/sources.json"), {
     schema_version: 1,
     service: path.basename(projectRoot),

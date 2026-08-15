@@ -45,7 +45,7 @@ Draft location:
 .investigator/memory/drafts/<case-id>.json
 ```
 
-Drafts are excluded from Git by the included `.gitignore`.
+Initialization adds the draft path to the target project's `.gitignore`, and strict doctor verifies that exclusion.
 
 ## What a card contains
 
@@ -113,4 +113,3 @@ Memory is advisory. Rooty must label it as historical context and validate every
 ## MVP boundary
 
 The memory CLI operates on the persisted snapshot-backed case format. The live host-driven workflow does not yet automatically capture its conversation and provider calls into that format. A future ingestion layer can bridge live investigations into the same verified ledger and review process without weakening the evidence standard.
-
