@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rooty.local/schema/case-card.schema.json",
+  "type": "object",
+  "required": ["schema_version", "case_id", "review_status", "services", "root_cause_class", "evidence_refs", "source_case_status", "content_fingerprint"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "case_id": { "type": "string", "pattern": "^INV-" },
+    "review_status": { "enum": ["draft", "approved", "rejected"] },
+    "services": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+    "root_cause_class": { "type": "string" },
+    "evidence_refs": { "type": "array", "items": { "type": "string", "pattern": "^E[0-9]+$" } },
+    "source_case_status": { "enum": ["CONFIRMED", "PROBABLE", "INCONCLUSIVE"] },
+    "content_fingerprint": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+  },
+  "additionalProperties": true
+}

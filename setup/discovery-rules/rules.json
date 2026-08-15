@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "rules": [
+    { "capability": "ticketing", "provider": "atlassian", "pattern": "(?:jira|atlassian|JIRA_[A-Z_]+|[A-Z]{2,10}-[0-9]+)", "confidence": 0.8 },
+    { "capability": "documentation", "provider": "atlassian", "pattern": "(?:confluence|ATLASSIAN_[A-Z_]+)", "confidence": 0.8 },
+    { "capability": "observability", "provider": "datadog", "pattern": "(?:datadog|DD_API_KEY|DD_SITE|ddtrace)", "confidence": 0.9 },
+    { "capability": "observability", "provider": "grafana", "pattern": "(?:grafana|loki|tempo|prometheus)", "confidence": 0.8 },
+    { "capability": "observability", "provider": "sentry", "pattern": "(?:sentry|SENTRY_DSN)", "confidence": 0.8 },
+    { "capability": "database", "provider": "postgres", "pattern": "(?:postgres(?:ql)?|PGHOST|DATABASE_URL|org\\.postgresql)", "confidence": 0.9 },
+    { "capability": "database", "provider": "mysql", "pattern": "(?:mysql|MYSQL_HOST|jdbc:mysql)", "confidence": 0.9 },
+    { "capability": "deployments", "provider": "argocd", "pattern": "(?:argocd|argoproj\\.io|ApplicationSet)", "confidence": 0.9 },
+    { "capability": "deployments", "provider": "kubernetes", "pattern": "(?:apiVersion:\\s*(?:apps/)?v1|kind:\\s*Deployment|helm)", "confidence": 0.7 }
+  ]
+}

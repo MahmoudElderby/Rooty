@@ -1,0 +1,124 @@
+{
+  "schema_version": 1,
+  "case_id": "INV-20260815-DEMO0001",
+  "ticket": {
+    "id": "ROOTY-101",
+    "reported_symptom": "Checkout returned 502 for payment pay_42 at 2026-08-14 13:04 EEST.",
+    "environment": "production",
+    "original_time_zone": "Africa/Cairo"
+  },
+  "expected_path": [
+    "checkout-api accepts the request and creates an authorization span",
+    "payments-api receives authorization success before its 3000 ms deadline",
+    "payments-api persists an authorized state transition",
+    "checkout-api maps the successful payment result to HTTP 200"
+  ],
+  "hypotheses": [
+    { "id": "H1", "statement": "The database rejected the payment write.", "status": "eliminated" },
+    { "id": "H2", "statement": "The authorization provider exceeded the client deadline before persistence.", "status": "confirmed" }
+  ],
+  "evidence": [
+    {
+      "evidence_id": "E1",
+      "classification": "REPORTED",
+      "source_type": "ticket",
+      "source_system": "jira-snapshot",
+      "environment": "production",
+      "event_time_range": "2026-08-14T11:04:00Z/2026-08-14T11:05:00Z",
+      "retrieved_at": "2026-08-15T12:20:00Z",
+      "query_or_locator": "ROOTY-101",
+      "permalink": "snapshot://tickets/ROOTY-101",
+      "observation": "Reporter states checkout returned 502 for pay_42.",
+      "limitations": "Ticket statement is not independent runtime proof.",
+      "supports": [],
+      "contradicts": []
+    },
+    {
+      "evidence_id": "E2",
+      "classification": "OBSERVED",
+      "source_type": "trace",
+      "source_system": "datadog-prod-snapshot",
+      "environment": "production",
+      "event_time_range": "2026-08-14T11:04:12Z/2026-08-14T11:04:16Z",
+      "retrieved_at": "2026-08-15T12:20:14Z",
+      "query_or_locator": "trace_id=4bf92f3577b34da6a3ce929d0e0e4736",
+      "permalink": "snapshot://traces/4bf92f3577b34da6a3ce929d0e0e4736",
+      "observation": "authorization span ended DEADLINE_EXCEEDED at 3000 ms before the persistence span could begin.",
+      "limitations": "Provider body is redacted.",
+      "supports": ["H2"],
+      "contradicts": ["H1"]
+    },
+    {
+      "evidence_id": "E3",
+      "classification": "OBSERVED",
+      "source_type": "database-history",
+      "source_system": "payments-ro-snapshot",
+      "environment": "production",
+      "event_time_range": "2026-08-14T11:04:00Z/2026-08-14T11:05:00Z",
+      "retrieved_at": "2026-08-15T12:21:10Z",
+      "query_or_locator": "SELECT state,event_time FROM payment_state_history WHERE payment_id=$1 AND event_time >= $2 AND event_time < $3 LIMIT 100",
+      "permalink": "snapshot://database/payment_state_history/pay_42",
+      "observation": "History contains created but no authorized or failed persistence event for pay_42 in the incident window.",
+      "limitations": "Snapshot includes temporal history, not only current state.",
+      "supports": ["H2"],
+      "contradicts": ["H1"]
+    },
+    {
+      "evidence_id": "E4",
+      "classification": "OBSERVED",
+      "source_type": "deployment",
+      "source_system": "argocd-prod-snapshot",
+      "environment": "production",
+      "event_time_range": "2026-08-14T10:00:00Z/2026-08-14T12:00:00Z",
+      "retrieved_at": "2026-08-15T12:22:00Z",
+      "query_or_locator": "application=payments-api-prod",
+      "permalink": "snapshot://deployments/payments-api-prod",
+      "observation": "payments-api version 8f13c7a and the 3000 ms authorization timeout were active at incident time.",
+      "limitations": "Frozen reviewed deployment snapshot.",
+      "supports": ["H2"],
+      "contradicts": []
+    },
+    {
+      "evidence_id": "E5",
+      "classification": "OBSERVED",
+      "source_type": "trace-comparison",
+      "source_system": "datadog-prod-snapshot",
+      "environment": "production",
+      "event_time_range": "2026-08-14T11:00:00Z/2026-08-14T11:10:00Z",
+      "retrieved_at": "2026-08-15T12:23:00Z",
+      "query_or_locator": "service=payments-api endpoint=authorize compare(status:ok,status:error) LIMIT 200",
+      "permalink": "snapshot://traces/compare/authorize",
+      "observation": "Successful requests in the same version persisted only after authorization completed below 3000 ms; database latency was normal in both cohorts.",
+      "limitations": "Comparison is bounded to 200 unsampled traces.",
+      "supports": ["H2"],
+      "contradicts": ["H1"]
+    }
+  ],
+  "analysis": {
+    "root_cause": "The authorization provider response exceeded the payments-api 3000 ms deadline, terminating the request before the authorized state could be persisted.",
+    "root_cause_class": "downstream-timeout-before-persistence",
+    "trigger": "Authorization-provider latency exceeded 3000 ms for the affected request.",
+    "trigger_class": "provider-latency-spike",
+    "first_bad_state": "The authorization span reached DEADLINE_EXCEEDED before any persistence span or authorized history event.",
+    "contributing_conditions": ["The client timeout was shorter than the observed provider response latency."],
+    "causal_chain": [
+      { "step": "The incident-time deployment enforced a 3000 ms authorization deadline.", "evidence_refs": ["E4"] },
+      { "step": "The provider call reached that deadline and ended DEADLINE_EXCEEDED before persistence.", "evidence_refs": ["E2"] },
+      { "step": "No authorized state transition was persisted for the affected payment.", "evidence_refs": ["E3"] },
+      { "step": "The failed path propagated as the reported checkout error; successful requests completed authorization below the deadline.", "evidence_refs": ["E5"] }
+    ],
+    "competing_hypotheses": [
+      { "statement": "The database rejected the write.", "status": "eliminated", "evidence_refs": ["E2", "E3", "E5"] },
+      { "statement": "A deployment or configuration different from the recorded incident version caused the behavior.", "status": "eliminated", "evidence_refs": ["E4"] }
+    ],
+    "evidence_gaps": [
+      { "description": "The downstream provider response body was redacted; span timing independently establishes the deadline path.", "critical": false }
+    ],
+    "handoff_notes": ["A separate remediation owner should evaluate timeout and provider-latency handling."],
+    "services": ["checkout-api", "payments-api"],
+    "symptom_signature": { "endpoint": "POST /checkout", "response_code": 502, "exception_fingerprint": "authorization-deadline-exceeded" },
+    "useful_pivots": ["trace_id", "payment_id"],
+    "query_recipes": ["payments-timeout-trace", "payment-state-at-time"],
+    "validated_versions": ["payments-api@8f13c7a"]
+  }
+}

@@ -1,0 +1,6 @@
+interface:
+  display_name: "Root-Cause Investigator"
+  short_description: "Evidence-first, read-only incident investigations"
+  default_prompt: "Use $root-cause-investigator to investigate this incident and report only evidence-backed causal findings."
+policy:
+  allow_implicit_invocation: true

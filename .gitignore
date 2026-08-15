@@ -1,0 +1,10 @@
+node_modules/
+coverage/
+*.log
+.env
+.env.*
+!.env.example
+.investigator/discovery.json
+.investigator/cases/
+.investigator/memory/drafts/
+.rooty-cases/

@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rooty.local/schema/source-catalog.schema.json",
+  "type": "object",
+  "required": ["schema_version", "service", "time_zone", "environments"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "service": { "type": "string", "minLength": 1 },
+    "aliases": { "type": "array", "items": { "type": "string" } },
+    "owners": { "type": "array", "items": { "type": "string" } },
+    "time_zone": { "const": "UTC" },
+    "environments": { "type": "object", "minProperties": 1 }
+  },
+  "additionalProperties": false
+}

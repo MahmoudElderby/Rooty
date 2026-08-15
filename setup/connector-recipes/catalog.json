@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "providers": [
+    { "id": "atlassian", "capabilities": ["ticketing", "documentation"], "auth": "oauth", "endpoint_env": "ATLASSIAN_MCP_URL", "credential_env": [], "required_access": "read-only", "allowed_tools": ["get_issue", "search_issues", "get_page", "search_pages"] },
+    { "id": "datadog", "capabilities": ["observability"], "auth": "environment-reference", "endpoint_env": "DATADOG_MCP_URL", "credential_env": ["DD_API_KEY", "DD_APP_KEY"], "required_access": "read-only", "allowed_tools": ["logs_search", "traces_search", "metrics_query"] },
+    { "id": "grafana", "capabilities": ["observability"], "auth": "oauth-or-environment-reference", "endpoint_env": "GRAFANA_MCP_URL", "credential_env": ["GRAFANA_SERVICE_ACCOUNT_TOKEN"], "required_access": "read-only", "allowed_tools": ["logs_search", "traces_search", "metrics_query"] },
+    { "id": "sentry", "capabilities": ["observability"], "auth": "oauth", "endpoint_env": "SENTRY_MCP_URL", "credential_env": [], "required_access": "read-only", "allowed_tools": ["search_events", "get_event", "search_issues"] },
+    { "id": "postgres", "capabilities": ["database"], "auth": "environment-reference", "endpoint_env": "POSTGRES_READONLY_MCP_URL", "credential_env": ["READONLY_DATABASE_URL"], "required_access": "read-only", "allowed_tools": ["schema_read", "query_readonly"] },
+    { "id": "mysql", "capabilities": ["database"], "auth": "environment-reference", "endpoint_env": "MYSQL_READONLY_MCP_URL", "credential_env": ["MYSQL_READONLY_URL"], "required_access": "read-only", "allowed_tools": ["schema_read", "query_readonly"] },
+    { "id": "argocd", "capabilities": ["deployments"], "auth": "oauth-or-environment-reference", "endpoint_env": "ARGOCD_READONLY_MCP_URL", "credential_env": ["ARGOCD_READONLY_TOKEN"], "required_access": "read-only", "allowed_tools": ["list_applications", "get_application", "list_revisions"] },
+    { "id": "kubernetes", "capabilities": ["deployments"], "auth": "environment-reference", "endpoint_env": "KUBERNETES_READONLY_MCP_URL", "credential_env": ["KUBECONFIG_READONLY"], "required_access": "read-only", "allowed_tools": ["list_deployments", "get_deployment", "list_events"] },
+    { "id": "rooty-snapshot", "capabilities": ["ticketing", "documentation", "observability", "database", "deployments"], "auth": "none", "endpoint_env": "ROOTY_MCP_SNAPSHOT", "credential_env": [], "required_access": "read-only", "allowed_tools": ["ticket_get", "docs_search", "logs_search", "traces_search", "db_query_readonly", "deployments_list"] }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rooty.local/schema/report-model.schema.json",
+  "type": "object",
+  "required": ["case_id", "status", "reported_symptom", "timeline", "expected_flow", "causal_chain", "evidence", "competing_hypotheses", "gaps", "handoff"],
+  "properties": {
+    "case_id": { "type": "string", "pattern": "^INV-" },
+    "status": { "enum": ["CONFIRMED", "PROBABLE", "INCONCLUSIVE"] },
+    "root_cause": { "type": ["string", "null"] }
+  },
+  "additionalProperties": true
+}

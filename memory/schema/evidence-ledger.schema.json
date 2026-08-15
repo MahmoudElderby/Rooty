@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rooty.local/schema/evidence-ledger.schema.json",
+  "type": "object",
+  "required": ["evidence_id", "case_id", "classification", "source_type", "source_system", "environment", "event_time_range", "retrieved_at", "query_or_locator", "observation", "limitations", "sequence", "previous_hash", "entry_hash"],
+  "properties": {
+    "evidence_id": { "type": "string", "pattern": "^E[0-9]+$" },
+    "case_id": { "type": "string", "pattern": "^INV-" },
+    "classification": { "enum": ["REPORTED", "OBSERVED", "INFERRED", "HYPOTHESIS", "UNKNOWN"] },
+    "event_time_range": { "type": "string", "pattern": "/" },
+    "retrieved_at": { "type": "string", "format": "date-time" },
+    "sequence": { "type": "integer", "minimum": 1 },
+    "previous_hash": { "type": "string" },
+    "entry_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+  },
+  "additionalProperties": true
+}
