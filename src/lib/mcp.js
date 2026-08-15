@@ -46,13 +46,45 @@ function rejectMutation(sql) {
   }
 }
 
+function validateSchema(value, schema, location = "arguments") {
+  if (schema.type === "object") {
+    if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error(`${location} must be an object`);
+    for (const key of schema.required ?? []) {
+      if (!Object.hasOwn(value, key)) throw new Error(`${location}.${key} is required`);
+    }
+    if (schema.additionalProperties === false) {
+      const unexpected = Object.keys(value).filter((key) => !Object.hasOwn(schema.properties ?? {}, key));
+      if (unexpected.length) throw new Error(`${location} contains unsupported properties: ${unexpected.join(", ")}`);
+    }
+    for (const [key, child] of Object.entries(value)) {
+      if (schema.properties?.[key]) validateSchema(child, schema.properties[key], `${location}.${key}`);
+    }
+    return;
+  }
+  if (schema.type === "string") {
+    if (typeof value !== "string") throw new Error(`${location} must be a string`);
+    if (schema.minLength !== undefined && value.length < schema.minLength) throw new Error(`${location} is too short`);
+    if (schema.maxLength !== undefined && value.length > schema.maxLength) throw new Error(`${location} is too long`);
+    if (schema.pattern && !new RegExp(schema.pattern).test(value)) throw new Error(`${location} has an invalid format`);
+    if (schema.format === "date-time" && !Number.isFinite(Date.parse(value))) throw new Error(`${location} must be an ISO date-time`);
+    return;
+  }
+  if (schema.type === "integer") {
+    if (!Number.isInteger(value)) throw new Error(`${location} must be an integer`);
+    if (schema.minimum !== undefined && value < schema.minimum) throw new Error(`${location} must be at least ${schema.minimum}`);
+    if (schema.maximum !== undefined && value > schema.maximum) throw new Error(`${location} must be at most ${schema.maximum}`);
+  }
+}
+
 function validateArguments(name, args) {
+  const tool = TOOLS.find((candidate) => candidate.name === name);
+  if (!tool) throw new Error(`Unknown or mutation-capable tool: ${name}`);
+  validateSchema(args, tool.inputSchema);
   if (!args || typeof args !== "object" || !String(args.case_id ?? "").startsWith("INV-")) throw new Error("A valid case_id is required for auditability");
   if (["logs_search", "traces_search", "deployments_list"].includes(name) && !isBoundedIsoRange(args.from, args.to, 24)) {
     throw new Error("A valid UTC time range of at most 24 hours is required");
   }
   if (name === "db_query_readonly") rejectMutation(String(args.sql ?? ""));
-  if (args.limit !== undefined && (!Number.isInteger(args.limit) || args.limit < 1 || args.limit > 1000)) throw new Error("limit must be between 1 and 1000");
 }
 
 async function loadSnapshot() {
@@ -63,7 +95,6 @@ async function loadSnapshot() {
 }
 
 export async function callReadTool(name, args) {
-  if (!TOOLS.some((tool) => tool.name === name)) throw new Error(`Unknown or mutation-capable tool: ${name}`);
   validateArguments(name, args);
   const snapshot = await loadSnapshot();
   let data;

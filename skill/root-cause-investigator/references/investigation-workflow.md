@@ -22,7 +22,7 @@ Walk boundaries in order and compare expected versus observed values. Identify t
 
 ## Stopping rule
 
-- `CONFIRMED`: every material causal link is directly supported; the first bad state and propagation are shown; material alternatives were tested; evidence is reproducible or independently corroborated; no critical proof is missing.
+- `CONFIRMED`: every material causal link has distinct `OBSERVED` support; one observation cannot stand in for multiple links; the first bad state and propagation are shown; every eliminated material alternative is supported by `OBSERVED` evidence; evidence is reproducible or independently corroborated across source systems or source types; no critical proof is missing.
 - `PROBABLE`: one explanation best fits observed evidence, but explicitly named critical corroboration is missing.
 - `INCONCLUSIVE`: evidence is unavailable, expired, sampled, contradictory, or insufficient to prefer a causal explanation.
 

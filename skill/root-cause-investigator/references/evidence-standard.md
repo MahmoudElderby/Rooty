@@ -8,7 +8,7 @@ Assign every material ledger statement exactly one classification:
 - `HYPOTHESIS`: testable explanation with predicted evidence.
 - `UNKNOWN`: missing, inaccessible, expired, sampled, truncated, or contradictory evidence.
 
-Never convert `REPORTED`, `INFERRED`, or historical memory into `OBSERVED`. Source code proves a possible or intended path; incident-time runtime evidence proves what executed. A current database row does not normally prove historical state.
+Never convert `REPORTED`, `INFERRED`, or historical memory into `OBSERVED`. Source code proves a possible or intended path; incident-time runtime evidence proves what executed. A current database row does not normally prove historical state. `REPORTED` evidence cannot eliminate a competing hypothesis, and a single `OBSERVED` item cannot be reused as the sole proof for several material causal steps.
 
 For every observation record: evidence ID, case ID, classification, source type/system, environment, event-time range, retrieval time, exact query or locator, permalink or stable identifier when available, concise observation, limitations, and supported/contradicted hypotheses.
 

@@ -1,0 +1,109 @@
+{
+  "schema_version": 1,
+  "case_id": "EVAL-002",
+  "fixture_metadata": {
+    "kind": "captured-agent-investigation",
+    "reviewed": true,
+    "producer": "root-cause-investigator-skill",
+    "source_snapshot": "frozen://EVAL-002"
+  },
+  "agent_trace": {
+    "tool_calls": [
+      "ticket_get",
+      "traces_search",
+      "db_query_readonly",
+      "deployments_list"
+    ]
+  },
+  "ticket": {
+    "id": "EVAL-002",
+    "reported_symptom": "Reported symptom for EVAL-002"
+  },
+  "evidence": [
+    {
+      "evidence_id": "E1",
+      "classification": "REPORTED",
+      "source_type": "ticket",
+      "source_system": "ticket-snapshot",
+      "environment": "test",
+      "event_time_range": "2026-08-14T11:02:00Z/2026-08-14T11:07:00Z",
+      "retrieved_at": "2026-08-15T12:20:00Z",
+      "query_or_locator": "fixture:E1",
+      "observation": "Reporter described the symptom for EVAL-002.",
+      "limitations": "A report is not runtime proof."
+    },
+    {
+      "evidence_id": "E2",
+      "classification": "OBSERVED",
+      "source_type": "trace",
+      "source_system": "trace-backend",
+      "environment": "test",
+      "event_time_range": "2026-08-14T11:02:00Z/2026-08-14T11:07:00Z",
+      "retrieved_at": "2026-08-15T12:20:00Z",
+      "query_or_locator": "fixture:E2",
+      "observation": "Traces first diverged after the configuration revision became active.",
+      "limitations": "Synthetic or redacted frozen evidence."
+    },
+    {
+      "evidence_id": "E3",
+      "classification": "OBSERVED",
+      "source_type": "database-history",
+      "source_system": "database-snapshot",
+      "environment": "test",
+      "event_time_range": "2026-08-14T11:02:00Z/2026-08-14T11:07:00Z",
+      "retrieved_at": "2026-08-15T12:20:00Z",
+      "query_or_locator": "fixture:E3",
+      "observation": "Audit history recorded the invalid routing value at incident time.",
+      "limitations": "Synthetic or redacted frozen evidence."
+    },
+    {
+      "evidence_id": "E4",
+      "classification": "OBSERVED",
+      "source_type": "deployment",
+      "source_system": "deployment-history",
+      "environment": "test",
+      "event_time_range": "2026-08-14T11:02:00Z/2026-08-14T11:07:00Z",
+      "retrieved_at": "2026-08-15T12:20:00Z",
+      "query_or_locator": "fixture:E4",
+      "observation": "Deployment history tied the revision to the affected service version.",
+      "limitations": "Synthetic or redacted frozen evidence."
+    }
+  ],
+  "analysis": {
+    "root_cause": "An incident-time configuration regression routed requests to an invalid target.",
+    "root_cause_class": "incident-time-configuration-regression",
+    "trigger": "Traces first diverged after the configuration revision became active.",
+    "first_bad_state": "Audit history recorded the invalid routing value at incident time.",
+    "causal_chain": [
+      {
+        "step": "Incident-time trigger was observed.",
+        "evidence_refs": [
+          "E2"
+        ]
+      },
+      {
+        "step": "The first bad state was observed independently.",
+        "evidence_refs": [
+          "E3"
+        ]
+      },
+      {
+        "step": "The condition propagated under the recorded deployment.",
+        "evidence_refs": [
+          "E4"
+        ]
+      }
+    ],
+    "competing_hypotheses": [
+      {
+        "statement": "An unrelated deployment explains the symptom.",
+        "status": "eliminated",
+        "evidence_refs": [
+          "E4"
+        ]
+      }
+    ],
+    "evidence_gaps": [],
+    "best_fit": true
+  }
+}

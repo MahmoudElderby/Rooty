@@ -6,6 +6,24 @@ const SKIP_DIRECTORIES = new Set([".git", "node_modules", ".investigator", "dist
 const TEXT_EXTENSIONS = new Set([".md", ".mdx", ".txt", ".json", ".yaml", ".yml", ".toml", ".tf", ".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".py", ".go", ".rs", ".java", ".kt", ".xml", ".properties", ".env.example"]);
 const MAX_FILES = 10_000;
 const MAX_FILE_BYTES = 1_000_000;
+const SENSITIVE_PATH_PART = /^(?:\.env(?:\..+)?|(?:secrets?|credentials?|passwords?|tokens?|private[-_.]?keys?|vault)(?:[._-].*)?)$/i;
+const STRUCTURED_CONFIG_EXTENSIONS = new Set([".json", ".yaml", ".yml", ".toml", ".properties"]);
+
+function isPotentiallySensitivePath(projectRoot, filePath) {
+  return path.relative(projectRoot, filePath).split(/[\\/]/).some((part) => SENSITIVE_PATH_PART.test(part) && part !== ".env.example");
+}
+
+function containsCredentialMaterial(filePath, content) {
+  if (/-----BEGIN [A-Z ]+PRIVATE KEY-----/.test(content)) return true;
+  if (!STRUCTURED_CONFIG_EXTENSIONS.has(path.extname(filePath).toLowerCase())) return false;
+  const assignment = /["']?(?:secret|password|passwd|token|access_token|api[_-]?key|app[_-]?key|private[_-]?key)["']?\s*[:=]\s*["']?([^"'#,\s][^"'#,\r\n]*)/gim;
+  for (const match of content.matchAll(assignment)) {
+    const value = match[1].trim();
+    const placeholder = /^(?:\$\{|\$[A-Z_]|process\.env|os\.environ|env\(|<|REDACTED|CHANGEME|EXAMPLE|PLACEHOLDER|null\b|false\b)/i.test(value) || /^[A-Z][A-Z0-9_]{2,}$/.test(value);
+    if (!placeholder) return true;
+  }
+  return false;
+}
 
 async function* walk(root) {
   const queue = [root];
@@ -34,6 +52,10 @@ export async function discoverSources({ packageRoot, projectRoot, output }) {
   let scannedFiles = 0;
   const warnings = [];
   for await (const filePath of walk(projectRoot)) {
+    if (isPotentiallySensitivePath(projectRoot, filePath)) {
+      warnings.push(`Skipped potentially sensitive file: ${path.relative(projectRoot, filePath)}`);
+      continue;
+    }
     scannedFiles += 1;
     let content;
     try {
@@ -43,6 +65,10 @@ export async function discoverSources({ packageRoot, projectRoot, output }) {
         continue;
       }
       content = buffer.toString("utf8");
+      if (containsCredentialMaterial(filePath, content)) {
+        warnings.push(`Skipped structured configuration containing credential material: ${path.relative(projectRoot, filePath)}`);
+        continue;
+      }
     } catch (error) {
       warnings.push(`Unreadable file: ${path.relative(projectRoot, filePath)} (${error.code ?? "error"})`);
       continue;
@@ -105,7 +131,7 @@ function resolveAuth(requested, bearerTokenEnv, recipe, endpoint, capability) {
   return { auth: selected };
 }
 
-export async function configureSources({ packageRoot, projectRoot, discoveryFile, endpoints = {}, auth = {}, bearerTokenEnv = {} }) {
+export async function configureSources({ packageRoot, projectRoot, discoveryFile, endpoints = {}, auth = {}, bearerTokenEnv = {}, providers = {} }) {
   const targetDiscovery = discoveryFile ?? path.join(projectRoot, ".investigator/discovery.json");
   const discovery = await pathExists(targetDiscovery)
     ? await readJson(targetDiscovery)
@@ -116,10 +142,25 @@ export async function configureSources({ packageRoot, projectRoot, discoveryFile
   const unresolved = [];
   for (const capability of capabilities) {
     const candidates = discovery.detections.filter((item) => item.capability === capability);
-    const selected = candidates.sort((left, right) => Number(right.confidence) - Number(left.confidence))[0];
+    const requestedProvider = providers[capability];
+    const selected = requestedProvider
+      ? candidates.find((item) => item.provider === requestedProvider) ?? {
+          capability,
+          provider: requestedProvider,
+          confidence: 1,
+          repository_classification: "REPORTED",
+          evidence: ["explicit-provider-selection"]
+        }
+      : candidates.sort((left, right) => Number(right.confidence) - Number(left.confidence))[0];
     if (!selected) {
-      configured[capability] = { provider: "unconfigured", status: "needs-user-input", required_access: "read-only" };
-      unresolved.push(capability);
+      const endpoint = endpoints[capability] ? validateEndpoint(endpoints[capability], capability) : undefined;
+      configured[capability] = {
+        provider: "unconfigured",
+        status: "needs-user-input",
+        required_access: "read-only",
+        ...(endpoint ? { endpoint } : {})
+      };
+      unresolved.push(`${capability}.provider`);
       continue;
     }
     const recipe = recipes.providers.find((item) => item.id === selected.provider && item.capabilities.includes(capability));
@@ -144,8 +185,9 @@ export async function configureSources({ packageRoot, projectRoot, discoveryFile
       endpoint_env_reference: recipe.endpoint_env,
       credential_env: recipe.credential_env ?? [],
       allowed_tools: recipe.allowed_tools,
+      doctor_probe: recipe.doctor_probes?.[capability],
       discovery_evidence: selected.evidence,
-      mapping_status: "INFERRED"
+      mapping_status: requestedProvider ? "USER_CONFIGURED" : "INFERRED"
     };
   }
   const registry = {

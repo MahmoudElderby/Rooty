@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "case_id": "EVAL-013",
+  "fixture_metadata": {
+    "kind": "captured-agent-investigation",
+    "reviewed": true,
+    "producer": "root-cause-investigator-skill",
+    "source_snapshot": "frozen://EVAL-013"
+  },
+  "agent_trace": {
+    "tool_calls": [
+      "ticket_get",
+      "traces_search",
+      "db_query_readonly"
+    ]
+  },
+  "ticket": {
+    "id": "EVAL-013",
+    "reported_symptom": "Reported symptom for EVAL-013"
+  },
+  "evidence": [
+    {
+      "evidence_id": "E1",
+      "classification": "REPORTED",
+      "source_type": "ticket",
+      "source_system": "ticket-snapshot",
+      "environment": "test",
+      "event_time_range": "2026-08-14T11:02:00Z/2026-08-14T11:07:00Z",
+      "retrieved_at": "2026-08-15T12:20:00Z",
+      "query_or_locator": "fixture:E1",
+      "observation": "The reporter described inconsistent state.",
+      "limitations": "A report is not runtime proof."
+    },
+    {
+      "evidence_id": "E2",
+      "classification": "OBSERVED",
+      "source_type": "trace",
+      "source_system": "trace-snapshot-a",
+      "environment": "test",
+      "event_time_range": "2026-08-14T11:02:00Z/2026-08-14T11:07:00Z",
+      "retrieved_at": "2026-08-15T12:20:00Z",
+      "query_or_locator": "fixture:E2",
+      "observation": "Trace snapshot A shows the downstream call completed.",
+      "limitations": "Synthetic or redacted frozen evidence."
+    },
+    {
+      "evidence_id": "E3",
+      "classification": "OBSERVED",
+      "source_type": "database-history",
+      "source_system": "database-snapshot-b",
+      "environment": "test",
+      "event_time_range": "2026-08-14T11:02:00Z/2026-08-14T11:07:00Z",
+      "retrieved_at": "2026-08-15T12:20:00Z",
+      "query_or_locator": "fixture:E3",
+      "observation": "Database snapshot B timestamps the transition before the trace began.",
+      "limitations": "Synthetic or redacted frozen evidence."
+    }
+  ],
+  "analysis": {
+    "root_cause": null,
+    "root_cause_class": "unknown",
+    "trigger": "Unknown.",
+    "first_bad_state": "Unknown.",
+    "causal_chain": [],
+    "competing_hypotheses": [
+      {
+        "statement": "No material alternative can be eliminated.",
+        "status": "untested",
+        "evidence_refs": []
+      }
+    ],
+    "evidence_gaps": [
+      {
+        "description": "Sources contradict one another.",
+        "critical": true
+      }
+    ],
+    "best_fit": false
+  }
+}

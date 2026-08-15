@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "case_id": "EVAL-010",
+  "fixture_metadata": {
+    "kind": "captured-agent-investigation",
+    "reviewed": true,
+    "producer": "root-cause-investigator-skill",
+    "source_snapshot": "frozen://EVAL-010"
+  },
+  "agent_trace": {
+    "tool_calls": [
+      "ticket_get",
+      "logs_search"
+    ]
+  },
+  "ticket": {
+    "id": "EVAL-010",
+    "reported_symptom": "Reported symptom for EVAL-010"
+  },
+  "evidence": [
+    {
+      "evidence_id": "E1",
+      "classification": "REPORTED",
+      "source_type": "ticket",
+      "source_system": "ticket-snapshot",
+      "environment": "test",
+      "event_time_range": "2026-08-14T11:02:00Z/2026-08-14T11:07:00Z",
+      "retrieved_at": "2026-08-15T12:20:00Z",
+      "query_or_locator": "fixture:E1",
+      "observation": "Reporter described the symptom for EVAL-010.",
+      "limitations": "A report is not runtime proof."
+    },
+    {
+      "evidence_id": "E2",
+      "classification": "OBSERVED",
+      "source_type": "log",
+      "source_system": "log-snapshot",
+      "environment": "test",
+      "event_time_range": "2026-08-14T11:02:00Z/2026-08-14T11:07:00Z",
+      "retrieved_at": "2026-08-15T12:20:00Z",
+      "query_or_locator": "fixture:E2",
+      "observation": "Logs contain duplicate request markers within the incident window.",
+      "limitations": "Synthetic or redacted frozen evidence."
+    }
+  ],
+  "analysis": {
+    "root_cause": "A retry race best fits the duplicate request markers.",
+    "root_cause_class": "retry-race",
+    "trigger": "Logs contain duplicate request markers within the incident window.",
+    "first_bad_state": "Not independently established.",
+    "causal_chain": [
+      {
+        "step": "A condition correlated with the symptom.",
+        "evidence_refs": [
+          "E2"
+        ]
+      }
+    ],
+    "competing_hypotheses": [
+      {
+        "statement": "Strongest alternative remains possible.",
+        "status": "untested",
+        "evidence_refs": []
+      }
+    ],
+    "evidence_gaps": [
+      {
+        "description": "Clock skew prevents exact event ordering.",
+        "critical": true
+      }
+    ],
+    "best_fit": true
+  }
+}

@@ -3,24 +3,24 @@ import { parseArgs, option, PACKAGE_ROOT } from "./lib/core.js";
 import { discoverSources, configureSources, listSources } from "./lib/sources.js";
 import { initializeHosts } from "./lib/hosts.js";
 import { runDoctor } from "./lib/doctor.js";
-import { runFrozenCase, renderExistingCase, appendEvidence } from "./lib/cases.js";
+import { assertCaseDirectoryOutsideProject, runFrozenCase, renderExistingCase, appendEvidence } from "./lib/cases.js";
 import { proposeMemory, approveMemory } from "./lib/memory.js";
 import { runEvaluation } from "./lib/evaluate.js";
 
 const HELP = `Rooty Investigator — evidence-first, read-only root-cause analysis
 
 Usage:
-  investigator init --host codex|claude|cursor|all [--project PATH] [--demo] [--activate-connectors]
-  investigator sources discover [--project PATH] [--output FILE]
-  investigator sources configure [--project PATH] [--discovery FILE] [--<capability>-mcp-url URL]
-  investigator sources list <service> --environment <name> [--project PATH]
-  investigator doctor [--project PATH] [--json]
-  investigator run <ticket> --snapshot FILE [--project PATH] [--case-dir PATH]
-  investigator evidence add --case-dir PATH --file FILE
-  investigator report --case-dir PATH
-  investigator memory propose --case-dir PATH [--project PATH]
-  investigator memory approve --draft FILE --reviewed-by NAME [--project PATH]
-  investigator eval [--cases FILE] [--json]
+  rooty init --host codex|claude|cursor|all [--project PATH] [--demo] [--activate-connectors]
+  rooty sources discover [--project PATH] [--output FILE]
+  rooty sources configure [--project PATH] [--discovery FILE] [--<capability>-provider ID] [--<capability>-mcp-url URL]
+  rooty sources list <service> --environment <name> [--project PATH]
+  rooty doctor [--project PATH] [--json]
+  rooty run <ticket> --snapshot FILE [--project PATH] [--case-dir PATH]
+  rooty evidence add --case-dir PATH --file FILE [--project PATH]
+  rooty report --case-dir PATH [--project PATH]
+  rooty memory propose --case-dir PATH [--project PATH]
+  rooty memory approve --draft FILE --case-dir PATH --reviewed-by NAME [--project PATH]
+  rooty eval [--cases FILE] [--json]
 
 The CLI never writes secrets. Generated source configuration contains only public
 endpoints, placeholders, and environment-variable references.`;
@@ -62,6 +62,7 @@ export async function main(argv) {
   if (command === "sources" && subcommand === "configure") {
     const capabilities = ["ticketing", "documentation", "observability", "database", "deployments"];
     const endpoints = Object.fromEntries(capabilities.filter((capability) => options[`${capability}-mcp-url`]).map((capability) => [capability, String(options[`${capability}-mcp-url`])]));
+    const providers = Object.fromEntries(capabilities.filter((capability) => options[`${capability}-provider`]).map((capability) => [capability, String(options[`${capability}-provider`])]));
     const auth = Object.fromEntries(capabilities.filter((capability) => options[`${capability}-auth`]).map((capability) => [capability, String(options[`${capability}-auth`])]));
     const bearerTokenEnv = Object.fromEntries(capabilities.filter((capability) => options[`${capability}-bearer-token-env`]).map((capability) => [capability, String(options[`${capability}-bearer-token-env`])]));
     const result = await configureSources({
@@ -69,6 +70,7 @@ export async function main(argv) {
       projectRoot: projectFrom(options),
       discoveryFile: options.discovery ? path.resolve(String(options.discovery)) : undefined,
       endpoints,
+      providers,
       auth,
       bearerTokenEnv
     });
@@ -115,14 +117,16 @@ export async function main(argv) {
 
   if (command === "evidence" && subcommand === "add") {
     if (!options["case-dir"] || !options.file) throw new Error("evidence add requires --case-dir and --file");
-    const result = await appendEvidence(path.resolve(String(options["case-dir"])), await importJson(path.resolve(String(options.file))));
+    const caseDir = await assertCaseDirectoryOutsideProject(projectFrom(options), path.resolve(String(options["case-dir"])));
+    const result = await appendEvidence(caseDir, await importJson(path.resolve(String(options.file))));
     process.stdout.write(`Appended ${result.evidence_id} at sequence ${result.sequence}\n`);
     return;
   }
 
   if (command === "report") {
     if (!options["case-dir"]) throw new Error("report requires --case-dir");
-    const result = await renderExistingCase(path.resolve(String(options["case-dir"])));
+    const caseDir = await assertCaseDirectoryOutsideProject(projectFrom(options), path.resolve(String(options["case-dir"])));
+    const result = await renderExistingCase(caseDir);
     process.stdout.write(`Rendered ${result.reportFile}\n`);
     return;
   }
@@ -135,11 +139,12 @@ export async function main(argv) {
   }
 
   if (command === "memory" && subcommand === "approve") {
-    if (!options.draft || !options["reviewed-by"]) throw new Error("memory approve requires --draft and --reviewed-by");
+    if (!options.draft || !options["case-dir"] || !options["reviewed-by"]) throw new Error("memory approve requires --draft, --case-dir, and --reviewed-by");
     const result = await approveMemory({
       projectRoot: projectFrom(options),
       draftFile: path.resolve(String(options.draft)),
-      reviewedBy: String(options["reviewed-by"])
+      reviewedBy: String(options["reviewed-by"]),
+      caseDir: path.resolve(String(options["case-dir"]))
     });
     process.stdout.write(`Approved: ${result.file}\n`);
     return;

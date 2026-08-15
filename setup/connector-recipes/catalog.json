@@ -1,14 +1,104 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "providers": [
-    { "id": "atlassian", "capabilities": ["ticketing", "documentation"], "auth": "oauth", "endpoint_env": "ATLASSIAN_MCP_URL", "credential_env": [], "required_access": "read-only", "allowed_tools": ["get_issue", "search_issues", "get_page", "search_pages"] },
-    { "id": "datadog", "capabilities": ["observability"], "auth": "environment-reference", "endpoint_env": "DATADOG_MCP_URL", "credential_env": ["DD_API_KEY", "DD_APP_KEY"], "required_access": "read-only", "allowed_tools": ["logs_search", "traces_search", "metrics_query"] },
-    { "id": "grafana", "capabilities": ["observability"], "auth": "oauth-or-environment-reference", "endpoint_env": "GRAFANA_MCP_URL", "credential_env": ["GRAFANA_SERVICE_ACCOUNT_TOKEN"], "required_access": "read-only", "allowed_tools": ["logs_search", "traces_search", "metrics_query"] },
-    { "id": "sentry", "capabilities": ["observability"], "auth": "oauth", "endpoint_env": "SENTRY_MCP_URL", "credential_env": [], "required_access": "read-only", "allowed_tools": ["search_events", "get_event", "search_issues"] },
-    { "id": "postgres", "capabilities": ["database"], "auth": "environment-reference", "endpoint_env": "POSTGRES_READONLY_MCP_URL", "credential_env": ["READONLY_DATABASE_URL"], "required_access": "read-only", "allowed_tools": ["schema_read", "query_readonly"] },
-    { "id": "mysql", "capabilities": ["database"], "auth": "environment-reference", "endpoint_env": "MYSQL_READONLY_MCP_URL", "credential_env": ["MYSQL_READONLY_URL"], "required_access": "read-only", "allowed_tools": ["schema_read", "query_readonly"] },
-    { "id": "argocd", "capabilities": ["deployments"], "auth": "oauth-or-environment-reference", "endpoint_env": "ARGOCD_READONLY_MCP_URL", "credential_env": ["ARGOCD_READONLY_TOKEN"], "required_access": "read-only", "allowed_tools": ["list_applications", "get_application", "list_revisions"] },
-    { "id": "kubernetes", "capabilities": ["deployments"], "auth": "environment-reference", "endpoint_env": "KUBERNETES_READONLY_MCP_URL", "credential_env": ["KUBECONFIG_READONLY"], "required_access": "read-only", "allowed_tools": ["list_deployments", "get_deployment", "list_events"] },
-    { "id": "rooty-snapshot", "capabilities": ["ticketing", "documentation", "observability", "database", "deployments"], "auth": "none", "endpoint_env": "ROOTY_MCP_SNAPSHOT", "credential_env": [], "required_access": "read-only", "allowed_tools": ["ticket_get", "docs_search", "logs_search", "traces_search", "db_query_readonly", "deployments_list"] }
+    {
+      "id": "atlassian",
+      "capabilities": ["ticketing", "documentation"],
+      "auth": "oauth",
+      "endpoint_env": "ATLASSIAN_MCP_URL",
+      "credential_env": [],
+      "required_access": "read-only",
+      "allowed_tools": ["get_issue", "search_issues", "get_page", "search_pages"],
+      "doctor_probes": {
+        "ticketing": { "tool": "search_issues", "arguments": { "query": "updated >= -1d ORDER BY updated DESC", "limit": 1 } },
+        "documentation": { "tool": "search_pages", "arguments": { "query": "Rooty doctor read probe", "limit": 1 } }
+      }
+    },
+    {
+      "id": "datadog",
+      "capabilities": ["observability"],
+      "auth": "environment-reference",
+      "endpoint_env": "DATADOG_MCP_URL",
+      "credential_env": ["DD_API_KEY", "DD_APP_KEY"],
+      "required_access": "read-only",
+      "allowed_tools": ["logs_search", "traces_search", "metrics_query"],
+      "doctor_probes": { "observability": { "tool": "logs_search", "arguments": { "query": "service:*", "from": "now-5m", "to": "now", "limit": 1 } } }
+    },
+    {
+      "id": "grafana",
+      "capabilities": ["observability"],
+      "auth": "oauth-or-environment-reference",
+      "endpoint_env": "GRAFANA_MCP_URL",
+      "credential_env": ["GRAFANA_SERVICE_ACCOUNT_TOKEN"],
+      "required_access": "read-only",
+      "allowed_tools": ["logs_search", "traces_search", "metrics_query"],
+      "doctor_probes": { "observability": { "tool": "logs_search", "arguments": { "query": "{}", "from": "now-5m", "to": "now", "limit": 1 } } }
+    },
+    {
+      "id": "sentry",
+      "capabilities": ["observability"],
+      "auth": "oauth",
+      "endpoint_env": "SENTRY_MCP_URL",
+      "credential_env": [],
+      "required_access": "read-only",
+      "allowed_tools": ["search_events", "get_event", "search_issues"],
+      "doctor_probes": { "observability": { "tool": "search_events", "arguments": { "query": "event.type:error", "limit": 1 } } }
+    },
+    {
+      "id": "postgres",
+      "capabilities": ["database"],
+      "auth": "environment-reference",
+      "endpoint_env": "POSTGRES_READONLY_MCP_URL",
+      "credential_env": ["READONLY_DATABASE_URL"],
+      "required_access": "read-only",
+      "allowed_tools": ["schema_read", "query_readonly"],
+      "doctor_probes": { "database": { "tool": "query_readonly", "arguments": { "sql": "SELECT 1 AS rooty_doctor_probe", "row_limit": 1 } } }
+    },
+    {
+      "id": "mysql",
+      "capabilities": ["database"],
+      "auth": "environment-reference",
+      "endpoint_env": "MYSQL_READONLY_MCP_URL",
+      "credential_env": ["MYSQL_READONLY_URL"],
+      "required_access": "read-only",
+      "allowed_tools": ["schema_read", "query_readonly"],
+      "doctor_probes": { "database": { "tool": "query_readonly", "arguments": { "sql": "SELECT 1 AS rooty_doctor_probe", "row_limit": 1 } } }
+    },
+    {
+      "id": "argocd",
+      "capabilities": ["deployments"],
+      "auth": "oauth-or-environment-reference",
+      "endpoint_env": "ARGOCD_READONLY_MCP_URL",
+      "credential_env": ["ARGOCD_READONLY_TOKEN"],
+      "required_access": "read-only",
+      "allowed_tools": ["list_applications", "get_application", "list_revisions"],
+      "doctor_probes": { "deployments": { "tool": "list_applications", "arguments": { "limit": 1 } } }
+    },
+    {
+      "id": "kubernetes",
+      "capabilities": ["deployments"],
+      "auth": "environment-reference",
+      "endpoint_env": "KUBERNETES_READONLY_MCP_URL",
+      "credential_env": ["KUBECONFIG_READONLY"],
+      "required_access": "read-only",
+      "allowed_tools": ["list_deployments", "get_deployment", "list_events"],
+      "doctor_probes": { "deployments": { "tool": "list_deployments", "arguments": { "namespace": "default", "limit": 1 } } }
+    },
+    {
+      "id": "rooty-snapshot",
+      "capabilities": ["ticketing", "documentation", "observability", "database", "deployments"],
+      "auth": "none",
+      "endpoint_env": "ROOTY_MCP_SNAPSHOT",
+      "credential_env": [],
+      "required_access": "read-only",
+      "allowed_tools": ["ticket_get", "docs_search", "logs_search", "traces_search", "db_query_readonly", "deployments_list"],
+      "doctor_probes": {
+        "ticketing": { "tool": "ticket_get", "arguments": { "case_id": "INV-DOCTOR", "ticket_id": "ROOTY-101" } },
+        "documentation": { "tool": "docs_search", "arguments": { "case_id": "INV-DOCTOR", "query": "payment", "limit": 1 } },
+        "observability": { "tool": "logs_search", "arguments": { "case_id": "INV-DOCTOR", "from": "2026-08-14T11:04:00Z", "to": "2026-08-14T11:05:00Z", "query": "*", "limit": 1 } },
+        "database": { "tool": "db_query_readonly", "arguments": { "case_id": "INV-DOCTOR", "sql": "SELECT 1", "row_limit": 1 } },
+        "deployments": { "tool": "deployments_list", "arguments": { "case_id": "INV-DOCTOR", "service": "payments-api", "from": "2026-08-14T11:04:00Z", "to": "2026-08-14T11:05:00Z" } }
+      }
+    }
   ]
 }

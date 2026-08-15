@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "case_id": "EVAL-006",
+  "fixture_metadata": {
+    "kind": "captured-agent-investigation",
+    "reviewed": true,
+    "producer": "root-cause-investigator-skill",
+    "source_snapshot": "frozen://EVAL-006"
+  },
+  "agent_trace": {
+    "tool_calls": [
+      "ticket_get",
+      "logs_search"
+    ]
+  },
+  "ticket": {
+    "id": "EVAL-006",
+    "reported_symptom": "Reported symptom for EVAL-006"
+  },
+  "evidence": [
+    {
+      "evidence_id": "E1",
+      "classification": "REPORTED",
+      "source_type": "ticket",
+      "source_system": "ticket-snapshot",
+      "environment": "test",
+      "event_time_range": "2026-08-14T11:02:00Z/2026-08-14T11:07:00Z",
+      "retrieved_at": "2026-08-15T12:20:00Z",
+      "query_or_locator": "fixture:E1",
+      "observation": "Reporter described the symptom for EVAL-006.",
+      "limitations": "A report is not runtime proof."
+    },
+    {
+      "evidence_id": "E2",
+      "classification": "OBSERVED",
+      "source_type": "log",
+      "source_system": "log-snapshot",
+      "environment": "test",
+      "event_time_range": "2026-08-14T11:02:00Z/2026-08-14T11:07:00Z",
+      "retrieved_at": "2026-08-15T12:20:00Z",
+      "query_or_locator": "fixture:E2",
+      "observation": "Bounded logs contain a downstream 429 at the reported time.",
+      "limitations": "Synthetic or redacted frozen evidence."
+    }
+  ],
+  "analysis": {
+    "root_cause": "A downstream rate limit best fits the bounded logs.",
+    "root_cause_class": "downstream-rate-limit",
+    "trigger": "Bounded logs contain a downstream 429 at the reported time.",
+    "first_bad_state": "Not independently established.",
+    "causal_chain": [
+      {
+        "step": "A condition correlated with the symptom.",
+        "evidence_refs": [
+          "E2"
+        ]
+      }
+    ],
+    "competing_hypotheses": [
+      {
+        "statement": "Strongest alternative remains possible.",
+        "status": "untested",
+        "evidence_refs": []
+      }
+    ],
+    "evidence_gaps": [
+      {
+        "description": "The independent trace was sampled out.",
+        "critical": true
+      }
+    ],
+    "best_fit": true
+  }
+}

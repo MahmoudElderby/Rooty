@@ -1,6 +1,6 @@
 import { cp, mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { pathExists, readJson } from "./core.js";
+import { isoNow, pathExists, readJson } from "./core.js";
 
 const HOSTS = new Set(["codex", "claude", "cursor", "all"]);
 const READ_TOOLS = ["ticket_get", "docs_search", "logs_search", "traces_search", "db_query_readonly", "deployments_list"];
@@ -41,7 +41,8 @@ function renderCodex(packageRoot, entries, demo) {
       ...(entry.auth === "oauth" ? ["auth = \"oauth\""] : []),
       ...(entry.auth === "bearer-env" ? [`bearer_token_env_var = ${tomlString(entry.bearer_token_env_var)}`] : []),
       `enabled_tools = [${entry.allowed_tools.map(tomlString).join(", ")}]`,
-      "enabled = false",
+      "enabled = true",
+      "required = true",
       ""
     );
   }
@@ -88,6 +89,7 @@ export async function initializeHosts({ packageRoot, projectRoot, host, demo = f
   if (requested.includes("codex")) intendedTargets.push(path.join(projectRoot, ".codex/config.toml"));
   if (requested.includes("claude")) intendedTargets.push(path.join(projectRoot, ".claude/skills/root-cause-investigator"), path.join(projectRoot, ".mcp.json"), path.join(projectRoot, ".claude/settings.json"), path.join(projectRoot, ".claude/hooks/rooty-readonly.mjs"), path.join(projectRoot, ".claude/rooty-allowed-tools.json"));
   if (requested.includes("cursor")) intendedTargets.push(path.join(projectRoot, ".cursor/mcp.json"), path.join(projectRoot, ".cursor/rules/root-cause-investigator.mdc"));
+  if (activateConnectors) intendedTargets.push(path.join(projectRoot, ".investigator/activated-connectors.json"));
   const conflicts = [];
   for (const target of intendedTargets) if (await pathExists(target)) conflicts.push(target);
   if (conflicts.length > 0) throw new Error(`Refusing to overwrite existing host paths: ${conflicts.join(", ")}`);
@@ -124,6 +126,23 @@ export async function initializeHosts({ packageRoot, projectRoot, host, demo = f
     await writeNew(path.join(projectRoot, ".cursor/mcp.json"), `${JSON.stringify(renderJsonHosts(packageRoot, entries, demo), null, 2)}\n`, files);
     const rule = await readFile(path.join(packageRoot, "hosts/cursor/root-cause-investigator.mdc"), "utf8");
     await writeNew(path.join(projectRoot, ".cursor/rules/root-cause-investigator.mdc"), rule, files);
+  }
+  if (activateConnectors) {
+    const activation = {
+      schema_version: 1,
+      activated_at: isoNow(),
+      connectors: entries.map((entry) => ({
+        name: entry.name,
+        capability: entry.capability,
+        provider: entry.provider,
+        endpoint: entry.endpoint,
+        auth: entry.auth,
+        ...(entry.bearer_token_env_var ? { bearer_token_env_var: entry.bearer_token_env_var } : {}),
+        allowed_tools: entry.allowed_tools,
+        doctor_probe: entry.doctor_probe
+      }))
+    };
+    await writeNew(path.join(projectRoot, ".investigator/activated-connectors.json"), `${JSON.stringify(activation, null, 2)}\n`, files);
   }
   return { files, connectorsActivated: entries.map((entry) => entry.name) };
 }

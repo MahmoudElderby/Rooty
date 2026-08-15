@@ -1,4 +1,4 @@
-import { appendFile, mkdir, readFile, writeFile } from "node:fs/promises";
+import { appendFile, mkdir, readFile, realpath, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { canonicalJson, isoNow, makeCaseId, pathExists, readJson, sha256, VALID_CLASSIFICATIONS, writeJson } from "./core.js";
 
@@ -20,28 +20,66 @@ export function assessCase(snapshot) {
   const ids = new Set(evidence.map((item) => item.evidence_id));
   if (ids.size !== evidence.length) throw new Error("Evidence IDs must be unique");
   const observed = new Set(evidence.filter((item) => item.classification === "OBSERVED").map((item) => item.evidence_id));
+  const evidenceById = new Map(evidence.map((item) => [item.evidence_id, item]));
   const analysis = snapshot.analysis ?? {};
   const chain = analysis.causal_chain ?? [];
-  const chainComplete = chain.length >= 2 && chain.every((step) =>
-    Array.isArray(step.evidence_refs) && step.evidence_refs.length > 0 && step.evidence_refs.every((id) => observed.has(id))
-  );
+  const chainEvidence = chain.map((step) => Array.isArray(step.evidence_refs) ? [...new Set(step.evidence_refs)] : []);
+  const chainReferencesObserved = chainEvidence.every((refs) => refs.length > 0 && refs.every((id) => observed.has(id)));
+  const chainEvidenceUse = new Map();
+  for (const refs of chainEvidence) for (const id of refs) chainEvidenceUse.set(id, (chainEvidenceUse.get(id) ?? 0) + 1);
+  const distinctEvidencePerStep = chainEvidence.every((refs) => refs.some((id) => chainEvidenceUse.get(id) === 1));
+  const chainObservedIds = new Set(chainEvidence.flat().filter((id) => observed.has(id)));
+  const observedSourceSystems = new Set([...chainObservedIds].map((id) => evidenceById.get(id)?.source_system).filter(Boolean));
+  const observedSourceTypes = new Set([...chainObservedIds].map((id) => evidenceById.get(id)?.source_type).filter(Boolean));
+  const independentlyCorroborated = observedSourceSystems.size >= 2 || observedSourceTypes.size >= 2;
+  const chainComplete = chain.length >= 3 && chainReferencesObserved && distinctEvidencePerStep && independentlyCorroborated;
   const competitors = analysis.competing_hypotheses ?? [];
   const alternativesTested = competitors.length > 0 && competitors.every((hypothesis) =>
     ["eliminated", "contradicted"].includes(hypothesis.status) &&
-    Array.isArray(hypothesis.evidence_refs) && hypothesis.evidence_refs.length > 0 && hypothesis.evidence_refs.every((id) => ids.has(id))
+    Array.isArray(hypothesis.evidence_refs) && hypothesis.evidence_refs.length > 0 && hypothesis.evidence_refs.every((id) => observed.has(id))
   );
   const criticalGaps = (analysis.evidence_gaps ?? []).filter((gap) => gap.critical === true);
-  const supportCount = new Set(chain.flatMap((step) => step.evidence_refs ?? []).filter((id) => observed.has(id))).size;
+  const supportCount = chainObservedIds.size;
   let status = "INCONCLUSIVE";
   if (analysis.root_cause && chainComplete && alternativesTested && criticalGaps.length === 0) status = "CONFIRMED";
   else if (analysis.root_cause && supportCount >= 1 && analysis.best_fit === true) status = "PROBABLE";
   return {
     status,
     chain_complete: chainComplete,
+    chain_references_observed: chainReferencesObserved,
+    distinct_evidence_per_step: distinctEvidencePerStep,
+    independently_corroborated: independentlyCorroborated,
     alternatives_tested: alternativesTested,
     critical_gaps: criticalGaps.map((gap) => gap.description),
-    observed_support_count: supportCount
+    observed_support_count: supportCount,
+    observed_source_count: observedSourceSystems.size
   };
+}
+
+function isSameOrWithin(parent, candidate) {
+  const relative = path.relative(parent, candidate);
+  return relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
+}
+
+export async function assertCaseDirectoryOutsideProject(projectRoot, caseDir) {
+  const project = await realpath(path.resolve(projectRoot));
+  const target = path.resolve(caseDir);
+  if (isSameOrWithin(path.resolve(projectRoot), target)) {
+    throw new Error(`Case directory must be outside the investigated project: ${target}`);
+  }
+
+  let existingAncestor = target;
+  while (!await pathExists(existingAncestor)) {
+    const parent = path.dirname(existingAncestor);
+    if (parent === existingAncestor) break;
+    existingAncestor = parent;
+  }
+  const resolvedAncestor = await realpath(existingAncestor);
+  const resolvedTarget = path.resolve(resolvedAncestor, path.relative(existingAncestor, target));
+  if (isSameOrWithin(project, resolvedTarget)) {
+    throw new Error(`Case directory resolves inside the investigated project: ${target}`);
+  }
+  return target;
 }
 
 function nextLedgerEntry(evidence, sequence, previousHash, caseId) {
@@ -101,7 +139,8 @@ export async function runFrozenCase({ projectRoot, ticket, snapshotFile, caseDir
   if (snapshot.ticket?.id !== ticket) throw new Error(`Snapshot ticket ${snapshot.ticket?.id ?? "<missing>"} does not match ${ticket}`);
   const assessment = assessCase(snapshot);
   const caseId = snapshot.case_id ?? makeCaseId();
-  const target = caseDir ?? path.join(path.dirname(projectRoot), ".rooty-cases", path.basename(projectRoot), caseId);
+  const requestedTarget = caseDir ?? path.join(path.dirname(projectRoot), ".rooty-cases", path.basename(projectRoot), caseId);
+  const target = await assertCaseDirectoryOutsideProject(projectRoot, requestedTarget);
   if (await pathExists(target)) throw new Error(`Refusing to overwrite existing case directory: ${target}`);
   await mkdir(target, { recursive: true });
   const state = {

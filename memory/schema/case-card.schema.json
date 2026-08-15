@@ -2,16 +2,40 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://rooty.local/schema/case-card.schema.json",
   "type": "object",
-  "required": ["schema_version", "case_id", "review_status", "services", "root_cause_class", "evidence_refs", "source_case_status", "content_fingerprint"],
+  "required": [
+    "schema_version", "case_id", "review_status", "services", "environments", "symptom_signature",
+    "root_cause_class", "trigger_class", "useful_pivots", "query_recipes", "validated_versions",
+    "evidence_refs", "source_case_status", "proposed_at", "source_case_fingerprint",
+    "source_ledger_head", "source_ledger_count", "content_fingerprint"
+  ],
   "properties": {
-    "schema_version": { "const": 1 },
-    "case_id": { "type": "string", "pattern": "^INV-" },
-    "review_status": { "enum": ["draft", "approved", "rejected"] },
+    "schema_version": { "const": 2 },
+    "case_id": { "type": "string", "pattern": "^INV-[A-Z0-9-]+$" },
+    "review_status": { "enum": ["draft", "approved"] },
     "services": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
-    "root_cause_class": { "type": "string" },
-    "evidence_refs": { "type": "array", "items": { "type": "string", "pattern": "^E[0-9]+$" } },
-    "source_case_status": { "enum": ["CONFIRMED", "PROBABLE", "INCONCLUSIVE"] },
-    "content_fingerprint": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+    "environments": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+    "symptom_signature": { "type": "object" },
+    "root_cause_class": { "type": "string", "minLength": 1 },
+    "trigger_class": { "type": "string", "minLength": 1 },
+    "useful_pivots": { "type": "array", "items": { "type": "string" } },
+    "query_recipes": { "type": "array", "items": { "type": "string" } },
+    "validated_versions": { "type": "array", "items": { "type": "string" } },
+    "evidence_refs": { "type": "array", "items": { "type": "string", "pattern": "^E[0-9]+$" }, "minItems": 1 },
+    "source_case_status": { "const": "CONFIRMED" },
+    "proposed_at": { "type": "string", "format": "date-time" },
+    "source_case_fingerprint": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "source_ledger_head": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "source_ledger_count": { "type": "integer", "minimum": 1 },
+    "content_fingerprint": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "reviewed_by": { "type": "string", "minLength": 1 },
+    "reviewed_at": { "type": "string", "format": "date-time" },
+    "expires_at": { "type": "string", "format": "date-time" }
   },
-  "additionalProperties": true
+  "allOf": [
+    {
+      "if": { "properties": { "review_status": { "const": "approved" } } },
+      "then": { "required": ["reviewed_by", "reviewed_at", "expires_at"] }
+    }
+  ],
+  "additionalProperties": false
 }

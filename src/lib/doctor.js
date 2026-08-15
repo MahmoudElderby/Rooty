@@ -1,12 +1,12 @@
 import { readFile } from "node:fs/promises";
 import { spawn } from "node:child_process";
 import path from "node:path";
-import { assessCase, readLedger, verifyLedgerEntries } from "./cases.js";
+import { readLedger, verifyLedgerEntries } from "./cases.js";
+import { runEvaluation } from "./evaluate.js";
 import { TOOLS } from "./mcp.js";
 import { assertNoEmbeddedSecrets, pathExists, readJson } from "./core.js";
-import { materializeReplayCase } from "./replay.js";
 
-export async function runDoctor({ packageRoot, projectRoot }) {
+export async function runDoctor({ packageRoot, projectRoot, connectorTimeoutMs = 3000 }) {
   const checks = [];
   const add = (status, name, message) => checks.push({ status, name, message });
   const canonical = path.join(projectRoot, ".agents/skills/root-cause-investigator/SKILL.md");
@@ -17,9 +17,13 @@ export async function runDoctor({ packageRoot, projectRoot }) {
   const recipeFile = path.join(packageRoot, "setup/connector-recipes/catalog.json");
   try {
     const recipes = await readJson(recipeFile);
-    const unsafe = recipes.providers.filter((provider) => provider.required_access !== "read-only" || provider.allowed_tools.some((tool) => /(create|update|delete|write|execute|rollback)/i.test(tool)));
-    if (unsafe.length) add("FAIL", "connector-recipes", `Unsafe recipes: ${unsafe.map((item) => item.id).join(", ")}`);
-    else add("PASS", "connector-recipes", `${recipes.providers.length} provider recipes are read-only allowlists`);
+    const unsafe = recipes.providers.filter((provider) =>
+      provider.required_access !== "read-only" ||
+      provider.allowed_tools.some((tool) => /(create|update|delete|write|execute|rollback)/i.test(tool)) ||
+      provider.capabilities.some((capability) => !provider.doctor_probes?.[capability])
+    );
+    if (unsafe.length) add("FAIL", "connector-recipes", `Unsafe or unprobeable recipes: ${unsafe.map((item) => item.id).join(", ")}`);
+    else add("PASS", "connector-recipes", `${recipes.providers.length} provider recipes have read-only allowlists and probes`);
   } catch (error) {
     add("FAIL", "connector-recipes", error.message);
   }
@@ -29,12 +33,14 @@ export async function runDoctor({ packageRoot, projectRoot }) {
     try {
       const sources = await readJson(sourcesFile);
       assertNoEmbeddedSecrets(sources, "sources");
-      const unresolved = Object.entries(sources.environments?.production?.capabilities ?? {}).filter(([, value]) => value.status !== "ready-for-host-rendering").map(([key]) => key);
+      const unresolved = Object.entries(sources.environments?.production?.capabilities ?? {})
+        .filter(([, value]) => value.status !== "ready-for-host-rendering")
+        .map(([key]) => key);
       add(unresolved.length ? "WARN" : "PASS", "source-registry", unresolved.length ? `Unresolved capabilities: ${unresolved.join(", ")}` : "All capabilities have connector references");
     } catch (error) {
       add("FAIL", "source-registry", error.message);
     }
-  } else add("WARN", "source-registry", "Run `investigator sources discover` and `sources configure`");
+  } else add("WARN", "source-registry", "Run `rooty sources discover` and `rooty sources configure`");
 
   const unsafeTools = TOOLS.filter((tool) => tool.annotations?.readOnlyHint !== true || tool.annotations?.destructiveHint !== false || /(create|update|delete|write|execute|rollback)/i.test(tool.name));
   if (unsafeTools.length) add("FAIL", "mcp-tools", `Unsafe tools: ${unsafeTools.map((tool) => tool.name).join(", ")}`);
@@ -47,21 +53,30 @@ export async function runDoctor({ packageRoot, projectRoot }) {
     add("FAIL", "mcp-startup", error.message);
   }
 
-  try {
-    const suite = await readJson(path.join(packageRoot, "evals/cases/replay-cases.json"));
-    if (suite.cases.length !== 15) add("FAIL", "replay-suite", `Expected 15 cases, found ${suite.cases.length}`);
-    else {
-      for (const item of suite.cases) assessCase(materializeReplayCase(item));
-      add("PASS", "replay-suite", "15 replay cases validate");
+  const activationFile = path.join(projectRoot, ".investigator/activated-connectors.json");
+  if (await pathExists(activationFile)) {
+    try {
+      const activation = await readJson(activationFile);
+      assertNoEmbeddedSecrets(activation, "activated-connectors");
+      const connectorChecks = await Promise.all((activation.connectors ?? []).map((connector) => doctorConnectorChecks(connector, connectorTimeoutMs)));
+      if (connectorChecks.length === 0) add("WARN", "activated-connectors", "Activation manifest contains no connectors");
+      else for (const group of connectorChecks) checks.push(...group);
+    } catch (error) {
+      add("FAIL", "activated-connectors", error.message);
     }
+  } else add("WARN", "activated-connectors", "No production connectors are activated");
+
+  try {
+    const evaluation = await runEvaluation({ casesFile: path.join(packageRoot, "evals/cases/replay-cases.json") });
+    if (!evaluation.ok || evaluation.total !== 15) add("FAIL", "replay-suite", `${evaluation.passed}/${evaluation.total} independent replay cases passed`);
+    else add("PASS", "replay-suite", "15 independent frozen replay cases validate");
   } catch (error) {
     add("FAIL", "replay-suite", error.message);
   }
 
   const caseRoot = path.join(projectRoot, ".investigator/cases");
-  if (await pathExists(caseRoot)) {
-    add("WARN", "case-location", "Case data is inside the source tree; prefer --case-dir outside the repository");
-  } else add("PASS", "case-location", "No investigation evidence is stored in the source tree");
+  if (await pathExists(caseRoot)) add("FAIL", "case-location", "Case data is inside the source tree; move it outside before investigating");
+  else add("PASS", "case-location", "No investigation evidence is stored in the source tree");
 
   try {
     const ignore = await readFile(path.join(packageRoot, ".gitignore"), "utf8");
@@ -76,6 +91,153 @@ export async function runDoctor({ packageRoot, projectRoot }) {
 export async function verifyCaseDirectory(caseDir) {
   const entries = await readLedger(caseDir);
   return verifyLedgerEntries(entries);
+}
+
+async function doctorConnectorChecks(connector, timeoutMs) {
+  const checks = [];
+  const add = (status, phase, message) => checks.push({ status, name: `${connector.name}-${phase}`, message });
+  if (!connector.name || !connector.endpoint || !Array.isArray(connector.allowed_tools)) {
+    add("FAIL", "configuration", "Activation entry is missing name, endpoint, or allowed_tools");
+    return checks;
+  }
+  if (connector.auth === "bearer-env") {
+    const variable = connector.bearer_token_env_var;
+    if (!variable || !process.env[variable]) {
+      add("FAIL", "authentication", `Bearer credential environment variable is unavailable: ${variable ?? "<missing>"}`);
+      return checks;
+    }
+    add("PASS", "authentication", `Bearer credential is available through ${variable}`);
+  } else if (connector.auth === "none") {
+    let hostname;
+    try { hostname = new URL(connector.endpoint).hostname; }
+    catch { add("FAIL", "authentication", `Invalid connector endpoint: ${connector.endpoint}`); return checks; }
+    if (!["localhost", "127.0.0.1", "::1"].includes(hostname)) {
+      add("FAIL", "authentication", "Unauthenticated MCP is allowed only on a loopback endpoint");
+      return checks;
+    }
+    add("PASS", "authentication", "Unauthenticated loopback MCP is configured; the live read probe will verify access");
+  } else if (connector.auth === "oauth") {
+    add("PASS", "authentication", `${connector.auth} is configured; the live read probe will verify access`);
+  } else {
+    add("FAIL", "authentication", `Unsupported or unconfigured auth mode: ${connector.auth ?? "<missing>"}`);
+    return checks;
+  }
+
+  const client = new HttpMcpClient(connector, timeoutMs);
+  try {
+    const initialized = await client.initialize();
+    add("PASS", "initialize", `Connected using MCP ${initialized.protocolVersion ?? "negotiated protocol"}`);
+  } catch (error) {
+    add("FAIL", "initialize", error.message);
+    return checks;
+  }
+
+  let tools;
+  try {
+    tools = await client.listTools();
+    const names = new Set(tools.map((tool) => tool.name));
+    const missing = connector.allowed_tools.filter((tool) => !names.has(tool));
+    if (missing.length) throw new Error(`Activated allowlist tools were not advertised: ${missing.join(", ")}`);
+    add("PASS", "tools-list", `${tools.length} tools advertised; activated allowlist resolved`);
+  } catch (error) {
+    add("FAIL", "tools-list", error.message);
+    return checks;
+  }
+
+  try {
+    const probe = connector.doctor_probe;
+    if (!probe?.tool || !connector.allowed_tools.includes(probe.tool)) throw new Error("A harmless doctor_probe from the activated allowlist is required");
+    if (!tools.some((tool) => tool.name === probe.tool)) throw new Error(`Probe tool is not advertised: ${probe.tool}`);
+    const result = await client.callTool(probe.tool, probe.arguments ?? {});
+    if (result?.isError === true) throw new Error(`Read probe returned an MCP tool error from ${probe.tool}`);
+    add("PASS", "read-probe", `${probe.tool} completed without a mutation request`);
+  } catch (error) {
+    add("FAIL", "read-probe", error.message);
+  }
+  return checks;
+}
+
+class HttpMcpClient {
+  constructor(connector, timeoutMs) {
+    this.connector = connector;
+    this.timeoutMs = timeoutMs;
+    this.nextId = 1;
+    this.sessionId = undefined;
+  }
+
+  async initialize() {
+    const result = await this.request("initialize", {
+      protocolVersion: "2025-11-25",
+      capabilities: {},
+      clientInfo: { name: "rooty-doctor", version: "0.1.0" }
+    });
+    await this.notify("notifications/initialized", {});
+    return result;
+  }
+
+  async listTools() {
+    const result = await this.request("tools/list", {});
+    if (!Array.isArray(result?.tools)) throw new Error("tools/list did not return a tools array");
+    return result.tools;
+  }
+
+  callTool(name, args) {
+    return this.request("tools/call", { name, arguments: args });
+  }
+
+  request(method, params) {
+    return this.send({ jsonrpc: "2.0", id: this.nextId++, method, params }, true);
+  }
+
+  notify(method, params) {
+    return this.send({ jsonrpc: "2.0", method, params }, false);
+  }
+
+  async send(body, expectsResponse) {
+    const headers = {
+      "content-type": "application/json",
+      accept: "application/json, text/event-stream"
+    };
+    if (this.sessionId) headers["mcp-session-id"] = this.sessionId;
+    if (this.connector.auth === "bearer-env") headers.authorization = `Bearer ${process.env[this.connector.bearer_token_env_var]}`;
+    let response;
+    try {
+      response = await fetch(this.connector.endpoint, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(this.timeoutMs)
+      });
+    } catch (error) {
+      throw new Error(`MCP ${body.method} connection failed for ${this.connector.endpoint}: ${error.message}`);
+    }
+    if (!response.ok) throw new Error(`MCP ${body.method} returned HTTP ${response.status}${[401, 403].includes(response.status) ? " (authentication unavailable or unauthorized)" : ""}`);
+    this.sessionId = response.headers.get("mcp-session-id") ?? this.sessionId;
+    const text = await response.text();
+    if (!expectsResponse && !text.trim()) return undefined;
+    const message = parseMcpMessage(text, expectsResponse ? body.id : undefined);
+    if (!message && expectsResponse) throw new Error(`MCP ${body.method} returned no JSON-RPC response`);
+    if (message?.error) throw new Error(`MCP ${body.method} error: ${message.error.message ?? JSON.stringify(message.error)}`);
+    return message?.result;
+  }
+}
+
+function parseMcpMessage(text, expectedId) {
+  const trimmed = text.trim();
+  if (!trimmed) return undefined;
+  try { return JSON.parse(trimmed); }
+  catch {
+    const messages = [];
+    for (const block of trimmed.split(/\r?\n\r?\n/)) {
+      const data = block.split(/\r?\n/).filter((line) => line.startsWith("data:")).map((line) => line.slice(5).trim()).join("\n");
+      if (!data || data === "[DONE]") continue;
+      try { messages.push(JSON.parse(data)); }
+      catch { /* try the next SSE event */ }
+    }
+    if (expectedId !== undefined) return messages.find((message) => message.id === expectedId) ?? messages.find((message) => message.error);
+    if (messages.length) return messages.at(-1);
+  }
+  throw new Error("Connector returned invalid JSON or SSE");
 }
 
 function probeBundledConnector(serverFile) {

@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "case_id": "EVAL-012",
+  "fixture_metadata": {
+    "kind": "captured-agent-investigation",
+    "reviewed": true,
+    "producer": "root-cause-investigator-skill",
+    "source_snapshot": "frozen://EVAL-012"
+  },
+  "agent_trace": {
+    "tool_calls": [
+      "ticket_get"
+    ]
+  },
+  "ticket": {
+    "id": "EVAL-012",
+    "reported_symptom": "Reported symptom for EVAL-012"
+  },
+  "evidence": [
+    {
+      "evidence_id": "E1",
+      "classification": "REPORTED",
+      "source_type": "ticket",
+      "source_system": "ticket-snapshot",
+      "environment": "test",
+      "event_time_range": "2026-08-14T11:02:00Z/2026-08-14T11:07:00Z",
+      "retrieved_at": "2026-08-15T12:20:00Z",
+      "query_or_locator": "fixture:E1",
+      "observation": "The report refers to an event outside retention.",
+      "limitations": "Runtime logs have expired."
+    }
+  ],
+  "analysis": {
+    "root_cause": null,
+    "root_cause_class": "unknown",
+    "trigger": "Unknown.",
+    "first_bad_state": "Unknown.",
+    "causal_chain": [],
+    "competing_hypotheses": [
+      {
+        "statement": "No material alternative can be eliminated.",
+        "status": "untested",
+        "evidence_refs": []
+      }
+    ],
+    "evidence_gaps": [
+      {
+        "description": "Logs are outside retention.",
+        "critical": true
+      }
+    ],
+    "best_fit": false
+  }
+}

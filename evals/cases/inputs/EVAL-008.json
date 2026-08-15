@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "case_id": "EVAL-008",
+  "fixture_metadata": {
+    "kind": "captured-agent-investigation",
+    "reviewed": true,
+    "producer": "root-cause-investigator-skill",
+    "source_snapshot": "frozen://EVAL-008"
+  },
+  "agent_trace": {
+    "tool_calls": [
+      "ticket_get",
+      "logs_search"
+    ]
+  },
+  "ticket": {
+    "id": "EVAL-008",
+    "reported_symptom": "Reported symptom for EVAL-008"
+  },
+  "evidence": [
+    {
+      "evidence_id": "E1",
+      "classification": "REPORTED",
+      "source_type": "ticket",
+      "source_system": "ticket-snapshot",
+      "environment": "test",
+      "event_time_range": "2026-08-14T11:02:00Z/2026-08-14T11:07:00Z",
+      "retrieved_at": "2026-08-15T12:20:00Z",
+      "query_or_locator": "fixture:E1",
+      "observation": "Reporter described the symptom for EVAL-008.",
+      "limitations": "A report is not runtime proof."
+    },
+    {
+      "evidence_id": "E2",
+      "classification": "OBSERVED",
+      "source_type": "log",
+      "source_system": "log-snapshot",
+      "environment": "test",
+      "event_time_range": "2026-08-14T11:02:00Z/2026-08-14T11:07:00Z",
+      "retrieved_at": "2026-08-15T12:20:00Z",
+      "query_or_locator": "fixture:E2",
+      "observation": "The current record lacks the expected derived state.",
+      "limitations": "Synthetic or redacted frozen evidence."
+    }
+  ],
+  "analysis": {
+    "root_cause": "A missing state transition best fits the current record.",
+    "root_cause_class": "state-transition-omission",
+    "trigger": "The current record lacks the expected derived state.",
+    "first_bad_state": "Not independently established.",
+    "causal_chain": [
+      {
+        "step": "A condition correlated with the symptom.",
+        "evidence_refs": [
+          "E2"
+        ]
+      }
+    ],
+    "competing_hypotheses": [
+      {
+        "statement": "Strongest alternative remains possible.",
+        "status": "untested",
+        "evidence_refs": []
+      }
+    ],
+    "evidence_gaps": [
+      {
+        "description": "Historical database state is unavailable.",
+        "critical": true
+      }
+    ],
+    "best_fit": true
+  }
+}
