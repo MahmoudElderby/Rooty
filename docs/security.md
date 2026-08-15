@@ -22,7 +22,7 @@ Rooty does not claim to sandbox a malicious MCP server or repair an over-privile
 |---|---|---|
 | Rooty skill and CLI | Investigation rules, validation, rendering, local assessment | Provider authorization |
 | AI host policy | Filesystem/tool restrictions supported by that host | Replacing provider-side permissions |
-| MCP recipe | Expected tool names, auth references, doctor probes | Server honesty or account least privilege |
+| MCP reference/proposal | Expected setup, credential bindings, tool restrictions, doctor probes | Server honesty or account least privilege |
 | MCP server | Returning provider data | Instructions embedded in returned text |
 | Provider identity/database role | Enforcing actual read permissions | Rooty's evidence interpretation |
 | Ticket, docs, logs, DB text, memory | Evidence content | Agent instructions |
@@ -46,7 +46,7 @@ MCP `readOnlyHint` and `destructiveHint` annotations are metadata. They are usef
 
 ## Credential handling
 
-Generated source and host files contain only environment-variable names. Rooty rejects:
+Every configured MCP entry must declare its credential bindings, but generated project and host files contain only environment-variable names, approved secret references, or host-managed OAuth metadata. Rooty rejects:
 
 - Credential values in secret-like object fields
 - Usernames or passwords embedded in MCP URLs
@@ -57,7 +57,7 @@ Generated source and host files contain only environment-variable names. Rooty r
 
 Do not commit token values, connection strings, private keys, raw `.env` files, or provider payloads.
 
-Rooty does not implement OAuth browser login, refresh-token storage, or credential rotation. Those remain provider/organization responsibilities.
+The mechanical installer does not start OAuth or store refresh tokens. The setup agent may initiate a host-managed OAuth flow only after separate user approval. Credential rotation remains a provider/organization responsibility.
 
 ## Prompt injection
 
@@ -90,9 +90,11 @@ Real MCP connectors must implement equivalent or stronger controls. A recipe all
 
 ## Filesystem and case isolation
 
+The project installer refuses filesystem roots, symlinked installation targets, and modified or unowned Rooty skill conflicts. Its manifest stores ownership hashes, not project evidence or credentials.
+
 Host adapters configure read-only behavior where supported. Persisted case data must live outside the investigated source tree. Rooty rejects lexical and symlink-resolved in-project case paths.
 
-This prevents an investigation from changing the repository and reduces the chance of committing incident evidence. During initialization, Rooty creates or extends the project's `.gitignore` with its runtime case, discovery, and draft paths. Strict doctor verifies the project exclusions, while package-only doctor verifies the shipped template.
+This prevents an investigation from changing the repository and reduces the chance of committing incident evidence. Advanced compatibility initialization creates or extends `.gitignore` with runtime case, discovery, and draft paths. Agent-led installation itself writes only the project skills, manifest, and confirmed documentation paths.
 
 Do not place raw production evidence in the Rooty repository. Apply your organization's retention, encryption, access-control, and deletion policies to external case storage.
 
@@ -123,15 +125,16 @@ Approved memory remains hypothesis input, not current-case evidence.
 
 ## Production readiness checklist
 
-- [ ] Every capability maps to the correct provider and environment.
-- [ ] Repository-inferred mappings were validated by an owner.
+- [ ] Data and observability map to the correct providers and environment; optional ticketing is explicitly requested or omitted.
+- [ ] Documentation paths are confirmed, and material documentation-derived choices were verified against current project evidence.
 - [ ] MCP endpoints use HTTPS or controlled loopback HTTP.
 - [ ] Every provider identity was independently proven read-only.
 - [ ] Database access uses a read-only role or replica with server-side limits.
 - [ ] Tokens are short-lived or managed outside project files.
+- [ ] Every active-host MCP entry declares all credential bindings without values.
 - [ ] Tool allowlists contain only required reads.
 - [ ] Doctor probes are harmless, bounded, and authorized.
-- [ ] Strict `rooty doctor` passes from the same environment that launches the host.
+- [ ] `rooty doctor` passes and the setup agent's live initialization/tool/probe checks pass from the same environment that launches the host.
 - [ ] Provider auditing records case IDs and tool calls.
 - [ ] Evidence storage and retention satisfy policy.
 - [ ] Remediation is handled by a separate workflow.

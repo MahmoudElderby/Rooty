@@ -1,3 +1,5 @@
 # Codex adapter
 
-`investigator init --host codex` installs the canonical skill at `.agents/skills/root-cause-investigator` and creates a project-scoped `.codex/config.toml`. The generated profile uses `sandbox_mode = "read-only"` and MCP `enabled_tools` allowlists. External servers remain disabled until endpoint references and read-only identities pass `investigator doctor`.
+`rooty install` places all Rooty skills under `.agents/skills/`, which Codex discovers at repository scope. During setup, the MCP-builder skill proposes a minimal project `.codex/config.toml` merge with forwarded credential names, explicit read-tool allowlists, required servers, and prompt-on-use approvals. The agent shows the diff and requests approval before writing or authenticating.
+
+`investigator init --host codex` remains available for the advanced compatibility path.

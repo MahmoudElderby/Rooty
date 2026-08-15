@@ -1,224 +1,113 @@
-# Project and connector setup
+# Project and MCP setup
 
-Rooty has no gateway in the MVP. The selected AI host connects directly to one MCP endpoint per configured capability. The same endpoint may satisfy more than one capability, such as Atlassian for ticketing and documentation.
+Rooty uses a mechanical installer followed by agent-led setup. The CLI establishes owned files and deterministic checks; the active Codex, Cursor, or Claude agent performs semantic discovery and guides approvals.
 
 ## Setup journey
 
-| User action | What Rooty does | Output |
+| State | Agent action | Developer sees |
 |---|---|---|
-| Install the npm package | Installs the dependency-free CLI and bundled assets | `rooty` and `investigator` commands |
-| Discover sources | Scans bounded, non-secret project text for provider signals | `.investigator/discovery.json` |
-| Validate detections | A human confirms inferred provider mappings and identifies gaps | Reviewed discovery |
-| Configure sources | Validates providers, HTTPS endpoints, auth modes, credential references, tool allowlists, and doctor probes | `.investigator/sources.json` |
-| Provide credentials | The user exposes tokens to the host process through environment variables | No credential file |
-| Initialize a host | Copies the canonical skill and renders host-specific read-only configuration | Host files and optional activation manifest |
-| Run doctor | Negotiates MCP, lists tools, checks allowlists, and performs bounded read probes | PASS/WARN/FAIL readiness report |
+| Installed | Confirm manifest and three skills | Installed locations and next prompt |
+| Docs confirmed | Confirm documentation entry points | Paths stored in `.rooty/project-context.json` |
+| Discovered | Read docs first, then targeted current source/config | Evidence for data and observability candidates |
+| Proposed | Build one provider/host MCP proposal | Config path, command/URL, credentials, controls, probe |
+| Approved | Request host-native approval | Exact writes and external actions |
+| Configured | Merge active-host MCP entry | Every credential binding declared in host config |
+| Verified | Initialize, list tools, enforce read-only, harmless read | `READY` or an actionable unresolved state |
 
-## 1. Discover sources
+## 1. Install project skills
 
-Run discovery from any location by explicitly naming the target project:
-
-```console
-rooty sources discover --project /path/to/project
-```
-
-Discovery scans up to 10,000 files of at most 1 MB each. It skips:
-
-- `.git`, `node_modules`, build output, virtual environments, and existing Rooty runtime state
-- Generated AI-host directories such as `.agents`, `.claude`, `.codex`, and `.cursor`
-- Common compiled/build directories such as `bin`, `obj`, `target`, and `TestResults`
-- Symlinks
-- Secret-named paths such as `.env`, `secrets.*`, credentials, token, key, or vault files
-- Structured configuration that appears to contain non-placeholder credential values
-- Unsupported or binary file types
-
-Detections are repository-derived signals, not verified truth. They are recorded as `INFERRED` with the files that triggered the match.
-
-Current discovery rules recognize:
-
-| Capability | Provider signals |
-|---|---|
-| Ticketing | Jira and Atlassian |
-| Documentation | Confluence and Atlassian |
-| Observability | Datadog, Grafana/Loki/Tempo/Prometheus, Sentry |
-| Database | PostgreSQL, MySQL |
-| Deployments | Argo CD, Kubernetes, Helm |
-
-If discovery finds nothing, explicitly select a provider during configuration. That mapping is recorded as `USER_CONFIGURED`.
-
-When two providers have the same highest confidence, Rooty records both as candidates and requires an explicit selection. It never chooses between equal candidates.
-
-## 2. Configure all required capabilities
-
-The production-readiness gate expects five capabilities:
-
-- `ticketing`
-- `documentation`
-- `observability`
-- `database`
-- `deployments`
-
-Each capability uses the same option pattern:
-
-```text
---<capability>-provider PROVIDER
---<capability>-mcp-url URL
---<capability>-auth oauth|bearer-env|none
---<capability>-oauth-token-env VARIABLE
---<capability>-bearer-token-env VARIABLE
-```
-
-Example:
+Run from the project folder:
 
 ```console
-rooty sources configure --project /path/to/project \
-  --ticketing-provider atlassian \
-  --ticketing-mcp-url https://mcp.example.internal/atlassian \
-  --ticketing-auth oauth \
-  --documentation-provider atlassian \
-  --documentation-mcp-url https://mcp.example.internal/atlassian \
-  --documentation-auth oauth \
-  --observability-provider datadog \
-  --observability-mcp-url https://mcp.example.internal/observability \
-  --observability-auth bearer-env \
-  --observability-bearer-token-env ROOTY_DATADOG_TOKEN \
-  --database-provider postgres \
-  --database-mcp-url https://mcp.example.internal/postgres \
-  --database-auth bearer-env \
-  --database-bearer-token-env ROOTY_POSTGRES_TOKEN \
-  --deployments-provider argocd \
-  --deployments-mcp-url https://mcp.example.internal/argocd \
-  --deployments-auth oauth
+npx rooty-investigator install
 ```
 
-Rooty accepts remote HTTPS endpoints and loopback HTTP endpoints. It rejects embedded URL credentials and credential-like query parameters.
+Rooty writes the same three skills to `.agents/skills/` for Codex and Cursor and to `.claude/skills/` for Claude. Reinstallation is idempotent and refuses to overwrite modified or unowned skill files.
 
-### Supported recipes
+## 2. Confirm documentation locations
 
-| Provider ID | Capabilities | Allowed tools from the recipe |
+Provide known locations during install or later:
+
+```console
+npx rooty-investigator install --docs "README.md,docs"
+npx rooty-investigator context set-docs --paths "README.md,docs"
+```
+
+When no location is stored, the setup agent performs a bounded search for likely entry points such as `README*`, `docs/`, `architecture/`, and ADR folders, then asks the developer to confirm them. External local documentation folders are allowed when explicitly supplied.
+
+Only paths are stored. Rooty does not create a map, index, embedding, cached summary, or inferred architecture.
+
+## 3. Discover providers
+
+The setup agent reads the relevant confirmed documents first. Documentation helps find likely components, communication paths, database technology, telemetry, index patterns, identifiers, and source folders. It remains provisional.
+
+The agent inspects current safe project files only to verify material choices or fill gaps. It never recursively scans a filesystem root and never reads credential values. If a choice remains ambiguous, it asks one focused question.
+
+Required capabilities:
+
+- **Data:** at least one provider usable for bounded state/history reads.
+- **Observability:** at least one provider usable for bounded logs, traces, or metrics evidence.
+
+Ticketing is optional because the developer can paste ticket content.
+
+## 4. Review the MCP proposal
+
+The `rooty-mcp-builder` skill prepares one proposal per provider and active host. Every proposal includes:
+
+- official provider server and documentation checked;
+- supported versions and deployment constraints;
+- STDIO or Streamable HTTP transport;
+- exact host config file and minimal merge;
+- every credential environment-variable, secret-manager, or OAuth binding;
+- provider-side least privilege and server read-only mode;
+- allowed and forbidden tools;
+- a bounded harmless probe;
+- required file writes, commands, packages, containers, or OAuth approvals.
+
+No configuration or external action occurs before the proposal is visible and approved.
+
+## 5. Configure the active host
+
+| Host | Skill path | Project MCP path |
 |---|---|---|
-| `atlassian` | Ticketing, documentation | Issue and page get/search tools |
-| `datadog` | Observability | Logs, traces, metrics reads |
-| `grafana` | Observability | Logs, traces, metrics reads |
-| `sentry` | Observability | Event and issue reads |
-| `postgres` | Database | Schema read and read-only query |
-| `mysql` | Database | Schema read and read-only query |
-| `argocd` | Deployments | Application and revision reads |
-| `kubernetes` | Deployments | Deployment and event reads |
-| `rooty-snapshot` | All demo capabilities | Six bundled synthetic read tools |
+| Codex | `.agents/skills/` | `.codex/config.toml` |
+| Cursor | `.agents/skills/` | `.cursor/mcp.json` |
+| Claude | `.claude/skills/` | `.mcp.json` |
 
-A recipe is configuration metadata. It does not install the provider's MCP server, create an account, or convert a write-capable identity into a read-only identity.
+The agent configures only the host where setup is running unless the developer requests more. Existing unrelated host configuration is preserved; ambiguous or malformed configuration blocks the merge.
 
-## 3. Configure authentication
+Every MCP entry must declare all required credential references. Values stay in the environment, approved secret manager, or host-managed OAuth. After rendering, the agent reports each missing binding, its config path, its purpose, and the smallest resolution action.
 
-### OAuth
+## 6. Verify safely
 
-Rooty does not run an interactive OAuth browser flow. It generates an environment-variable reference such as:
+Verification checks:
 
-```text
-ROOTY_ATLASSIAN_MCP_OAUTH_TOKEN
-```
+1. Credential names resolve without revealing values.
+2. The MCP server initializes.
+3. The live advertised tool list matches the reviewed allowlist.
+4. Mutation and administration tools are absent, disabled, or blocked.
+5. A bounded non-sensitive read succeeds.
 
-Override the name when needed:
+Rooty is ready only when data and observability both pass. Ticketing may remain `NOT_REQUESTED`.
 
-```console
-rooty sources configure ... \
-  --ticketing-auth oauth \
-  --ticketing-oauth-token-env COMPANY_ATLASSIAN_ACCESS_TOKEN
-```
-
-Obtain the access token through the provider-approved flow and expose it to the AI host process.
-
-### Bearer environment reference
-
-Bearer mode requires an explicit variable name:
-
-```console
-rooty sources configure ... \
-  --database-auth bearer-env \
-  --database-bearer-token-env ROOTY_DATABASE_READ_TOKEN
-```
-
-### No authentication
-
-`--<capability>-auth none` is allowed only for `localhost`, `127.0.0.1`, or `::1`. It is intended for controlled local connectors such as the demo.
-
-Rooty configuration contains variable names, never values. Keep values in the process environment, OS credential storage, or an approved secret manager.
-
-## 4. Review the source registry
-
-Inspect:
+## Provider organization
 
 ```text
-/path/to/project/.investigator/sources.json
+providers/
+├── data/
+│   ├── sql-server
+│   └── mongodb
+├── observability/
+│   ├── elasticsearch
+│   └── grafana
+├── ticketing/
+│   ├── jira
+│   └── azure-devops
+└── custom/
 ```
 
-Every production capability should have:
+SQL Server uses Microsoft's SQL MCP Server through DAB. Elasticsearch 8.19.15 uses Elastic's standalone compatibility server, which currently requires Docker; Rooty asks separately before installing Docker or pulling an image. MongoDB, Grafana, Azure DevOps, and custom providers require review of current official documentation and the live tool surface.
 
-- The expected provider
-- `status: "ready-for-host-rendering"`
-- The correct direct MCP endpoint
-- The intended auth mode and credential environment-variable name
-- A bounded `allowed_tools` list
-- A harmless `doctor_probe`
-- A mapping status of `INFERRED` or `USER_CONFIGURED`
+## Advanced compatibility commands
 
-List one environment through the CLI:
-
-```console
-rooty sources list my-service --environment production --project /path/to/project
-```
-
-The service name defaults to the project directory name. Environment input is lowercased and validated, but it must match a registered environment; the generated MVP registry contains `production`.
-
-## 5. Initialize a host
-
-```console
-rooty init --host codex --project /path/to/project --activate-connectors
-```
-
-Generated files:
-
-| Host | Files |
-|---|---|
-| All hosts | `.agents/skills/root-cause-investigator/` |
-| Codex | `.codex/config.toml` |
-| Claude Code | `.claude/skills/root-cause-investigator/`, `.mcp.json`, `.claude/settings.json`, read-only hook and allowlist |
-| Cursor | `.cursor/mcp.json`, `.cursor/rules/root-cause-investigator.mdc` |
-| Activated project | `.investigator/activated-connectors.json` |
-| Project safety | Creates `.gitignore` when absent or appends missing Rooty runtime exclusions |
-
-Use `--host all` to render every included adapter. Use `--demo` to add the bundled local synthetic connector.
-
-Do not run a bare `rooty init`. Rooty requires either `--demo` or a complete production registry with `--activate-connectors`.
-
-Rooty deliberately refuses to overwrite any existing host target. Back up and merge existing host configuration, then rerun initialization only when the target paths are clear.
-
-Initialization preserves existing `.gitignore` content and appends only missing Rooty runtime paths. Strict doctor validates those project exclusions; package-only doctor validates the shipped template instead.
-
-## 6. Run the readiness gate
-
-```console
-rooty doctor --project /path/to/project
-```
-
-Strict doctor fails when a required capability is unresolved or unactivated, a credential variable is missing, an endpoint is unreachable or unauthorized, MCP initialization fails, an allowed tool is absent or unsafe, or a harmless read probe fails.
-
-Use JSON for automation:
-
-```console
-rooty doctor --project /path/to/project --json
-```
-
-Use `--package-only` only when checking the installed kit itself. Missing project sources and activation become warnings in that mode.
-
-## Adding an unsupported provider
-
-A provider needs:
-
-1. A direct MCP server that implements the required read behavior.
-2. A new recipe in `setup/connector-recipes/catalog.json` with capability, auth metadata, explicit read allowlist, and bounded doctor probe.
-3. Optional safe detection rules in `setup/discovery-rules/rules.json`.
-4. Tests for configuration, rendered host output, doctor negotiation, allowlist enforcement, and read probes.
-
-Never add mutation-capable tools to a Rooty recipe.
+The earlier `sources discover`, `sources configure`, and `init --activate-connectors` commands remain available for existing workflows and deterministic connector experiments. They are not the intended first-time journey.

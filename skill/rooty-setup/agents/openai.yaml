@@ -1,0 +1,4 @@
+interface:
+  display_name: "Rooty Setup"
+  short_description: "Discover and configure Rooty safely"
+  default_prompt: "Use $rooty-setup to set up Rooty for this project."

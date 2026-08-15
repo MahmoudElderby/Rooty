@@ -5,6 +5,8 @@ import { readLedger, verifyLedgerEntries } from "./cases.js";
 import { runEvaluation } from "./evaluate.js";
 import { TOOLS } from "./mcp.js";
 import { assertNoEmbeddedSecrets, pathExists, readJson } from "./core.js";
+import { inspectRootyInstall, ROOTY_SKILLS } from "./installer.js";
+import { detectSetupModel } from "./setup-model.js";
 
 const REQUIRED_CAPABILITIES = ["ticketing", "documentation", "observability", "database", "deployments"];
 const REQUIRED_GITIGNORE_ENTRIES = [
@@ -15,12 +17,24 @@ const REQUIRED_GITIGNORE_ENTRIES = [
 ];
 
 export async function runDoctor({ packageRoot, projectRoot, connectorTimeoutMs = 3000, requireActivatedConnectors = true }) {
+  const setupModel = await detectSetupModel(projectRoot);
+  if (requireActivatedConnectors && ["agent-led-v3", "invalid-agent-led-install"].includes(setupModel)) {
+    const installation = await inspectRootyInstall(projectRoot);
+    const packageHealth = await runDoctor({ packageRoot, projectRoot, connectorTimeoutMs, requireActivatedConnectors: false });
+    const compatibilityOnly = new Set(["source-registry", "activated-connectors", "activated-connectors-coverage"]);
+    const checks = [...installation.checks, ...packageHealth.checks.filter((check) => !compatibilityOnly.has(check.name))];
+    return { ok: !checks.some((check) => check.status === "FAIL"), setupModel, checks };
+  }
   const checks = [];
   const add = (status, name, message) => checks.push({ status, name, message });
-  const canonical = path.join(projectRoot, ".agents/skills/root-cause-investigator/SKILL.md");
-  const packaged = path.join(packageRoot, "skill/root-cause-investigator/SKILL.md");
-  if (await pathExists(canonical) || await pathExists(packaged)) add("PASS", "skill", "root-cause-investigator skill is discoverable or packaged");
-  else add("FAIL", "skill", "SKILL.md is missing");
+  const missingSkills = [];
+  for (const skill of ROOTY_SKILLS) {
+    const canonical = path.join(projectRoot, `.agents/skills/${skill}/SKILL.md`);
+    const packaged = path.join(packageRoot, `skill/${skill}/SKILL.md`);
+    if (!await pathExists(canonical) && !await pathExists(packaged)) missingSkills.push(skill);
+  }
+  if (missingSkills.length === 0) add("PASS", "skill", `${ROOTY_SKILLS.length} Rooty skills are discoverable or packaged`);
+  else add("FAIL", "skill", `Missing skills: ${missingSkills.join(", ")}`);
 
   const recipeFile = path.join(packageRoot, "setup/connector-recipes/catalog.json");
   try {
@@ -50,7 +64,9 @@ export async function runDoctor({ packageRoot, projectRoot, connectorTimeoutMs =
     } catch (error) {
       add("FAIL", "source-registry", error.message);
     }
-  } else add(requireActivatedConnectors ? "FAIL" : "WARN", "source-registry", "Run `rooty sources discover` and `rooty sources configure`");
+  } else add(requireActivatedConnectors ? "FAIL" : "WARN", "source-registry", requireActivatedConnectors
+    ? "Advanced source registry is missing"
+    : "Advanced compatibility source registry is not configured");
 
   const unsafeTools = TOOLS.filter((tool) => tool.annotations?.readOnlyHint !== true || tool.annotations?.destructiveHint !== false || /(create|update|delete|write|execute|rollback)/i.test(tool.name));
   if (unsafeTools.length) add("FAIL", "mcp-tools", `Unsafe tools: ${unsafeTools.map((tool) => tool.name).join(", ")}`);
@@ -80,7 +96,9 @@ export async function runDoctor({ packageRoot, projectRoot, connectorTimeoutMs =
     } catch (error) {
       add("FAIL", "activated-connectors", error.message);
     }
-  } else add(requireActivatedConnectors ? "FAIL" : "WARN", "activated-connectors", "No production connectors are activated");
+  } else add(requireActivatedConnectors ? "FAIL" : "WARN", "activated-connectors", requireActivatedConnectors
+    ? "No production connectors are activated"
+    : "No advanced compatibility connectors are activated");
 
   try {
     const evaluation = await runEvaluation({ casesFile: path.join(packageRoot, "evals/cases/replay-cases.json") });

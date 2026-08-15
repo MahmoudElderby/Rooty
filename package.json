@@ -1,13 +1,14 @@
 {
   "name": "rooty-investigator",
-  "version": "0.1.1",
-  "description": "Portable, read-only root-cause investigation skill and setup CLI",
+  "version": "0.2.0",
+  "description": "Agent-led, read-only root-cause investigation skills and setup CLI",
   "keywords": [
     "ai-agent",
     "debugging",
     "incident-investigation",
     "mcp",
-    "root-cause-analysis"
+    "root-cause-analysis",
+    "agent-skills"
   ],
   "homepage": "https://github.com/MahmoudElderby/Rooty#readme",
   "bugs": {
@@ -33,7 +34,7 @@
     "src/"
   ],
   "scripts": {
-    "test": "node --test tests/*.test.js",
+    "test": "node --test tests",
     "eval": "node bin/investigator.js eval",
     "doctor": "node bin/investigator.js doctor --package-only"
   },
