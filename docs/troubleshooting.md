@@ -58,6 +58,22 @@ Choose specific documentation files or folders. Filesystem roots and the project
 
 Read the setup agent's credential table. It should name the binding, provider, exact host config path, and resolution action without printing a value. Supply the value through the approved environment, secret manager, or host OAuth flow, restart/reload the MCP server when required, and rerun the harmless probe.
 
+### `Rooty DAB launcher: credential binding ... is missing`
+
+The per-catalog SQL entry is present, but the named connection-string variable is not visible to the host process. The MCP entry's `--credential-env` argument is the binding to configure. For Codex, forward it with `env_vars`; for Claude, use `${VAR}` interpolation; for Cursor, start the IDE from an environment containing the variable or use a user-scoped secret facility verified for that Cursor version. Restart the host after setting it. Never put the connection string into committed MCP JSON/TOML or `dab-config.json`.
+
+### A per-catalog SQL MCP closes or advertises zero tools
+
+Open that server's host MCP log and use the launcher message to correct only the named catalog. Confirm:
+
+- absolute Node, `.rooty/start-dab.cjs`, DAB, and `.rooty/mcp-<domain>/dab-config.json` paths;
+- a unique explicit `ASPNETCORE_URLS=http://127.0.0.1:<port>` value, not port zero;
+- explicit live-metadata entities and the `rooty-reader` read permission;
+- no `.env`, `data-source-files`, autoentities, `DAB_ENVIRONMENT`, shell wrapper, or mutation-enabled tool;
+- DAB starts through MCP initialize with `describe_entities`, `read_records`, and `aggregate_records`.
+
+Do not add `--no-https-redirect` or use `dab validate` on 2.0.10 as a health workaround. Each `rooty-sql-{domain}` is independent, so leave healthy catalog entries running while fixing the failed one.
+
 ## Advanced source discovery and configuration
 
 ### `Unresolved capabilities`

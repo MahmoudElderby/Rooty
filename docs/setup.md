@@ -106,9 +106,9 @@ providers/
 └── custom/
 ```
 
-SQL Server uses Microsoft's SQL MCP Server through DAB. Elasticsearch 8.19.15 uses Elastic's standalone compatibility server, which currently requires Docker; Rooty asks separately before installing Docker or pulling an image. MongoDB, Grafana, Azure DevOps, and custom providers require review of current official documentation and the live tool surface.
+SQL Server uses Microsoft's SQL MCP Server through DAB. Elasticsearch 8.19.15 uses Elastic's official standalone Docker image with `ES_VERSION=8` and the `list_indices` readiness probe; Rooty asks separately before installing Docker, pulling the image, or starting a container. MongoDB, Grafana, Azure DevOps, and custom providers require review of current official documentation and the live tool surface.
 
-For SQL Server, Rooty enumerates every accessible online user database, excludes system/inaccessible catalogs, and generates one DAB child plus one host credential binding per catalog under `.rooty/mcp/data/sql-server/`. The parent uses absolute child paths, unique autoentity keys and catalog-prefixed entity names. Readiness is MCP initialize plus a non-empty `describe_entities` result covering every catalog; `dab validate` alone is not a readiness check.
+For SQL Server, Rooty enumerates live catalogs and `INFORMATION_SCHEMA` objects, then creates one `rooty-sql-{domain}` MCP per catalog. Each has an isolated `.rooty/mcp-{domain}/dab-config.json` with explicit entities, a named credential reference, a unique nonzero loopback port, and absolute paths through `.rooty/start-dab.cjs`. The same pattern applies to Codex, Cursor, and Claude. Readiness is independent MCP initialization, exact read-only tools, non-empty `describe_entities`, and a bounded read per catalog; `dab validate` on 2.0.10 is not a readiness check.
 
 ## Advanced compatibility commands
 

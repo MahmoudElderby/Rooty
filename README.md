@@ -195,8 +195,8 @@ Read [Memory and learning](docs/memory-and-learning.md) for lifecycle and govern
 
 | Provider | Capability | Current setup status |
 |---|---|---|
-| Microsoft SQL MCP Server through DAB | Data | Standard Rooty reference |
-| Elastic standalone / Agent Builder | Observability | Standard Rooty reference; Elasticsearch 8.19.15 uses standalone Docker |
+| Microsoft SQL MCP Server through DAB | Data | One isolated read-only MCP per live catalog on Codex, Cursor, and Claude |
+| Elastic standalone / Agent Builder | Observability | Elasticsearch 8.19.15 uses the official Docker image, `ES_VERSION=8`, and `list_indices` probe |
 | Atlassian Rovo for Jira Cloud | Ticketing | Standard Rooty reference; optional capability |
 | MongoDB official MCP server | Data | Agent reference; live tool review required |
 | Grafana official MCP server | Observability | Agent reference; live tool review required |

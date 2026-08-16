@@ -100,14 +100,24 @@ Add `rooty mcp status` to report binding names and availability without exposing
 
 Promote providers only after validation and mutation tests:
 
-1. SQL Server/DAB multi-catalog discovery, per-catalog autoentity configuration, and STDIO `describe_entities` probe.
-2. Elasticsearch standalone 8.x/9.x compatibility and Agent Builder paths.
+1. SQL Server live catalog/object discovery, one isolated explicit-entity DAB per catalog, shared hardened launcher, and independent STDIO probes on Codex, Cursor, and Claude.
+2. Elasticsearch 8.x official Docker compatibility (`ES_VERSION=8`, `list_indices`) and Agent Builder paths.
 3. Jira/Rovo read-only identity and tool allowlist contract.
 4. MongoDB official read-only mode and disabled mutation groups.
 5. Grafana official disable flags and viewer-role contract.
 6. Azure DevOps read-only domains, identity scopes, and tool allowlist.
 
 Custom providers always start as `REVIEW_REQUIRED`.
+
+### SQL catalog implementation increment
+
+Status: implemented on `codex/sql-catalog-mcp-per-ide`.
+
+- Package `assets/start-dab.cjs` with the MCP-builder skill and copy it to `.rooty/start-dab.cjs` only after setup approval.
+- Reject multi-source/autoentity DAB config, mutation tools, `.env` credential files, shell wrappers, relative paths, `DAB_ENVIRONMENT`, and implicit ports at launcher startup.
+- Create `.rooty/mcp-{domain}/dab-config.json` and `rooty-sql-{domain}` host entries independently.
+- Declare the credential binding name through `--credential-env`; use Codex forwarding, Claude interpolation, and Cursor process-environment inheritance without committing values.
+- Keep Elasticsearch 8.19.15 on the official Docker image with `ES_VERSION=8` and `list_indices` readiness.
 
 ## Phase 5: verification and UX hardening
 
