@@ -7,6 +7,8 @@ Official references:
 
 Use the trusted project's `.codex/config.toml`. Preserve unrelated settings and existing MCP servers. If the file already exists, show a minimal merge rather than replacing it.
 
+For SQL Server, also read the provider's [tested per-catalog pattern](../providers/data/sql-server-cursor.md). Its absolute Node + shared launcher + absolute DAB/config invocation overrides the generic `cwd` example below and must be repeated once per catalog.
+
 ## STDIO shape
 
 ```toml
@@ -21,7 +23,7 @@ enabled_tools = ["verified_read_tool"]
 default_tools_approval_mode = "prompt"
 ```
 
-Use `cwd` when a local server resolves files or defaults from its working directory. Use `env_vars` to forward credential names already present in the Codex process environment. Use `[mcp_servers.<name>.env]` only for non-secret constants. Never put a secret value in `env`.
+Use `cwd` when a generic local server resolves files or defaults from its working directory. SQL Server uses the launcher instead. Use `env_vars` to forward credential names already present in the Codex process environment. Use `[mcp_servers.<name>.env]` only for non-secret constants. Never put a secret value in `env`.
 
 ## Streamable HTTP shape
 

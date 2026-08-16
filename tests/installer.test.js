@@ -36,6 +36,15 @@ test("agent-led install copies all Rooty skills for supported hosts", async () =
       const packaged = await readFile(path.join(ROOT, "skill", skill, "SKILL.md"), "utf8");
       assert.equal(installed, packaged);
     }
+    const installedLauncher = await readFile(
+      path.join(projectRoot, target, "rooty-mcp-builder", "assets", "start-dab.cjs"),
+      "utf8"
+    );
+    const packagedLauncher = await readFile(
+      path.join(ROOT, "skill", "rooty-mcp-builder", "assets", "start-dab.cjs"),
+      "utf8"
+    );
+    assert.equal(installedLauncher, packagedLauncher);
   }
 
   assert.deepEqual(await readProjectContext(projectRoot), { schema_version: 1, documentation: { paths: [] } });

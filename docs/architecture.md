@@ -38,7 +38,7 @@ There is no Rooty gateway or central credential store. Each host connects direct
 - copies `rooty-setup`, `rooty-mcp-builder`, and `root-cause-investigator` into `.agents/skills/` and `.claude/skills/`;
 - records SHA-256 ownership fingerprints in `.rooty/state/install-manifest.json`;
 - stores only confirmed documentation paths in `.rooty/config/project-context.json`;
-- creates category roots under `.rooty/mcp/` so provider artifacts do not accumulate in the `.rooty` top level;
+- creates category roots under `.rooty/mcp/` for general provider artifacts; approved SQL setup uses the tested `.rooty/mcp-<domain>/dab-config.json` layout and one shared `.rooty/start-dab.cjs` launcher;
 - migrates the two flat version 0.2.0 state files during reinstall;
 - updates unchanged Rooty-owned files and refuses modified/unowned conflicts.
 
@@ -65,6 +65,8 @@ references/
 ```
 
 It researches official setup, creates a reviewable proposal, requests native approvals, declares credential references in host configuration, and verifies a harmless read.
+
+SQL Server has one deliberate cross-host runtime contract: one `rooty-sql-{domain}` process per live catalog. Codex, Cursor, and Claude all call the same hardened launcher with absolute paths; the launcher sets DAB's CWD to the isolated catalog folder and starts only the read-only MCP tool surface. This avoids a provider-by-host divergence while keeping catalog failures independent.
 
 ### Investigator skill
 

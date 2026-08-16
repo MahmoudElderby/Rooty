@@ -7,6 +7,8 @@ Official references:
 
 Use `.cursor/mcp.json` for project-specific providers. Preserve unrelated `mcpServers` entries and reject malformed or ambiguous JSON instead of overwriting it. Cursor's published `mcp.json` shape does not document a `cwd` field, so never rely on the process starting beside the provider config. Use absolute executable, config, and nested-config paths.
 
+For SQL Server, also read the provider's [tested per-catalog pattern](../providers/data/sql-server-cursor.md). Use its absolute Node + shared launcher + absolute DAB/config invocation once per catalog. The launcher makes DAB's CWD deterministic and names a missing credential without revealing it.
+
 ## STDIO shape
 
 ```json

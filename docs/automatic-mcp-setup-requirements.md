@@ -62,7 +62,7 @@ The installer must:
 - copy `rooty-setup`, `rooty-mcp-builder`, and `root-cause-investigator`;
 - create `.rooty/state/install-manifest.json` with Rooty-owned file hashes;
 - create `.rooty/config/project-context.json` with only `documentation.paths`;
-- create `.rooty/mcp/{data,observability,ticketing,custom}` and place generated provider artifacts only below the matching category/provider;
+- create `.rooty/mcp/{data,observability,ticketing,custom}` for general providers; SQL Server setup later creates the tested `.rooty/mcp-<domain>/dab-config.json` folders and shared `.rooty/start-dab.cjs` launcher after approval;
 - recognize and migrate the flat version 0.2.0 manifest/context paths;
 - accept optional `--docs PATH,...` values;
 - preserve confirmed paths when reinstall runs without `--docs`;
@@ -176,11 +176,15 @@ Every proposal must state:
 
 ### SQL Server
 
-Use Microsoft's SQL MCP Server included with DAB. Automatically enumerate all accessible online user databases and generate one child data source and credential binding per catalog. Exclude system, offline, snapshot, and inaccessible databases. Use globally unique autoentity definition keys and catalog-prefixed entity names, omit empty `entities` objects, use absolute child/config paths, and keep generated files under `.rooty/mcp/data/sql-server/`. Restrict DAB DML tools to describe/read/aggregate and use a database identity with `SELECT` only. Existing DAB configuration must be preserved or merged only after review. Verify through MCP initialize and non-empty `describe_entities` coverage for every catalog; do not gate readiness on `dab validate`.
+Use Microsoft's SQL MCP Server included with DAB. Automatically enumerate accessible online user databases from live `sys.databases`, then enumerate each catalog's current tables/views from `INFORMATION_SCHEMA`; documentation only orients discovery. Exclude system, offline, snapshot, and inaccessible databases.
+
+Generate one independent MCP server per catalog named `rooty-sql-{domain}`. Each uses `.rooty/mcp-{domain}/dab-config.json`, one credential reference, explicit entities only, one unique nonzero loopback port, and the shared `.rooty/start-dab.cjs` launcher. Every Codex, Cursor, and Claude entry uses absolute Node, launcher, DAB, and config paths. DAB starts with `--mcp-stdio role:rooty-reader --LogLevel Error`; only describe/read/aggregate tools are enabled and the database identity is `SELECT`-only.
+
+Do not use a multi-catalog DAB, `data-source-files`, wildcard autoentities, `dbo.%`, `DAB_ENVIRONMENT`, command-shell wrappers, `--no-https-redirect`, or `ASPNETCORE_URLS=...:0`. Credential values remain outside Git and each host entry visibly names its binding. Verify every catalog independently through MCP initialize, exact tool listing, non-empty `describe_entities`, and a bounded read. Do not use `dab validate` on DAB 2.0.10 as the readiness gate.
 
 ### Elasticsearch 8.19.15
 
-Version 8.19.15 is supported through Elastic's standalone MCP server. The standalone server is deprecated in favor of Agent Builder for newer deployments and currently requires Docker. Rooty must not install Docker or pull an image without separate explicit approval.
+Version 8.19.15 is supported through Elastic's standalone MCP server. Use Elastic's official `docker.elastic.co/mcp/elasticsearch` image, declare `ES_VERSION=8`, and use `list_indices` as the readiness probe. The standalone server is deprecated in favor of Agent Builder for newer deployments and currently requires Docker. Rooty must not install Docker, pull the image, or start the container without separate explicit approval.
 
 ### Jira
 
@@ -259,6 +263,8 @@ Existing deterministic `sources`, host `init`, connector activation, frozen case
 - Setup reads confirmed docs before targeted source and stores no derived map.
 - Data and observability are mandatory; ticketing is optional.
 - All host MCP entries declare credential references and no values.
+- Every SQL catalog has an independent `rooty-sql-{domain}` server, explicit entities, unique port, and per-catalog readiness state on Codex, Cursor, and Claude.
+- The SQL launcher rejects multi-source, wildcard, shell-wrapper, credential-file, mutation-enabled, and implicit-port startup.
 - Docker/package/OAuth actions require visible separate approval.
 - Elasticsearch 8.19.15 follows the standalone compatibility path.
 - Doctor validates installed ownership and context without demanding the legacy five-capability registry.

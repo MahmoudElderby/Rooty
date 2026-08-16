@@ -21,6 +21,7 @@ Verify:
 - `.rooty/state/install-manifest.json` fingerprints every installed file;
 - `.rooty/config/project-context.json` stores only documentation paths;
 - `.rooty/mcp/{data,observability,ticketing,custom}` exists for generated provider artifacts;
+- the packaged MCP-builder skill contains `assets/start-dab.cjs`; approved SQL setup later copies it once and creates `.rooty/mcp-<domain>/` folders;
 - a simulated version 0.2.0 flat layout migrates without losing documentation paths;
 - a second install changes no skill files;
 - a locally modified owned file blocks reinstall before any write;
@@ -44,4 +45,4 @@ Add provider guidance under the matching capability category. Include vendor-own
 
 A reference is not automatically a deterministic recipe. Promotion requires a canonical proposal schema, validator coverage, safe host rendering tests, mutation tests, and a lifecycle owner.
 
-For SQL Server, also test a host process whose CWD is the project root, multiple catalogs with colliding table names, no emitted empty `entities` object, an occupied port 5000, and MCP `describe_entities` coverage across all discovered catalogs.
+For SQL Server, test launcher argument/path validation, a host process whose CWD is unrelated, missing credential names, explicit unique ports, `.env` refusal, and rejection of multi-source, autoentity, mutation-enabled, or shell-wrapper configurations. Test each catalog's `describe_entities` and bounded-read readiness independently on Codex, Cursor, and Claude.

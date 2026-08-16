@@ -7,6 +7,8 @@ Official references:
 
 Use project-scoped `.mcp.json` for team-visible MCP configuration. Preserve unrelated `mcpServers` entries. Do not place personal credentials in the file.
 
+For SQL Server, also read the provider's [tested per-catalog pattern](../providers/data/sql-server-cursor.md). Use its absolute Node + shared launcher + absolute DAB/config invocation once per catalog, even though Claude provides a project-root environment variable.
+
 ## STDIO shape
 
 ```json

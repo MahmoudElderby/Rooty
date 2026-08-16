@@ -12,6 +12,12 @@
 
 Do not skip directly from discovery to configuration. A proposal may be revised without repeating installation or documentation confirmation.
 
+## SQL Server multi-catalog branch
+
+When the data provider is SQL Server, the setup agent must read `rooty-mcp-builder/references/providers/data/sql-server-cursor.md` before proposing files. Discover catalogs and entities from the live server, then create one `rooty-sql-{domain}` lifecycle row per catalog. Copy the shared `.rooty/start-dab.cjs` launcher and create isolated `.rooty/mcp-{domain}/dab-config.json` files only after approval. Apply the same launcher pattern to Codex, Cursor, and Claude.
+
+One catalog can be `READY` while another is `NEEDS_CREDENTIAL` or `UNAVAILABLE`. Data capability is ready when the reviewed catalogs needed for investigation are ready; never hide partial catalog failures behind one aggregate status.
+
 ## Failure response
 
 For every failure, report:
