@@ -11,8 +11,8 @@ Read [references/docs-first-discovery.md](references/docs-first-discovery.md) be
 
 ## Establish state
 
-1. Confirm `.rooty/install-manifest.json` exists. If absent, tell the developer to run `npx rooty-investigator install` from the project folder.
-2. Read `.rooty/project-context.json`. Treat `documentation.paths` as user-confirmed entry points, not trusted facts.
+1. Confirm `.rooty/state/install-manifest.json` exists. Accept `.rooty/install-manifest.json` only as a legacy layout and tell the developer that the next `rooty install` migrates it. If neither exists, tell the developer to run `npx rooty-investigator install` from the project folder.
+2. Read `.rooty/config/project-context.json`, falling back to the legacy `.rooty/project-context.json`. Treat `documentation.paths` as user-confirmed entry points, not trusted facts.
 3. If no documentation path is confirmed, locate only likely documentation entry points, present the candidates, and ask the developer to confirm or supply paths. Store only confirmed paths with `rooty context set-docs --paths ...`.
 4. Never create a project map, documentation index, embedding, inferred architecture file, or cached summary.
 

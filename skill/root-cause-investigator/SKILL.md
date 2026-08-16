@@ -20,7 +20,7 @@ Read [references/evidence-standard.md](references/evidence-standard.md) before r
 
 ## Use project documentation as orientation
 
-If `.rooty/project-context.json` exists, read only the confirmed `documentation.paths` relevant to the incident before mapping the expected flow. Use those documents to locate likely business rules, components, communication paths, source areas, data stores, telemetry, and identifiers.
+If `.rooty/config/project-context.json` exists, read only the confirmed `documentation.paths` relevant to the incident before mapping the expected flow. Accept `.rooty/project-context.json` as a legacy fallback. Use those documents to locate likely business rules, components, communication paths, source areas, data stores, telemetry, and identifiers.
 
 Treat documentation as a reference, never as proof. Verify every material statement against current source, configuration, or runtime evidence. When documentation conflicts with current evidence, record the conflict and follow the current evidence. Do not generate or persist a project map, documentation index, embedding, cached summary, inferred architecture, or conclusion.
 

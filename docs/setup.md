@@ -7,7 +7,7 @@ Rooty uses a mechanical installer followed by agent-led setup. The CLI establish
 | State | Agent action | Developer sees |
 |---|---|---|
 | Installed | Confirm manifest and three skills | Installed locations and next prompt |
-| Docs confirmed | Confirm documentation entry points | Paths stored in `.rooty/project-context.json` |
+| Docs confirmed | Confirm documentation entry points | Paths stored in `.rooty/config/project-context.json` |
 | Discovered | Read docs first, then targeted current source/config | Evidence for data and observability candidates |
 | Proposed | Build one provider/host MCP proposal | Config path, command/URL, credentials, controls, probe |
 | Approved | Request host-native approval | Exact writes and external actions |
@@ -107,6 +107,8 @@ providers/
 ```
 
 SQL Server uses Microsoft's SQL MCP Server through DAB. Elasticsearch 8.19.15 uses Elastic's standalone compatibility server, which currently requires Docker; Rooty asks separately before installing Docker or pulling an image. MongoDB, Grafana, Azure DevOps, and custom providers require review of current official documentation and the live tool surface.
+
+For SQL Server, Rooty enumerates every accessible online user database, excludes system/inaccessible catalogs, and generates one DAB child plus one host credential binding per catalog under `.rooty/mcp/data/sql-server/`. The parent uses absolute child paths, unique autoentity keys and catalog-prefixed entity names. Readiness is MCP initialize plus a non-empty `describe_entities` result covering every catalog; `dab validate` alone is not a readiness check.
 
 ## Advanced compatibility commands
 

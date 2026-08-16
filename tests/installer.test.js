@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, mkdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, readdir, rename, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -9,6 +9,8 @@ import {
   installRooty,
   inspectRootyInstall,
   readProjectContext,
+  ROOTY_PATHS,
+  ROOTY_PROJECT_DIRECTORIES,
   ROOTY_SKILLS,
   ROOTY_SKILL_TARGETS,
   setDocumentationPaths
@@ -37,6 +39,12 @@ test("agent-led install copies all Rooty skills for supported hosts", async () =
   }
 
   assert.deepEqual(await readProjectContext(projectRoot), { schema_version: 1, documentation: { paths: [] } });
+  assert.deepEqual((await readdir(path.join(projectRoot, ".rooty"))).sort(), ["config", "mcp", "state"]);
+  for (const directory of ROOTY_PROJECT_DIRECTORIES) {
+    await readdir(path.join(projectRoot, directory));
+  }
+  const manifest = JSON.parse(await readFile(path.join(projectRoot, ROOTY_PATHS.manifest), "utf8"));
+  assert.equal(manifest.project_context, ROOTY_PATHS.context);
   assert.equal(await detectSetupModel(projectRoot), "agent-led-v3");
   const inspected = await inspectRootyInstall(projectRoot);
   assert.equal(inspected.ok, true, JSON.stringify(inspected.checks));
@@ -56,6 +64,25 @@ test("install records confirmed documentation paths and is idempotent", async ()
 
   await setDocumentationPaths({ projectRoot, documentationPaths: ["docs"] });
   assert.deepEqual((await readProjectContext(projectRoot)).documentation.paths, ["docs"]);
+});
+
+test("install migrates the flat 0.2 Rooty state layout", async () => {
+  const projectRoot = await project("rooty-layout-migration");
+  await mkdir(path.join(projectRoot, "docs"));
+  await installRooty({ packageRoot: ROOT, projectRoot, documentationPaths: ["docs"] });
+
+  const manifest = JSON.parse(await readFile(path.join(projectRoot, ROOTY_PATHS.manifest), "utf8"));
+  manifest.project_context = ROOTY_PATHS.legacyContext;
+  await writeFile(path.join(projectRoot, ROOTY_PATHS.manifest), `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
+  await rename(path.join(projectRoot, ROOTY_PATHS.context), path.join(projectRoot, ROOTY_PATHS.legacyContext));
+  await rename(path.join(projectRoot, ROOTY_PATHS.manifest), path.join(projectRoot, ROOTY_PATHS.legacyManifest));
+
+  assert.equal(await detectSetupModel(projectRoot), "agent-led-v3");
+  const result = await installRooty({ packageRoot: ROOT, projectRoot });
+  assert.deepEqual(result.documentationPaths, ["docs"]);
+  assert.deepEqual((await readProjectContext(projectRoot)).documentation.paths, ["docs"]);
+  await assert.rejects(() => readFile(path.join(projectRoot, ROOTY_PATHS.legacyContext), "utf8"), /ENOENT/);
+  await assert.rejects(() => readFile(path.join(projectRoot, ROOTY_PATHS.legacyManifest), "utf8"), /ENOENT/);
 });
 
 test("install preflights every owned file before writing and refuses local modifications", async () => {

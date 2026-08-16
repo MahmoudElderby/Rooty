@@ -19,7 +19,7 @@ Install Rooty's project-scoped skills and context files.
 rooty install [--project PATH] [--docs PATH,...] [--json]
 ```
 
-`rooty setup` is an alias. The command copies all three skills to `.agents/skills/` and `.claude/skills/`, writes `.rooty/install-manifest.json`, and creates or preserves `.rooty/project-context.json`.
+`rooty setup` is an alias. The command copies all three skills to `.agents/skills/` and `.claude/skills/`, writes `.rooty/state/install-manifest.json`, creates or preserves `.rooty/config/project-context.json`, and creates `.rooty/mcp/{data,observability,ticketing,custom}`. Reinstall migrates the two flat state files written by version 0.2.0.
 
 | Option | Meaning |
 |---|---|

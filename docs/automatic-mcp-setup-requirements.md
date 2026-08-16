@@ -60,8 +60,10 @@ The installer must:
 - reject a filesystem root;
 - reject symlinked Rooty installation targets;
 - copy `rooty-setup`, `rooty-mcp-builder`, and `root-cause-investigator`;
-- create `.rooty/install-manifest.json` with Rooty-owned file hashes;
-- create `.rooty/project-context.json` with only `documentation.paths`;
+- create `.rooty/state/install-manifest.json` with Rooty-owned file hashes;
+- create `.rooty/config/project-context.json` with only `documentation.paths`;
+- create `.rooty/mcp/{data,observability,ticketing,custom}` and place generated provider artifacts only below the matching category/provider;
+- recognize and migrate the flat version 0.2.0 manifest/context paths;
 - accept optional `--docs PATH,...` values;
 - preserve confirmed paths when reinstall runs without `--docs`;
 - be idempotent;
@@ -174,7 +176,7 @@ Every proposal must state:
 
 ### SQL Server
 
-Use Microsoft's SQL MCP Server included with DAB. Restrict DAB DML tools to reads, expose reviewed entities only, and use a database identity with `SELECT` only. Existing DAB configuration must be preserved or merged only after review.
+Use Microsoft's SQL MCP Server included with DAB. Automatically enumerate all accessible online user databases and generate one child data source and credential binding per catalog. Exclude system, offline, snapshot, and inaccessible databases. Use globally unique autoentity definition keys and catalog-prefixed entity names, omit empty `entities` objects, use absolute child/config paths, and keep generated files under `.rooty/mcp/data/sql-server/`. Restrict DAB DML tools to describe/read/aggregate and use a database identity with `SELECT` only. Existing DAB configuration must be preserved or merged only after review. Verify through MCP initialize and non-empty `describe_entities` coverage for every catalog; do not gate readiness on `dab validate`.
 
 ### Elasticsearch 8.19.15
 

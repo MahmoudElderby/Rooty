@@ -36,8 +36,10 @@ There is no Rooty gateway or central credential store. Each host connects direct
 - validates the project and target paths;
 - refuses filesystem roots and symlinked installation targets;
 - copies `rooty-setup`, `rooty-mcp-builder`, and `root-cause-investigator` into `.agents/skills/` and `.claude/skills/`;
-- records SHA-256 ownership fingerprints in `.rooty/install-manifest.json`;
-- stores only confirmed documentation paths in `.rooty/project-context.json`;
+- records SHA-256 ownership fingerprints in `.rooty/state/install-manifest.json`;
+- stores only confirmed documentation paths in `.rooty/config/project-context.json`;
+- creates category roots under `.rooty/mcp/` so provider artifacts do not accumulate in the `.rooty` top level;
+- migrates the two flat version 0.2.0 state files during reinstall;
 - updates unchanged Rooty-owned files and refuses modified/unowned conflicts.
 
 It does not discover providers, inspect source, execute provider packages, install runtimes, start OAuth, collect credentials, or render MCP configuration.

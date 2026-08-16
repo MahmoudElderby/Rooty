@@ -26,11 +26,20 @@ Installation creates project-scoped copies of `rooty-setup`, `rooty-mcp-builder`
 
 ```text
 .rooty/
-├── install-manifest.json
-└── project-context.json
+├── config/
+│   └── project-context.json
+├── state/
+│   └── install-manifest.json
+└── mcp/
+    ├── data/
+    ├── observability/
+    ├── ticketing/
+    └── custom/
 ```
 
-The manifest fingerprints Rooty-owned files so reinstall can update unchanged files without overwriting developer modifications. Project context stores only confirmed documentation paths.
+The manifest fingerprints Rooty-owned files so reinstall can update unchanged files without overwriting developer modifications. Project context stores only confirmed documentation paths. Provider-specific generated files live under `.rooty/mcp/<category>/<provider>/`, never loose in `.rooty/`.
+
+Reinstalling automatically migrates the flat `.rooty/install-manifest.json` and `.rooty/project-context.json` layout created by version 0.2.0.
 
 Installation does not scan the source tree, execute a package, pull an image, start OAuth, collect credentials, or configure MCP servers.
 

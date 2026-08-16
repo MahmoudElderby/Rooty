@@ -18,8 +18,10 @@ Pack the current worktree, then run the tarball from a temporary sandbox project
 Verify:
 
 - three skills exist under both host skill roots;
-- `.rooty/install-manifest.json` fingerprints every installed file;
-- `.rooty/project-context.json` stores only documentation paths;
+- `.rooty/state/install-manifest.json` fingerprints every installed file;
+- `.rooty/config/project-context.json` stores only documentation paths;
+- `.rooty/mcp/{data,observability,ticketing,custom}` exists for generated provider artifacts;
+- a simulated version 0.2.0 flat layout migrates without losing documentation paths;
 - a second install changes no skill files;
 - a locally modified owned file blocks reinstall before any write;
 - doctor reports empty documentation as a warning, not a failed install.
@@ -41,3 +43,5 @@ Keep each `SKILL.md` focused. Put host and provider variants in direct reference
 Add provider guidance under the matching capability category. Include vendor-owned official sources, deployment/version limits, credentials, provider-side read-only enforcement, forbidden tools, and a harmless bounded probe.
 
 A reference is not automatically a deterministic recipe. Promotion requires a canonical proposal schema, validator coverage, safe host rendering tests, mutation tests, and a lifecycle owner.
+
+For SQL Server, also test a host process whose CWD is the project root, multiple catalogs with colliding table names, no emitted empty `entities` object, an occupied port 5000, and MCP `describe_entities` coverage across all discovered catalogs.
