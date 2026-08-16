@@ -6,7 +6,7 @@ Use project documentation as a navigation aid. Documentation can identify likely
 
 ## Locate entry points
 
-When `.rooty/project-context.json` has no confirmed path, perform only a bounded entry-point search in the project root and common documentation folders. Prefer:
+When `.rooty/config/project-context.json` has no confirmed path, perform only a bounded entry-point search in the project root and common documentation folders. Prefer:
 
 - `README*`, `docs/`, `documentation/`, `architecture/`, `adr/`, and `design/`;
 - explicitly linked files from those entry points;
@@ -24,7 +24,7 @@ Start with overview, architecture, operations, observability, and data sections 
 - environments and correlation identifiers;
 - provider-specific setup already adopted by the project.
 
-Do not persist extracted statements. Keep only confirmed documentation paths in `.rooty/project-context.json`.
+Do not persist extracted statements. Keep only confirmed documentation paths in `.rooty/config/project-context.json`.
 
 ## Verify current state
 

@@ -6,6 +6,7 @@ import {
   readdir,
   rename,
   stat,
+  unlink,
   writeFile
 } from "node:fs/promises";
 import path from "node:path";
@@ -14,8 +15,20 @@ export const ROOTY_SKILLS = ["rooty-setup", "rooty-mcp-builder", "root-cause-inv
 export const ROOTY_SKILL_TARGETS = [".agents/skills", ".claude/skills"];
 
 const INSTALLATION_MODE = "agent-led-v3";
-const MANIFEST_PATH = ".rooty/install-manifest.json";
-const CONTEXT_PATH = ".rooty/project-context.json";
+export const ROOTY_PATHS = Object.freeze({
+  manifest: ".rooty/state/install-manifest.json",
+  context: ".rooty/config/project-context.json",
+  legacyManifest: ".rooty/install-manifest.json",
+  legacyContext: ".rooty/project-context.json"
+});
+export const ROOTY_PROJECT_DIRECTORIES = Object.freeze([
+  ".rooty/config",
+  ".rooty/state",
+  ".rooty/mcp/data",
+  ".rooty/mcp/observability",
+  ".rooty/mcp/ticketing",
+  ".rooty/mcp/custom"
+]);
 
 function slash(value) {
   return value.split(path.sep).join("/");
@@ -86,9 +99,13 @@ async function listFiles(root) {
 }
 
 async function readManifest(projectRoot) {
-  const file = path.join(projectRoot, MANIFEST_PATH);
+  const canonical = path.join(projectRoot, ROOTY_PATHS.manifest);
+  const legacy = path.join(projectRoot, ROOTY_PATHS.legacyManifest);
+  const file = await exists(canonical) ? canonical : legacy;
   if (!await exists(file)) return undefined;
   try {
+    const details = await lstat(file);
+    if (!details.isFile() || details.isSymbolicLink()) throw new Error("manifest is not a regular file");
     const manifest = JSON.parse(await readFile(file, "utf8"));
     if (manifest?.schema_version !== 1 || manifest?.installation !== INSTALLATION_MODE || typeof manifest?.files !== "object") {
       throw new Error("unsupported manifest shape");
@@ -141,8 +158,12 @@ export async function normalizeDocumentationPaths(projectRoot, values) {
 
 export async function readProjectContext(projectRoot) {
   const resolved = await assertProjectRoot(projectRoot);
-  const file = path.join(resolved, CONTEXT_PATH);
+  const canonical = path.join(resolved, ROOTY_PATHS.context);
+  const legacy = path.join(resolved, ROOTY_PATHS.legacyContext);
+  const file = await exists(canonical) ? canonical : legacy;
   if (!await exists(file)) return { schema_version: 1, documentation: { paths: [] } };
+  const details = await lstat(file);
+  if (!details.isFile() || details.isSymbolicLink()) throw new Error(`Invalid Rooty project context: ${file}`);
   const context = JSON.parse(await readFile(file, "utf8"));
   if (context?.schema_version !== 1 || !Array.isArray(context?.documentation?.paths)) {
     throw new Error(`Invalid Rooty project context: ${file}`);
@@ -152,16 +173,27 @@ export async function readProjectContext(projectRoot) {
 
 export async function setDocumentationPaths({ projectRoot, documentationPaths }) {
   const resolved = await assertProjectRoot(projectRoot);
-  const rootyDirectory = path.join(resolved, ".rooty");
-  await assertNoSymlinkSegments(resolved, rootyDirectory);
+  const contextFile = path.join(resolved, ROOTY_PATHS.context);
+  const legacyContextFile = path.join(resolved, ROOTY_PATHS.legacyContext);
+  await assertNoSymlinkSegments(resolved, contextFile);
+  await assertNoSymlinkSegments(resolved, legacyContextFile);
   const paths = await normalizeDocumentationPaths(resolved, documentationPaths);
   const context = { schema_version: 1, documentation: { paths } };
-  await atomicJson(path.join(resolved, CONTEXT_PATH), context);
-  return { file: path.join(resolved, CONTEXT_PATH), context };
+  await atomicJson(contextFile, context);
+  if (await exists(legacyContextFile)) await unlink(legacyContextFile);
+  return { file: contextFile, context };
 }
 
 export async function installRooty({ packageRoot, projectRoot, documentationPaths = [] }) {
   const resolved = await assertProjectRoot(projectRoot);
+  for (const relative of [
+    ROOTY_PATHS.manifest,
+    ROOTY_PATHS.context,
+    ROOTY_PATHS.legacyManifest,
+    ROOTY_PATHS.legacyContext
+  ]) {
+    await assertNoSymlinkSegments(resolved, path.join(resolved, relative));
+  }
   const manifest = await readManifest(resolved);
   const planned = [];
   const nextFiles = {};
@@ -196,16 +228,26 @@ export async function installRooty({ packageRoot, projectRoot, documentationPath
     }
   }
 
-  const contextFile = path.join(resolved, CONTEXT_PATH);
-  const manifestFile = path.join(resolved, MANIFEST_PATH);
+  const contextFile = path.join(resolved, ROOTY_PATHS.context);
+  const manifestFile = path.join(resolved, ROOTY_PATHS.manifest);
+  const legacyContextFile = path.join(resolved, ROOTY_PATHS.legacyContext);
+  const legacyManifestFile = path.join(resolved, ROOTY_PATHS.legacyManifest);
+  for (const directory of ROOTY_PROJECT_DIRECTORIES) {
+    await assertNoSymlinkSegments(resolved, path.join(resolved, directory));
+  }
   await assertNoSymlinkSegments(resolved, contextFile);
   await assertNoSymlinkSegments(resolved, manifestFile);
+  await assertNoSymlinkSegments(resolved, legacyContextFile);
+  await assertNoSymlinkSegments(resolved, legacyManifestFile);
 
   const suppliedDocs = splitDocumentationPaths(documentationPaths);
   const context = suppliedDocs.length > 0
     ? { schema_version: 1, documentation: { paths: await normalizeDocumentationPaths(resolved, suppliedDocs) } }
     : await readProjectContext(resolved);
 
+  for (const directory of ROOTY_PROJECT_DIRECTORIES) {
+    await mkdir(path.join(resolved, directory), { recursive: true });
+  }
   for (const item of planned) {
     await mkdir(path.dirname(item.target), { recursive: true });
     await writeFile(item.target, item.content);
@@ -220,9 +262,11 @@ export async function installRooty({ packageRoot, projectRoot, documentationPath
     skill_targets: ROOTY_SKILL_TARGETS,
     skills: ROOTY_SKILLS,
     files: Object.fromEntries(Object.entries(nextFiles).sort(([left], [right]) => left.localeCompare(right))),
-    project_context: CONTEXT_PATH
+    project_context: ROOTY_PATHS.context
   };
   await atomicJson(manifestFile, nextManifest);
+  if (await exists(legacyContextFile)) await unlink(legacyContextFile);
+  if (await exists(legacyManifestFile)) await unlink(legacyManifestFile);
 
   return {
     installation: INSTALLATION_MODE,

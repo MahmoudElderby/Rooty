@@ -27,7 +27,7 @@ Status: implemented on `codex/agent-led-setup-redesign`.
 
 ### Setup model and doctor
 
-- Detect `.rooty/install-manifest.json` as `agent-led-v3`.
+- Detect `.rooty/state/install-manifest.json` as `agent-led-v3`, with a version 0.2.0 flat-path fallback and migration.
 - Validate installed skill hashes and project context.
 - Keep missing documentation as a warning.
 - Preserve legacy source-registry/activation doctor behavior for legacy projects.
@@ -100,7 +100,7 @@ Add `rooty mcp status` to report binding names and availability without exposing
 
 Promote providers only after validation and mutation tests:
 
-1. SQL Server/DAB read-only entity configuration and STDIO probe.
+1. SQL Server/DAB multi-catalog discovery, per-catalog autoentity configuration, and STDIO `describe_entities` probe.
 2. Elasticsearch standalone 8.x/9.x compatibility and Agent Builder paths.
 3. Jira/Rovo read-only identity and tool allowlist contract.
 4. MongoDB official read-only mode and disabled mutation groups.

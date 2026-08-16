@@ -13,6 +13,7 @@ Use the trusted project's `.codex/config.toml`. Preserve unrelated settings and 
 [mcp_servers.rooty_provider]
 command = "provider-command"
 args = ["provider-arguments"]
+cwd = "absolute-provider-config-directory"
 env_vars = ["ROOTY_REQUIRED_CREDENTIAL"]
 enabled = true
 required = true
@@ -20,7 +21,7 @@ enabled_tools = ["verified_read_tool"]
 default_tools_approval_mode = "prompt"
 ```
 
-Use `env_vars` to forward credential names already present in the Codex process environment. Use `[mcp_servers.<name>.env]` only for non-secret constants. Never put a secret value in `env`.
+Use `cwd` when a local server resolves files or defaults from its working directory. Use `env_vars` to forward credential names already present in the Codex process environment. Use `[mcp_servers.<name>.env]` only for non-secret constants. Never put a secret value in `env`.
 
 ## Streamable HTTP shape
 

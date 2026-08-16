@@ -69,7 +69,7 @@ Then open the project in Codex, Cursor, or Claude and ask:
 Set up Rooty for this project.
 ```
 
-The CLI copies Rooty's skills and creates `.rooty/project-context.json`. The active agent reviews documentation, performs targeted discovery, proposes provider access, requests approvals, guides credentials, and verifies readiness.
+The CLI copies Rooty's skills and creates `.rooty/config/project-context.json`. The active agent reviews documentation, performs targeted discovery, proposes provider access, requests approvals, guides credentials, and verifies readiness.
 
 If you already know the documentation locations:
 
@@ -99,7 +99,7 @@ Codex and Cursor discover `.agents/skills`; Claude uses `.claude/skills`. Instal
 
 ## Documentation-first, not documentation-trusting
 
-`.rooty/project-context.json` stores only user-confirmed documentation paths:
+`.rooty/config/project-context.json` stores only user-confirmed documentation paths:
 
 ```json
 {

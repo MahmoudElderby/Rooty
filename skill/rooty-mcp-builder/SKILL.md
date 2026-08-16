@@ -30,6 +30,7 @@ Produce a proposal before any mutation. Include:
 - official server identity and documentation URLs checked;
 - support status and any version or deployment constraints;
 - transport, command or URL, exact host config path, and merge scope;
+- generated artifact paths under `.rooty/mcp/<category>/<provider>/`, never directly under `.rooty/`;
 - every credential binding name and where its value must be supplied;
 - provider-side read-only identity or role and server-side read-only controls;
 - explicit allowed and forbidden tool categories;
