@@ -1,5 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
 import {
+  appendFile,
   lstat,
   mkdir,
   readFile,
@@ -10,6 +11,7 @@ import {
   writeFile
 } from "node:fs/promises";
 import path from "node:path";
+import { MEMORY_PATHS, migrateLegacyMemory } from "./memory-store.js";
 
 export const ROOTY_SKILLS = ["rooty-setup", "rooty-mcp-builder", "root-cause-investigator"];
 export const ROOTY_SKILL_TARGETS = [".agents/skills", ".claude/skills"];
@@ -24,6 +26,8 @@ export const ROOTY_PATHS = Object.freeze({
 export const ROOTY_PROJECT_DIRECTORIES = Object.freeze([
   ".rooty/config",
   ".rooty/state",
+  MEMORY_PATHS.drafts,
+  MEMORY_PATHS.approved,
   ".rooty/mcp/data",
   ".rooty/mcp/observability",
   ".rooty/mcp/ticketing",
@@ -121,6 +125,24 @@ async function atomicJson(filePath, value) {
   const temporary = path.join(path.dirname(filePath), `.${path.basename(filePath)}.${randomUUID()}.tmp`);
   await writeFile(temporary, `${JSON.stringify(value, null, 2)}\n`, "utf8");
   await rename(temporary, filePath);
+}
+
+async function ensureProjectGitignore(packageRoot, projectRoot) {
+  const template = await readFile(path.join(packageRoot, "setup/gitignore-template.txt"), "utf8");
+  const target = path.join(projectRoot, ".gitignore");
+  if (!await exists(target)) {
+    await writeFile(target, template, "utf8");
+    return { file: target, changed: true };
+  }
+  const details = await lstat(target);
+  if (!details.isFile() || details.isSymbolicLink()) throw new Error(`Refusing unsafe Git ignore target: ${target}`);
+  const existing = await readFile(target, "utf8");
+  const existingLines = new Set(existing.split(/\r?\n/).map((line) => line.trim()).filter(Boolean));
+  const missing = template.split(/\r?\n/).filter((line) => line && !line.startsWith("#") && !existingLines.has(line));
+  if (missing.length === 0) return { file: target, changed: false };
+  const separator = existing.endsWith("\n") ? "" : "\n";
+  await appendFile(target, `${separator}\n# Rooty runtime state\n${missing.join("\n")}\n`, "utf8");
+  return { file: target, changed: true };
 }
 
 export function splitDocumentationPaths(value) {
@@ -232,6 +254,7 @@ export async function installRooty({ packageRoot, projectRoot, documentationPath
   const manifestFile = path.join(resolved, ROOTY_PATHS.manifest);
   const legacyContextFile = path.join(resolved, ROOTY_PATHS.legacyContext);
   const legacyManifestFile = path.join(resolved, ROOTY_PATHS.legacyManifest);
+  const gitignoreFile = path.join(resolved, ".gitignore");
   for (const directory of ROOTY_PROJECT_DIRECTORIES) {
     await assertNoSymlinkSegments(resolved, path.join(resolved, directory));
   }
@@ -239,11 +262,18 @@ export async function installRooty({ packageRoot, projectRoot, documentationPath
   await assertNoSymlinkSegments(resolved, manifestFile);
   await assertNoSymlinkSegments(resolved, legacyContextFile);
   await assertNoSymlinkSegments(resolved, legacyManifestFile);
+  await assertNoSymlinkSegments(resolved, gitignoreFile);
+  if (await exists(gitignoreFile)) {
+    const details = await lstat(gitignoreFile);
+    if (!details.isFile() || details.isSymbolicLink()) throw new Error(`Refusing unsafe Git ignore target: ${gitignoreFile}`);
+  }
 
   const suppliedDocs = splitDocumentationPaths(documentationPaths);
   const context = suppliedDocs.length > 0
     ? { schema_version: 1, documentation: { paths: await normalizeDocumentationPaths(resolved, suppliedDocs) } }
     : await readProjectContext(resolved);
+
+  const memoryMigration = await migrateLegacyMemory(resolved);
 
   for (const directory of ROOTY_PROJECT_DIRECTORIES) {
     await mkdir(path.join(resolved, directory), { recursive: true });
@@ -253,6 +283,7 @@ export async function installRooty({ packageRoot, projectRoot, documentationPath
     await writeFile(item.target, item.content);
   }
   await atomicJson(contextFile, context);
+  const gitignore = await ensureProjectGitignore(packageRoot, resolved);
 
   const packageManifest = JSON.parse(await readFile(path.join(packageRoot, "package.json"), "utf8"));
   const nextManifest = {
@@ -274,6 +305,13 @@ export async function installRooty({ packageRoot, projectRoot, documentationPath
     manifestFile,
     contextFile,
     documentationPaths: context.documentation.paths,
+    memory: {
+      drafts: path.join(resolved, MEMORY_PATHS.drafts),
+      approved: path.join(resolved, MEMORY_PATHS.approved),
+      migratedFiles: memoryMigration.copiedFiles,
+      legacyFilesRetained: memoryMigration.legacyFilesRetained
+    },
+    gitignore,
     skills: ROOTY_SKILLS,
     targets: ROOTY_SKILL_TARGETS,
     writtenFiles: planned.map((item) => item.target)
@@ -313,6 +351,32 @@ export async function inspectRootyInstall(projectRoot) {
     add("FAIL", "installed-skills", `Missing: ${missing.length}; modified: ${modified.length}. Re-run \`rooty install\` after reviewing local changes.`);
   } else {
     add("PASS", "installed-skills", `${manifest.skills.length} skills are intact in ${manifest.skill_targets.length} host locations`);
+  }
+
+  const missingDirectories = [];
+  const unsafeDirectories = [];
+  for (const relative of ROOTY_PROJECT_DIRECTORIES) {
+    const target = path.join(resolved, relative);
+    if (!await exists(target)) {
+      missingDirectories.push(relative);
+      continue;
+    }
+    const details = await lstat(target);
+    if (!details.isDirectory() || details.isSymbolicLink()) unsafeDirectories.push(relative);
+  }
+  if (missingDirectories.length || unsafeDirectories.length) {
+    add("FAIL", "rooty-layout", `Missing directories: ${missingDirectories.join(", ") || "none"}; unsafe directories: ${unsafeDirectories.join(", ") || "none"}. Re-run \`rooty install\`.`);
+  } else {
+    add("PASS", "rooty-layout", `Canonical memory is available at ${MEMORY_PATHS.root}`);
+  }
+
+  try {
+    const ignore = await readFile(path.join(resolved, ".gitignore"), "utf8");
+    const lines = new Set(ignore.split(/\r?\n/).map((line) => line.trim()).filter(Boolean));
+    if (!lines.has(`${MEMORY_PATHS.drafts}/`)) throw new Error(`Missing ${MEMORY_PATHS.drafts}/`);
+    add("PASS", "memory-gitignore", "Memory drafts are excluded from Git");
+  } catch (error) {
+    add("FAIL", "memory-gitignore", `${error.message}. Re-run \`rooty install\`.`);
   }
 
   try {

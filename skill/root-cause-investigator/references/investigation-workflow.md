@@ -2,11 +2,13 @@
 
 ## Preflight
 
-Establish a case ID, source registry, environment boundary, external identity, and evidence ledger. Refuse if the requested operation requires mutation. State access and retention gaps early.
+Establish a case ID, source registry, environment boundary, external identity, and evidence ledger. Refuse if the requested operation requires mutation. Before querying, build a compact evidence map covering available runtime sources, incident-time history versus current state, retention windows, correlation fields, and access gaps.
+
+Treat every identifier from a ticket, conversation, or attachment as `REPORTED`. Reconcile conflicting identifiers against attachments and independent runtime records; no single reported source is automatically authoritative. Enumerate relevant failure surfaces across synchronous handlers, asynchronous workers or error queues, and downstream communication records without assuming one log sink is complete.
 
 ## Intake and path map
 
-Extract actors, tenants, entities, event time/timezone, environment, expected/observed behavior, frequency, scope, request/correlation/trace/session IDs, and relevant change windows. Map only the relevant entry point, services, queues, downstream calls, persistence, and response mapping. State the invariant at each boundary.
+Extract actors, tenants, entities, event time/timezone, environment, expected/observed behavior, frequency, scope, request/correlation/trace/session IDs, and relevant change windows. Map only the relevant entry point, services, queues, downstream calls, persistence, and response mapping. Trace surfaced error text through wrapper, translation, and response-mapping layers to the originating throw or failure site. State the invariant at each boundary.
 
 ## Hypothesis ledger
 
@@ -14,7 +16,7 @@ Record an ID, statement, status, predictions, and bounded tests. Status is one o
 
 ## Evidence acquisition
 
-Start with the narrowest exact pivot. Expand the time window deliberately and never beyond connector limits without separate authorization. Prefer independently corroborating sources. For databases, label current state, incident-time history/audit/CDC, or derived state.
+Start with the narrowest exact pivot. Before drilling deeply into one record, compare the relevant boundaries or a bounded successful cohort when that can distinguish the leading hypotheses. Expand the time window deliberately and never beyond connector limits without separate authorization. Prefer independently corroborating sources. For databases, label current state, incident-time history/audit/CDC, or derived state. Query an external system early only when its state is the cheapest discriminating test between the leading explanations.
 
 ## First bad state and falsification
 

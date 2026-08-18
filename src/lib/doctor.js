@@ -13,6 +13,7 @@ const REQUIRED_GITIGNORE_ENTRIES = [
   ".investigator/discovery.json",
   ".investigator/cases/",
   ".investigator/memory/drafts/",
+  ".rooty/memory/drafts/",
   ".rooty-cases/"
 ];
 

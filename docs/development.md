@@ -20,6 +20,7 @@ Verify:
 - three skills exist under both host skill roots;
 - `.rooty/state/install-manifest.json` fingerprints every installed file;
 - `.rooty/config/project-context.json` stores only documentation paths;
+- `.rooty/memory/{drafts,approved}` exists and draft cards are excluded from Git;
 - `.rooty/mcp/{data,observability,ticketing,custom}` exists for generated provider artifacts;
 - the packaged MCP-builder skill contains `assets/start-dab.cjs`; approved SQL setup later copies it once and creates `.rooty/mcp-<domain>/` folders;
 - a simulated version 0.2.0 flat layout migrates without losing documentation paths;

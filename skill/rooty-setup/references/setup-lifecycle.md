@@ -2,7 +2,7 @@
 
 ## State sequence
 
-1. `INSTALLED`: all three Rooty skills and `.rooty/config/project-context.json` exist.
+1. `INSTALLED`: all three Rooty skills, `.rooty/config/project-context.json`, and `.rooty/memory/{drafts,approved}` exist.
 2. `DOCS_CONFIRMED`: documentation entry points are confirmed, or the developer explicitly confirms none are available.
 3. `DISCOVERED`: data and observability candidates are supported by documentation or current project evidence.
 4. `PROPOSED`: each connection has an official-source proposal, host path, credentials, safety controls, and probe.

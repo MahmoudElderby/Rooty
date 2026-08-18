@@ -30,6 +30,9 @@ Installation creates project-scoped copies of `rooty-setup`, `rooty-mcp-builder`
 │   └── project-context.json
 ├── state/
 │   └── install-manifest.json
+├── memory/
+│   ├── drafts/
+│   └── approved/
 └── mcp/
     ├── data/
     ├── observability/
@@ -37,9 +40,9 @@ Installation creates project-scoped copies of `rooty-setup`, `rooty-mcp-builder`
     └── custom/
 ```
 
-The manifest fingerprints Rooty-owned files so reinstall can update unchanged files without overwriting developer modifications. Project context stores only confirmed documentation paths. General provider files live under `.rooty/mcp/<category>/<provider>/`. After an approved SQL setup, the tested runtime layout adds one `.rooty/mcp-<domain>/dab-config.json` per catalog and one shared `.rooty/start-dab.cjs` launcher.
+The manifest fingerprints Rooty-owned files so reinstall can update unchanged files without overwriting developer modifications. Project context stores only confirmed documentation paths. Draft memory is gitignored; approved sanitized cards can be shared with the team. General provider files live under `.rooty/mcp/<category>/<provider>/`. After an approved SQL setup, the tested runtime layout adds one `.rooty/mcp-<domain>/dab-config.json` per catalog and one shared `.rooty/start-dab.cjs` launcher.
 
-Reinstalling automatically migrates the flat `.rooty/install-manifest.json` and `.rooty/project-context.json` layout created by version 0.2.0.
+Reinstalling automatically migrates the flat `.rooty/install-manifest.json` and `.rooty/project-context.json` layout created by version 0.2.0. It also copies legacy `.investigator/memory` JSON cards into `.rooty/memory` after collision checks while retaining the original files.
 
 Installation does not scan the source tree, execute a package, pull an image, start OAuth, collect credentials, or configure MCP servers.
 

@@ -94,7 +94,7 @@ The project installer refuses filesystem roots, symlinked installation targets, 
 
 Host adapters configure read-only behavior where supported. Persisted case data must live outside the investigated source tree. Rooty rejects lexical and symlink-resolved in-project case paths.
 
-This prevents an investigation from changing the repository and reduces the chance of committing incident evidence. Advanced compatibility initialization creates or extends `.gitignore` with runtime case, discovery, and draft paths. Agent-led installation itself writes only the project skills, manifest, and confirmed documentation paths.
+This prevents an investigation from changing the repository and reduces the chance of committing incident evidence. Installation creates or extends `.gitignore` with runtime case, discovery, and memory-draft paths. Agent-led installation writes project skills, Rooty configuration and state, empty memory directories, provider artifact directories, and the ignore policy; it does not write investigation conclusions.
 
 Do not place raw production evidence in the Rooty repository. Apply your organization's retention, encryption, access-control, and deletion policies to external case storage.
 
@@ -118,7 +118,7 @@ Only recomputed `CONFIRMED` cases are eligible. Approval:
 - Requires a human or accountable team identity
 - Compares the draft to a freshly rebuilt card
 - Rejects restricted fields and common secret patterns
-- Refuses overwrites
+- Refuses overwrites, duplicate learning fingerprints, and overlapping concern keys
 - Adds a 180-day expiry
 
 Approved memory remains hypothesis input, not current-case evidence.

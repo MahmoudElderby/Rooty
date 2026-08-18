@@ -91,11 +91,18 @@ npx rooty-investigator install --docs "README.md,docs,architecture"
 └── root-cause-investigator/
 
 .rooty/
-├── install-manifest.json
-└── project-context.json
+├── config/
+│   └── project-context.json
+├── state/
+│   └── install-manifest.json
+├── memory/
+│   ├── drafts/
+│   └── approved/
+└── mcp/
 ```
 
 Codex and Cursor discover `.agents/skills`; Claude uses `.claude/skills`. Installation is safe to repeat: Rooty updates unchanged owned skill files and refuses to overwrite modified or unowned ones.
+It also merges Rooty's runtime exclusions into `.gitignore`; drafts remain local while approved sanitized memory can be shared.
 
 ## Documentation-first, not documentation-trusting
 
@@ -183,11 +190,11 @@ rooty memory propose \
 rooty memory approve \
   --project /path/to/project \
   --case-dir /path/to/confirmed-case \
-  --draft /path/to/project/.investigator/memory/drafts/INV-....json \
+  --draft /path/to/project/.rooty/memory/drafts/INV-....json \
   --reviewed-by team-payments
 ```
 
-Only a currently verified `CONFIRMED` case can become a draft. Approval re-verifies the source case and evidence hash chain, requires a human or accountable team, rejects sensitive fields, and sets an expiry. Approved memory may suggest pivots and hypotheses in a later case; it can never prove the new case.
+Only a currently verified `CONFIRMED` case can become a draft. Approval re-verifies the source case and evidence hash chain, requires a human or accountable team, rejects sensitive fields, and sets an expiry. Stable concern keys and reusable-content fingerprints reject duplicate or overlapping learning. Approved memory may suggest pivots and hypotheses in a later case; it can never prove the new case. Reinstall copies legacy `.investigator/memory` cards into `.rooty/memory` without deleting the originals.
 
 Read [Memory and learning](docs/memory-and-learning.md) for lifecycle and governance details.
 

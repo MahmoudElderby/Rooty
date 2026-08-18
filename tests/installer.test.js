@@ -48,28 +48,65 @@ test("agent-led install copies all Rooty skills for supported hosts", async () =
   }
 
   assert.deepEqual(await readProjectContext(projectRoot), { schema_version: 1, documentation: { paths: [] } });
-  assert.deepEqual((await readdir(path.join(projectRoot, ".rooty"))).sort(), ["config", "mcp", "state"]);
+  assert.deepEqual((await readdir(path.join(projectRoot, ".rooty"))).sort(), ["config", "mcp", "memory", "state"]);
   for (const directory of ROOTY_PROJECT_DIRECTORIES) {
     await readdir(path.join(projectRoot, directory));
   }
+  assert.match(await readFile(path.join(projectRoot, ".gitignore"), "utf8"), /\.rooty\/memory\/drafts\//);
   const manifest = JSON.parse(await readFile(path.join(projectRoot, ROOTY_PATHS.manifest), "utf8"));
   assert.equal(manifest.project_context, ROOTY_PATHS.context);
   assert.equal(await detectSetupModel(projectRoot), "agent-led-v3");
   const inspected = await inspectRootyInstall(projectRoot);
   assert.equal(inspected.ok, true, JSON.stringify(inspected.checks));
   assert.equal(inspected.checks.find((check) => check.name === "documentation-context")?.status, "WARN");
+  assert.equal(inspected.checks.find((check) => check.name === "rooty-layout")?.status, "PASS");
+  assert.equal(inspected.checks.find((check) => check.name === "memory-gitignore")?.status, "PASS");
+});
+
+test("install copies legacy memory into the canonical Rooty layout without deleting the source", async () => {
+  const projectRoot = await project("rooty-memory-migration");
+  const legacyDraft = path.join(projectRoot, ".investigator/memory/drafts/INV-LEGACY.json");
+  const legacyApproved = path.join(projectRoot, ".investigator/memory/approved/INV-APPROVED.json");
+  await mkdir(path.dirname(legacyDraft), { recursive: true });
+  await mkdir(path.dirname(legacyApproved), { recursive: true });
+  await writeFile(legacyDraft, "{\"kind\":\"draft\"}\n", "utf8");
+  await writeFile(legacyApproved, "{\"kind\":\"approved\"}\n", "utf8");
+
+  const result = await installRooty({ packageRoot: ROOT, projectRoot });
+  assert.equal(result.memory.migratedFiles.length, 2);
+  assert.equal(await readFile(path.join(projectRoot, ".rooty/memory/drafts/INV-LEGACY.json"), "utf8"), "{\"kind\":\"draft\"}\n");
+  assert.equal(await readFile(path.join(projectRoot, ".rooty/memory/approved/INV-APPROVED.json"), "utf8"), "{\"kind\":\"approved\"}\n");
+  assert.equal(await readFile(legacyDraft, "utf8"), "{\"kind\":\"draft\"}\n");
+  assert.equal(await readFile(legacyApproved, "utf8"), "{\"kind\":\"approved\"}\n");
+});
+
+test("install refuses conflicting legacy memory before installing skills", async () => {
+  const projectRoot = await project("rooty-memory-conflict");
+  const legacyDraft = path.join(projectRoot, ".investigator/memory/drafts/INV-CONFLICT.json");
+  const canonicalDraft = path.join(projectRoot, ".rooty/memory/drafts/INV-CONFLICT.json");
+  await mkdir(path.dirname(legacyDraft), { recursive: true });
+  await mkdir(path.dirname(canonicalDraft), { recursive: true });
+  await writeFile(legacyDraft, "{\"source\":\"legacy\"}\n", "utf8");
+  await writeFile(canonicalDraft, "{\"source\":\"canonical\"}\n", "utf8");
+
+  await assert.rejects(() => installRooty({ packageRoot: ROOT, projectRoot }), /conflicting legacy memory migration/);
+  await assert.rejects(() => readFile(path.join(projectRoot, ".agents/skills/rooty-setup/SKILL.md"), "utf8"), /ENOENT/);
 });
 
 test("install records confirmed documentation paths and is idempotent", async () => {
   const projectRoot = await project("rooty-docs");
   await mkdir(path.join(projectRoot, "docs"));
   await writeFile(path.join(projectRoot, "README.md"), "# Project\n", "utf8");
+  await writeFile(path.join(projectRoot, ".gitignore"), "node_modules/\n", "utf8");
 
   const first = await installRooty({ packageRoot: ROOT, projectRoot, documentationPaths: ["README.md", "docs", "docs"] });
   assert.deepEqual(first.documentationPaths, ["README.md", "docs"]);
   const second = await installRooty({ packageRoot: ROOT, projectRoot });
   assert.equal(second.writtenFiles.length, 0);
   assert.deepEqual(second.documentationPaths, ["README.md", "docs"]);
+  const ignore = await readFile(path.join(projectRoot, ".gitignore"), "utf8");
+  assert.match(ignore, /^node_modules\//);
+  assert.match(ignore, /\.rooty\/memory\/drafts\//);
 
   await setDocumentationPaths({ projectRoot, documentationPaths: ["docs"] });
   assert.deepEqual((await readProjectContext(projectRoot)).documentation.paths, ["docs"]);

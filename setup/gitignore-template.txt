@@ -2,4 +2,5 @@
 .investigator/discovery.json
 .investigator/cases/
 .investigator/memory/drafts/
+.rooty/memory/drafts/
 .rooty-cases/

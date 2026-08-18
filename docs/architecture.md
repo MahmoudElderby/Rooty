@@ -38,6 +38,7 @@ There is no Rooty gateway or central credential store. Each host connects direct
 - copies `rooty-setup`, `rooty-mcp-builder`, and `root-cause-investigator` into `.agents/skills/` and `.claude/skills/`;
 - records SHA-256 ownership fingerprints in `.rooty/state/install-manifest.json`;
 - stores only confirmed documentation paths in `.rooty/config/project-context.json`;
+- creates `.rooty/memory/{drafts,approved}`, gitignores drafts, and copies non-conflicting legacy `.investigator/memory` cards without deleting the originals;
 - creates category roots under `.rooty/mcp/` for general provider artifacts; approved SQL setup uses the tested `.rooty/mcp-<domain>/dab-config.json` layout and one shared `.rooty/start-dab.cjs` launcher;
 - migrates the two flat version 0.2.0 state files during reinstall;
 - updates unchanged Rooty-owned files and refuses modified/unowned conflicts.
@@ -70,7 +71,7 @@ SQL Server has one deliberate cross-host runtime contract: one `rooty-sql-{domai
 
 ### Investigator skill
 
-`skill/root-cause-investigator/` retains Rooty's investigation method: intake, expected-flow reconstruction, testable hypotheses, bounded evidence queries, first-bad-state analysis, competing-cause falsification, and `CONFIRMED`, `PROBABLE`, or `INCONCLUSIVE` outcomes. Confirmed project docs orient the search but never prove a claim.
+`skill/root-cause-investigator/` retains Rooty's investigation method: pre-query evidence mapping, reported-identifier reconciliation, expected-flow reconstruction, failure-surface enumeration, wrapper-to-origin tracing, testable hypotheses, bounded evidence queries, first-bad-state analysis, competing-cause falsification, and `CONFIRMED`, `PROBABLE`, or `INCONCLUSIVE` outcomes. Confirmed project docs orient the search but never prove a claim. Universal methodology remains in this canonical skill rather than duplicated in always-on host rules.
 
 ## Deterministic safety engine
 
@@ -81,6 +82,8 @@ The existing CLI modules remain responsible for controls that should not depend 
 - safe host rendering and connector activation for compatibility workflows;
 - MCP initialization, tool comparison, and harmless probes;
 - frozen snapshot cases, hash-chained evidence, reports, memory review, and evaluation.
+
+Approved project memory uses schema-versioned cards with stable concern keys and reusable-content fingerprints. Host adapters do not own or merge learning content.
 
 The next engine contract will accept a canonical agent-authored provider proposal, validate it, and render a minimal host merge. Until that contract is implemented, non-standard provider configuration remains `REVIEW_REQUIRED` and is applied through the host's visible approval flow.
 

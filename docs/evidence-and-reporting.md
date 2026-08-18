@@ -105,7 +105,7 @@ Reports contain these sections in order:
 8. Competing hypotheses and tests
 9. Evidence gaps and limitations
 10. Handoff notes
-11. Proposed reusable learning card marked as a draft
+11. Proposed reusable learning card marked as a draft, including scope, kind, canonical concern key, applicability, and proposed disposition
 
 For `INCONCLUSIVE`, the report does not name a root cause. For `PROBABLE`, it names the exact missing proof. Reports omit fix instructions and implementation plans.
 

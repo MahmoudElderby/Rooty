@@ -71,3 +71,29 @@ test("Elasticsearch 8 compatibility uses the official image and list_indices pro
     "separate approval"
   ]);
 });
+
+test("investigation method includes validated preflight and governed learning behavior", async () => {
+  const investigator = await content("skill/root-cause-investigator/SKILL.md");
+  const workflow = await content("skill/root-cause-investigator/references/investigation-workflow.md");
+  const setup = await content("skill/rooty-setup/SKILL.md");
+  const cursorAdapter = await content("hosts/cursor/root-cause-investigator.mdc");
+
+  requires(investigator, [
+    "pre-query evidence map",
+    "reconcile conflicting identifiers",
+    "failure surfaces",
+    "through wrappers",
+    "universal",
+    "project",
+    "case_only",
+    "Never merge learning directly into host rule files"
+  ]);
+  requires(workflow, [
+    "incident-time history versus current state",
+    "no single reported source is automatically authoritative",
+    "bounded successful cohort",
+    "cheapest discriminating test"
+  ]);
+  requires(setup, [".rooty/memory/{drafts,approved}", "Do not create always-on host investigation rules"]);
+  assert.match(cursorAdapter, /alwaysApply:\s*false/);
+});

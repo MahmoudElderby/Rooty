@@ -199,6 +199,11 @@ function bullets(values, fallback = "None established.") {
   return values?.length ? values.map((value) => `- ${typeof value === "string" ? value : value.description ?? JSON.stringify(value)}`).join("\n") : fallback;
 }
 
+function learningKey(analysis) {
+  const segment = (value, fallback) => String(value ?? fallback).trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || fallback;
+  return `failure_pattern:${segment(analysis.root_cause_class, "unclassified")}:${segment(analysis.trigger_class, "unknown")}`;
+}
+
 export function renderReport(state, entries) {
   const analysis = state.analysis;
   const status = state.assessment.status;
@@ -257,8 +262,12 @@ Rooty does not propose or apply remediation. A separate owner should decide corr
 
 ## 11. Proposed reusable learning card
 
+- Scope: ${status === "CONFIRMED" ? "project" : "case_only"}
+- Kind: failure_pattern
+- Canonical key: ${learningKey(analysis)}
 - Root-cause class: ${status === "CONFIRMED" ? analysis.root_cause_class ?? "unclassified" : "Not eligible for approval until confirmed."}
 - Useful pivots: ${(analysis.useful_pivots ?? []).join(", ") || "None recorded."}
+- Proposed disposition: ${status === "CONFIRMED" ? "project_memory" : "case_notes"}
 - Review status: draft
 `;
 }

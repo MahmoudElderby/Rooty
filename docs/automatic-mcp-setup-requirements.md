@@ -31,7 +31,7 @@ The CLI declares and copies Rooty's project folder structure and skills. The act
 3. Use deterministic code for path safety, schemas, ownership, secret detection, config merging, allowlists, and probes.
 4. Read project documentation before source code when confirmed docs exist.
 5. Treat documentation as navigation reference, never as guaranteed truth.
-6. Persist only documentation paths; do not build a project map.
+6. Persist only confirmed documentation paths during semantic setup discovery; reviewed memory and mechanical provider artifacts follow their own schemas. Do not build a project map.
 7. Require data and observability capabilities; make ticketing optional.
 8. Declare all credential bindings in each active host MCP entry, never values.
 9. Use the host's visible approval flow for meaningful external actions.
@@ -62,6 +62,7 @@ The installer must:
 - copy `rooty-setup`, `rooty-mcp-builder`, and `root-cause-investigator`;
 - create `.rooty/state/install-manifest.json` with Rooty-owned file hashes;
 - create `.rooty/config/project-context.json` with only `documentation.paths`;
+- create `.rooty/memory/{drafts,approved}`, gitignore drafts, and safely copy any non-conflicting legacy memory cards while retaining their sources;
 - create `.rooty/mcp/{data,observability,ticketing,custom}` for general providers; SQL Server setup later creates the tested `.rooty/mcp-<domain>/dab-config.json` folders and shared `.rooty/start-dab.cjs` launcher after approval;
 - recognize and migrate the flat version 0.2.0 manifest/context paths;
 - accept optional `--docs PATH,...` values;
@@ -83,6 +84,8 @@ Installation must not:
 - begin OAuth;
 - collect or persist credential values;
 - render MCP configuration.
+
+Installation must not generate project-specific investigation rules or derived project knowledge. Universal investigation methodology is delivered through the canonical installed skill; approved reusable project learning is stored separately under `.rooty/memory`.
 
 ## 6. Documentation context
 
@@ -258,6 +261,7 @@ Existing deterministic `sources`, host `init`, connector activation, frozen case
 
 - One install command produces all required skill/context files on Windows, macOS, and Linux.
 - Reinstall is idempotent and conflicts fail before partial writes.
+- Install creates `.rooty/memory/{drafts,approved}`, protects drafts from Git, and copies non-conflicting legacy cards without deleting their sources.
 - Codex/Cursor and Claude discover their installed skills.
 - Empty documentation context is a warning; invalid/broad paths are rejected.
 - Setup reads confirmed docs before targeted source and stores no derived map.

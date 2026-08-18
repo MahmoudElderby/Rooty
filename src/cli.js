@@ -57,7 +57,10 @@ function installOutput(result) {
     `${color("1;32", "INSTALLED")} Rooty skills for Codex, Cursor, and Claude`,
     `${color("1;36", "PROJECT")}   ${result.projectRoot}`,
     `${color("1;36", "SKILLS")}    ${result.skills.join(", ")}`,
-    `${color("1;36", "ROOTY")}     .rooty/{config,state,mcp/{data,observability,ticketing,custom}}`,
+    `${color("1;36", "ROOTY")}     .rooty/{config,state,memory/{drafts,approved},mcp/{data,observability,ticketing,custom}}`,
+    result.memory.migratedFiles.length
+      ? `${color("1;36", "MEMORY")}    copied ${result.memory.migratedFiles.length} legacy card(s); legacy files retained`
+      : `${color("1;36", "MEMORY")}    ${result.memory.drafts}`,
     result.documentationPaths.length
       ? `${color("1;36", "DOCS")}      ${result.documentationPaths.join(", ")}`
       : `${color("1;33", "DOCS")}      not selected; the setup agent will ask`,

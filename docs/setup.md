@@ -22,7 +22,9 @@ Run from the project folder:
 npx rooty-investigator install
 ```
 
-Rooty writes the same three skills to `.agents/skills/` for Codex and Cursor and to `.claude/skills/` for Claude. Reinstallation is idempotent and refuses to overwrite modified or unowned skill files.
+Rooty writes the same three skills to `.agents/skills/` for Codex and Cursor and to `.claude/skills/` for Claude. It creates `.rooty/memory/{drafts,approved}` and protects drafts through `.gitignore`. Reinstallation is idempotent, refuses to overwrite modified or unowned skill files, and copies non-conflicting legacy memory without deleting the source.
+
+Rooty does not install always-on host methodology rules. The canonical investigator skill owns universal behavior; reviewed project learning remains separate under `.rooty/memory`.
 
 ## 2. Confirm documentation locations
 

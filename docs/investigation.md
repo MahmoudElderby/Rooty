@@ -31,7 +31,7 @@ Rooty must not silently replace missing data with assumptions or widen to an unb
 
 ### 3. Follow the investigation
 
-The host may show Rooty reading project docs and code, retrieving the ticket, and calling direct read-only MCP tools. Rooty starts with the narrowest pivot:
+The host may show Rooty reading project docs and code, retrieving the ticket, and calling direct read-only MCP tools. Before querying, Rooty maps available sources, environments, retention, historical coverage, correlation fields, and access gaps. Ticket and attachment identifiers remain `REPORTED` until reconciled with independent evidence. Rooty then starts with the narrowest pivot:
 
 1. Request, correlation, trace, or session ID
 2. Entity ID plus bounded event time
@@ -59,16 +59,16 @@ Rooty stops after the investigation report. A different person or agent can use 
 
 | Phase | Internal behavior | Exit condition |
 |---|---|---|
-| Preflight | Establishes scope, environment, case identity, read-only boundaries, source availability, and retention limits | Mutation is refused; missing access is stated |
-| Intake | Retrieves the ticket and extracts actors, entities, timestamps, timezone, expected/observed behavior, frequency, scope, identifiers, and links | Ticket claims remain `REPORTED` |
-| Path map | Reads relevant code and documentation to map entry point, service boundaries, queues, downstream calls, persistence, and response mapping | Each boundary has an expected invariant |
+| Preflight | Establishes scope, environment, case identity, read-only boundaries, evidence map, source availability, historical coverage, and retention limits | Mutation is refused; missing access is stated |
+| Intake | Retrieves the ticket and extracts actors, entities, timestamps, timezone, expected/observed behavior, frequency, scope, identifiers, attachments, and links | Reported identifiers are reconciled; unresolved conflicts remain explicit |
+| Path map | Maps entry point, service boundaries, synchronous/asynchronous/downstream failure surfaces, persistence, response mapping, and wrapper-to-origin error flow | Each boundary has an expected invariant |
 | Hypothesis design | Creates testable explanations, predictions, and bounded tests | Every costly query has a purpose |
 | Evidence acquisition | Queries direct MCP sources using exact pivots and bounded time windows | Each observation records identity, timing, locator, result limits, and limitations |
 | First-bad-state analysis | Walks boundaries in order and compares expected versus observed values | Earliest verified divergence is identified |
 | Falsification | Tests the strongest alternative, successful traffic, incident-time version/config, retries, sampling, skew, and asynchronous delay | Material competitors are eliminated or remain open |
 | Assessment | Applies the deterministic stopping rule | One of three outcomes is selected |
 | Reporting | Renders the evidence chain and explicit gaps | No remediation content is included |
-| Learning proposal | Sanitizes reusable symptom classes, pivots, and query patterns | Draft only; human approval remains required |
+| Learning proposal | Classifies sanitized learning as universal, project, or case-only and assigns a canonical concern key | Draft only; human approval remains required; host rules are not modified |
 
 ## Expected path versus executed path
 
@@ -157,4 +157,3 @@ Root cause only; return explicit evidence gaps.
 The live investigation is executed by the AI host using Rooty's installed skill and activated MCP tools. The host returns the report in its conversation.
 
 The current `rooty run` command does not launch that live workflow. It consumes a frozen snapshot and creates deterministic case artifacts. Automatic capture and normalization of a live conversation into `case.json` and `evidence.ndjson` is future work.
-

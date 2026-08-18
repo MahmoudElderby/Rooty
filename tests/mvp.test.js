@@ -15,7 +15,7 @@ import { initializeHosts } from "../src/lib/hosts.js";
 import { callReadTool, TOOLS } from "../src/lib/mcp.js";
 import { approveMemory, proposeMemory } from "../src/lib/memory.js";
 import { configureSources, discoverSources, listSources } from "../src/lib/sources.js";
-import { pathExists, readJson, writeJson } from "../src/lib/core.js";
+import { pathExists, readJson, sha256, writeJson } from "../src/lib/core.js";
 import { main } from "../src/cli.js";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -115,13 +115,48 @@ test("vertical slice creates a hash-chained ledger, deterministic report, and so
 
   const draft = await proposeMemory({ projectRoot, caseDir });
   assert.equal(draft.card.review_status, "draft");
-  assert.equal(draft.card.schema_version, 2);
+  assert.equal(draft.card.schema_version, 3);
+  assert.equal(draft.card.scope, "project");
+  assert.equal(draft.card.kind, "failure_pattern");
+  assert.equal(draft.card.proposed_disposition, "project_memory");
+  assert.match(draft.card.canonical_key, /^failure_pattern:/);
+  assert.match(draft.card.learning_fingerprint, /^[a-f0-9]{64}$/);
+  assert.match(draft.file, /\.rooty[\\/]memory[\\/]drafts/);
   assert.equal(draft.card.source_ledger_count, 6);
   assert.match(draft.card.source_case_fingerprint, /^[a-f0-9]{64}$/);
   const approved = await approveMemory({ projectRoot, draftFile: draft.file, reviewedBy: "team-payments", caseDir });
   assert.equal(approved.card.review_status, "approved");
   assert.equal(approved.card.source_case_status, "CONFIRMED");
+  assert.match(approved.file, /\.rooty[\\/]memory[\\/]approved/);
   assert.equal(Object.hasOwn(approved.card, "raw_logs"), false);
+});
+
+test("legacy memory drafts remain approvable but new approvals use .rooty", async () => {
+  const projectRoot = await tempDirectory("rooty-legacy-memory");
+  const caseDir = path.join(await tempDirectory("rooty-legacy-cases"), "verified");
+  await runFrozenCase({ projectRoot, ticket: "ROOTY-101", snapshotFile: SNAPSHOT, caseDir });
+  const draft = await proposeMemory({ projectRoot, caseDir });
+  const legacyDraft = path.join(projectRoot, ".investigator/memory/drafts", path.basename(draft.file));
+  await mkdir(path.dirname(legacyDraft), { recursive: true });
+  const legacyCard = { ...draft.card, schema_version: 2 };
+  for (const field of ["scope", "kind", "canonical_key", "statement", "applicability", "supersedes", "proposed_disposition", "learning_fingerprint"]) delete legacyCard[field];
+  delete legacyCard.content_fingerprint;
+  legacyCard.content_fingerprint = sha256(legacyCard);
+  await writeJson(legacyDraft, legacyCard);
+
+  const approved = await approveMemory({ projectRoot, draftFile: legacyDraft, reviewedBy: "team-payments", caseDir });
+  assert.equal(approved.card.schema_version, 2);
+  assert.match(approved.file, /\.rooty[\\/]memory[\\/]approved/);
+});
+
+test("memory proposal rejects duplicate reusable learning deterministically", async () => {
+  const projectRoot = await tempDirectory("rooty-memory-dedup");
+  const firstCase = path.join(await tempDirectory("rooty-dedup-cases"), "first");
+  const secondCase = path.join(await tempDirectory("rooty-dedup-cases"), "second");
+  await runFrozenCase({ projectRoot, ticket: "ROOTY-101", snapshotFile: SNAPSHOT, caseDir: firstCase });
+  await runFrozenCase({ projectRoot, ticket: "ROOTY-101", snapshotFile: SNAPSHOT, caseDir: secondCase });
+  await proposeMemory({ projectRoot, caseDir: firstCase });
+  await assert.rejects(() => proposeMemory({ projectRoot, caseDir: secondCase }), /Duplicate reusable learning already exists/);
 });
 
 test("fabricated or detached memory drafts cannot be approved", async () => {
@@ -137,7 +172,7 @@ test("fabricated or detached memory drafts cannot be approved", async () => {
     root_cause_class: "fabricated-cause",
     content_fingerprint: "a".repeat(64)
   };
-  const fakeFile = path.join(fakeProject, ".investigator/memory/drafts/INV-FAKE-CONFIRMED.json");
+  const fakeFile = path.join(fakeProject, ".rooty/memory/drafts/INV-FAKE-CONFIRMED.json");
   await writeJson(fakeFile, fake);
   await assert.rejects(
     () => approveMemory({ projectRoot: fakeProject, draftFile: fakeFile, reviewedBy: "attacker", caseDir }),
@@ -148,10 +183,10 @@ test("fabricated or detached memory drafts cannot be approved", async () => {
   await writeJson(detached, sourceDraft.card);
   await assert.rejects(
     () => approveMemory({ projectRoot: fakeProject, draftFile: detached, reviewedBy: "reviewer", caseDir }),
-    /outside project/
+    /outside Rooty memory drafts/
   );
 
-  const missingCase = path.join(fakeProject, ".investigator/memory/drafts/INV-MISSING.json");
+  const missingCase = path.join(fakeProject, ".rooty/memory/drafts/INV-MISSING.json");
   await writeJson(missingCase, { case_id: "INV-MISSING", review_status: "draft", source_case_status: "CONFIRMED" });
   await assert.rejects(
     () => approveMemory({ projectRoot: fakeProject, draftFile: missingCase, reviewedBy: "reviewer", caseDir }),
@@ -285,7 +320,7 @@ test("discovery, host rendering, and activation preserve read-only controls", as
   assert.ok(initialized.files.length >= 8);
   const projectIgnore = await readFile(path.join(projectRoot, ".gitignore"), "utf8");
   assert.match(projectIgnore, /^dist\//m);
-  for (const entry of [".investigator/discovery.json", ".investigator/cases/", ".investigator/memory/drafts/", ".rooty-cases/"]) {
+  for (const entry of [".investigator/discovery.json", ".investigator/cases/", ".investigator/memory/drafts/", ".rooty/memory/drafts/", ".rooty-cases/"]) {
     assert.ok(projectIgnore.split(/\r?\n/).includes(entry), `missing project exclusion: ${entry}`);
   }
   const codex = await readFile(path.join(projectRoot, ".codex/config.toml"), "utf8");
@@ -449,6 +484,7 @@ test("package is publishable under rooty, retains the alias, includes docs, and 
   assert.match(gif.subarray(0, 6).toString("ascii"), /^GIF8[79]a$/);
   const ignoreTemplate = await readFile(path.join(ROOT, "setup/gitignore-template.txt"), "utf8");
   assert.match(ignoreTemplate, /\.investigator\/memory\/drafts\//);
+  assert.match(ignoreTemplate, /\.rooty\/memory\/drafts\//);
 });
 
 test("skill ledger validator accepts generated ledger", async () => {

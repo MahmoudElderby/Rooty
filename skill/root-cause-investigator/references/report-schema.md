@@ -12,6 +12,6 @@ Write these sections in order:
 8. Competing hypotheses: tests and why each was eliminated or remains open.
 9. Evidence gaps and access, retention, sampling, redaction, or historical-state limitations.
 10. Handoff notes for a separate remediation owner.
-11. Proposed reusable learning card marked `draft`.
+11. Proposed reusable learning card marked `draft`, with `scope`, `kind`, `canonical_key`, reusable statement, applicability, evidence references, and proposed disposition. Use `universal -> upstream_proposal`, `project -> project_memory`, or `case_only -> case_notes`. Do not name a host rule file.
 
 Omit fix instructions, patches, implementation plans, migration commands, or other remediation. For `INCONCLUSIVE`, do not name a root cause. For `PROBABLE`, name the exact missing proof.

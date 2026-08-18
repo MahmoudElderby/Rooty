@@ -19,7 +19,7 @@ Install Rooty's project-scoped skills and context files.
 rooty install [--project PATH] [--docs PATH,...] [--json]
 ```
 
-`rooty setup` is an alias. The command copies all three skills to `.agents/skills/` and `.claude/skills/`, writes `.rooty/state/install-manifest.json`, creates or preserves `.rooty/config/project-context.json`, and creates `.rooty/mcp/{data,observability,ticketing,custom}`. Reinstall migrates the two flat state files written by version 0.2.0.
+`rooty setup` is an alias. The command copies all three skills to `.agents/skills/` and `.claude/skills/`, writes `.rooty/state/install-manifest.json`, creates or preserves `.rooty/config/project-context.json`, creates `.rooty/memory/{drafts,approved}`, and creates `.rooty/mcp/{data,observability,ticketing,custom}`. It also merges Rooty's runtime exclusions into `.gitignore`. Reinstall migrates the two flat state files written by version 0.2.0 and safely copies legacy `.investigator/memory` cards into the canonical memory folders without deleting their sources.
 
 | Option | Meaning |
 |---|---|
@@ -183,7 +183,7 @@ Create a sanitized learning draft from a verified confirmed case.
 rooty memory propose --case-dir PATH [--project PATH]
 ```
 
-Only a recomputed `CONFIRMED` case is accepted. Output is written under `.investigator/memory/drafts/<case-id>.json`.
+Only a recomputed `CONFIRMED` case is accepted. Output is written under `.rooty/memory/drafts/<case-id>.json`. Schema-version 3 cards include a stable canonical concern key, scope, kind, applicability, proposed disposition, and reusable-content fingerprint. Exact duplicates and overlapping concern keys are rejected.
 
 ## `rooty memory approve`
 
@@ -197,7 +197,7 @@ rooty memory approve
   [--project PATH]
 ```
 
-The draft must remain under the project's draft directory and match the supplied source case. Approval re-verifies all source evidence and fingerprints and writes `.investigator/memory/approved/<case-id>.json`.
+The draft must remain under `.rooty/memory/drafts` or the legacy `.investigator/memory/drafts` fallback and match the supplied source case. Approval re-verifies all source evidence and fingerprints and writes `.rooty/memory/approved/<case-id>.json`.
 
 ## `rooty eval`
 

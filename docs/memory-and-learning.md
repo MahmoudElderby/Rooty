@@ -37,19 +37,21 @@ Before writing a draft, Rooty:
 5. Confirms the stored assessment still matches.
 6. Rejects non-confirmed cases.
 7. Builds a sanitized card and fingerprints its content and source case.
-8. Refuses to overwrite an existing draft.
+8. Assigns a stable concern key and a reusable-content fingerprint.
+9. Rejects exact duplicates and blocks overlapping concerns until an explicit reviewed supersession workflow is available.
+10. Refuses to overwrite an existing draft.
 
 Draft location:
 
 ```text
-.investigator/memory/drafts/<case-id>.json
+.rooty/memory/drafts/<case-id>.json
 ```
 
-Initialization adds the draft path to the target project's `.gitignore`, and strict doctor verifies that exclusion.
+Installation creates the memory directories, adds the draft path to the target project's `.gitignore`, and verifies the canonical layout. Reinstall copies legacy `.investigator/memory` JSON cards into `.rooty/memory` after collision checks and retains the legacy source files. Approval can still read a legacy draft during the compatibility period.
 
 ## What a card contains
 
-A schema-version 2 card contains:
+A schema-version 3 card contains:
 
 - Source case ID and `CONFIRMED` status
 - Services and environments
@@ -62,6 +64,11 @@ A schema-version 2 card contains:
 - Source case fingerprint
 - Ledger head and entry count
 - Content fingerprint
+- Learning scope and kind
+- Stable canonical concern key
+- Reusable statement and applicability
+- Proposed disposition and supersession IDs
+- Reusable-content fingerprint for deterministic deduplication
 - Proposal timestamp and review state
 
 It must not contain restricted fields such as raw logs, payloads, customer email, access tokens, API keys, or passwords. Rooty also scans serialized content for common secret patterns.
@@ -74,7 +81,7 @@ Approval requires an accountable reviewer and the original verified case:
 rooty memory approve \
   --project /path/to/project \
   --case-dir /path/to/confirmed-case \
-  --draft /path/to/project/.investigator/memory/drafts/INV-20260815-ABC12345.json \
+  --draft /path/to/project/.rooty/memory/drafts/INV-20260815-ABC12345.json \
   --reviewed-by team-payments
 ```
 
@@ -89,14 +96,18 @@ Approval re-runs the full verification. It rejects the draft if:
 - Sensitive content is detected
 - The reviewer is empty
 - An approved card already exists
+- The same reusable learning fingerprint already exists
+- The canonical concern key overlaps an existing card; automatic replacement is forbidden
 
 Approved location:
 
 ```text
-.investigator/memory/approved/<case-id>.json
+.rooty/memory/approved/<case-id>.json
 ```
 
 Approved cards record `reviewed_by`, `reviewed_at`, and an `expires_at` timestamp 180 days later.
+
+Universal learning is proposed for upstream Rooty review, project learning is eligible for local approved memory, and one-off facts remain in case notes. Rooty does not merge learning into host-native rule files.
 
 ## How later investigations use memory
 
