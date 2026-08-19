@@ -222,6 +222,12 @@ body {
   font-weight: 600;
 }
 
+.scene__caption code {
+  font-family: var(--mono);
+  font-size: 21px;
+  color: var(--cyan);
+}
+
 /* ---------- panels ---------- */
 
 .panel {
