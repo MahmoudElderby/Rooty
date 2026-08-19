@@ -237,7 +237,7 @@ async function captureInvestigation(workspace, projectRoot) {
       .map((line) => line.replace(/^##\s*/, "")),
     proposeCommand: `rooty memory propose --case-dir ${DISPLAY_CASE_DIR}`,
     proposeOutput: lines(propose.stdout),
-    approveCommand: `rooty memory approve --draft ... --reviewed-by team-payments`,
+    approveCommand: "rooty memory approve --draft ... --reviewed-by team-payments",
     approveOutput: lines(approve.stdout),
     draft: {
       case_id: draft.case_id,
