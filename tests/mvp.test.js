@@ -480,6 +480,9 @@ test("package is publishable under rooty, retains the alias, includes docs, and 
   assert.equal(manifest.bin.investigator, "bin/investigator.js");
   assert.ok(manifest.files.includes("docs/"));
   assert.equal(manifest.files.includes("rooty-how-it-works.gif"), false);
+  // The video pipeline and its rendered media are GitHub-only, like the GIF.
+  assert.equal(manifest.files.some((entry) => entry.startsWith("tools")), false);
+  assert.equal(manifest.files.some((entry) => entry.startsWith("media")), false);
   const gif = await readFile(path.join(ROOT, "rooty-how-it-works.gif"));
   assert.match(gif.subarray(0, 6).toString("ascii"), /^GIF8[79]a$/);
   const ignoreTemplate = await readFile(path.join(ROOT, "setup/gitignore-template.txt"), "utf8");

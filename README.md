@@ -12,6 +12,8 @@ Rooty investigates. It does **not** patch code, change data, mutate tickets, dep
 
 ![Rooty investigation walkthrough](https://raw.githubusercontent.com/MahmoudElderby/Rooty/main/rooty-how-it-works.gif)
 
+The loop above is a condensed highlight. Full walkthroughs: [how installation works](media/rooty-install.mp4), [how an investigation is done](media/rooty-investigation.mp4), or [both acts in one video](media/rooty-how-it-works.mp4). Every command, banner, file count, evidence item, and hash chain shown in them is captured from a real Rooty run by [`tools/video`](tools/video/README.md).
+
 ## Why Rooty exists
 
 Most coding agents see only the repository. Production failures rarely live in only one place: the ticket describes the symptom, code describes the intended path, traces show the executed path, logs expose failures, database history reveals state, and deployments establish what changed.
@@ -264,6 +266,8 @@ npm run eval
 `npm run doctor` checks package health without requiring project connectors. In an agent-led installation, `rooty doctor --project ...` verifies installed skill ownership and documentation context alongside package safety checks.
 
 The project uses only Node.js standard-library modules. The 15-case evaluation covers confirmed, probable, and inconclusive outcomes; evidence abstention; prompt injection; bounded source access; and blocked mutation attempts.
+
+The explainer video and README GIF are regenerated from real CLI output with `node tools/video/generate.mjs`; see [`tools/video/README.md`](tools/video/README.md). The pipeline needs `ffmpeg` and Chrome but adds no npm dependencies, and neither it nor `media/` ships in the npm package.
 
 ## License
 

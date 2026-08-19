@@ -281,7 +281,17 @@ Run:
 npm pack --dry-run --json
 ```
 
-Confirm `docs/` is present and `rooty-how-it-works.gif` is absent from the tarball. The GIF remains in Git and the README uses its absolute GitHub URL.
+Confirm `docs/` is present and that `rooty-how-it-works.gif`, `media/`, and `tools/` are absent from the tarball. Those are GitHub-only assets: the GIF is referenced by its absolute GitHub URL, `media/` holds the rendered walkthrough videos, and `tools/video/` holds the generator that produces both.
+
+### A video test asks you to re-run `tools/video/capture.mjs`
+
+CLI output that the explainer video puts on screen has changed, so the committed capture is stale. Regenerate it and the assets:
+
+```console
+node tools/video/generate.mjs
+```
+
+See [`tools/video/README.md`](../tools/video/README.md) for the requirements and the individual stages.
 
 ### Package-only doctor reports a missing `.gitignore` inside the npm installation
 
