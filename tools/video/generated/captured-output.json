@@ -1,0 +1,546 @@
+{
+  "schema_version": 1,
+  "generator": "tools/video/capture.mjs",
+  "rooty_version": "0.2.3",
+  "node_version": "v22.14.0",
+  "display_project": "~/work/checkout-api",
+  "display_case_dir": "~/rooty-cases/INV-20260815-DEMO0001",
+  "install": {
+    "projectRoot": "~/work/checkout-api",
+    "command": "npx rooty-investigator install",
+    "bannerWithoutDocs": [
+      "INSTALLED Rooty skills for Codex, Cursor, and Claude",
+      "PROJECT   ~/work/checkout-api",
+      "SKILLS    rooty-setup, rooty-mcp-builder, root-cause-investigator",
+      "ROOTY     .rooty/{config,state,memory/{drafts,approved},mcp/{data,observability,ticketing,custom}}",
+      "MEMORY    ~/work/checkout-api/.rooty/memory/drafts",
+      "DOCS      not selected; the setup agent will ask",
+      "",
+      "Next: Open Codex, Cursor, or Claude in this project and ask:",
+      "  Set up Rooty for this project."
+    ],
+    "bannerWithDocs": [
+      "INSTALLED Rooty skills for Codex, Cursor, and Claude",
+      "PROJECT   ~/work/checkout-api",
+      "SKILLS    rooty-setup, rooty-mcp-builder, root-cause-investigator",
+      "ROOTY     .rooty/{config,state,memory/{drafts,approved},mcp/{data,observability,ticketing,custom}}",
+      "MEMORY    ~/work/checkout-api/.rooty/memory/drafts",
+      "DOCS      README.md, docs",
+      "",
+      "Next: Open Codex, Cursor, or Claude in this project and ask:",
+      "  Set up Rooty for this project."
+    ],
+    "docsCommand": "npx rooty-investigator install --docs \"README.md,docs\"",
+    "tree": [
+      ".agents",
+      ".agents/skills",
+      ".agents/skills/root-cause-investigator",
+      ".agents/skills/root-cause-investigator/agents",
+      ".agents/skills/root-cause-investigator/agents/openai.yaml",
+      ".agents/skills/root-cause-investigator/references",
+      ".agents/skills/root-cause-investigator/references/evidence-standard.md",
+      ".agents/skills/root-cause-investigator/references/investigation-workflow.md",
+      ".agents/skills/root-cause-investigator/references/report-schema.md",
+      ".agents/skills/root-cause-investigator/references/source-catalog-schema.md",
+      ".agents/skills/root-cause-investigator/scripts",
+      ".agents/skills/root-cause-investigator/scripts/render-report.mjs",
+      ".agents/skills/root-cause-investigator/scripts/validate-evidence-ledger.mjs",
+      ".agents/skills/root-cause-investigator/SKILL.md",
+      ".agents/skills/rooty-mcp-builder",
+      ".agents/skills/rooty-mcp-builder/agents",
+      ".agents/skills/rooty-mcp-builder/agents/openai.yaml",
+      ".agents/skills/rooty-mcp-builder/assets",
+      ".agents/skills/rooty-mcp-builder/assets/start-dab.cjs",
+      ".agents/skills/rooty-mcp-builder/references",
+      ".agents/skills/rooty-mcp-builder/references/hosts",
+      ".agents/skills/rooty-mcp-builder/references/hosts/claude.md",
+      ".agents/skills/rooty-mcp-builder/references/hosts/codex.md",
+      ".agents/skills/rooty-mcp-builder/references/hosts/cursor.md",
+      ".agents/skills/rooty-mcp-builder/references/provider-research.md",
+      ".agents/skills/rooty-mcp-builder/references/providers",
+      ".agents/skills/rooty-mcp-builder/references/providers/custom",
+      ".agents/skills/rooty-mcp-builder/references/providers/custom/custom-provider.md",
+      ".agents/skills/rooty-mcp-builder/references/providers/data",
+      ".agents/skills/rooty-mcp-builder/references/providers/data/mongodb.md",
+      ".agents/skills/rooty-mcp-builder/references/providers/data/sql-server-cursor.md",
+      ".agents/skills/rooty-mcp-builder/references/providers/data/sql-server.md",
+      ".agents/skills/rooty-mcp-builder/references/providers/observability",
+      ".agents/skills/rooty-mcp-builder/references/providers/observability/elasticsearch.md",
+      ".agents/skills/rooty-mcp-builder/references/providers/observability/grafana.md",
+      ".agents/skills/rooty-mcp-builder/references/providers/ticketing",
+      ".agents/skills/rooty-mcp-builder/references/providers/ticketing/azure-devops.md",
+      ".agents/skills/rooty-mcp-builder/references/providers/ticketing/jira.md",
+      ".agents/skills/rooty-mcp-builder/references/read-only-policy.md",
+      ".agents/skills/rooty-mcp-builder/SKILL.md",
+      ".agents/skills/rooty-setup",
+      ".agents/skills/rooty-setup/agents",
+      ".agents/skills/rooty-setup/agents/openai.yaml",
+      ".agents/skills/rooty-setup/references",
+      ".agents/skills/rooty-setup/references/docs-first-discovery.md",
+      ".agents/skills/rooty-setup/references/setup-lifecycle.md",
+      ".agents/skills/rooty-setup/SKILL.md",
+      ".claude",
+      ".claude/skills",
+      ".claude/skills/root-cause-investigator",
+      ".claude/skills/root-cause-investigator/agents",
+      ".claude/skills/root-cause-investigator/agents/openai.yaml",
+      ".claude/skills/root-cause-investigator/references",
+      ".claude/skills/root-cause-investigator/references/evidence-standard.md",
+      ".claude/skills/root-cause-investigator/references/investigation-workflow.md",
+      ".claude/skills/root-cause-investigator/references/report-schema.md",
+      ".claude/skills/root-cause-investigator/references/source-catalog-schema.md",
+      ".claude/skills/root-cause-investigator/scripts",
+      ".claude/skills/root-cause-investigator/scripts/render-report.mjs",
+      ".claude/skills/root-cause-investigator/scripts/validate-evidence-ledger.mjs",
+      ".claude/skills/root-cause-investigator/SKILL.md",
+      ".claude/skills/rooty-mcp-builder",
+      ".claude/skills/rooty-mcp-builder/agents",
+      ".claude/skills/rooty-mcp-builder/agents/openai.yaml",
+      ".claude/skills/rooty-mcp-builder/assets",
+      ".claude/skills/rooty-mcp-builder/assets/start-dab.cjs",
+      ".claude/skills/rooty-mcp-builder/references",
+      ".claude/skills/rooty-mcp-builder/references/hosts",
+      ".claude/skills/rooty-mcp-builder/references/hosts/claude.md",
+      ".claude/skills/rooty-mcp-builder/references/hosts/codex.md",
+      ".claude/skills/rooty-mcp-builder/references/hosts/cursor.md",
+      ".claude/skills/rooty-mcp-builder/references/provider-research.md",
+      ".claude/skills/rooty-mcp-builder/references/providers",
+      ".claude/skills/rooty-mcp-builder/references/providers/custom",
+      ".claude/skills/rooty-mcp-builder/references/providers/custom/custom-provider.md",
+      ".claude/skills/rooty-mcp-builder/references/providers/data",
+      ".claude/skills/rooty-mcp-builder/references/providers/data/mongodb.md",
+      ".claude/skills/rooty-mcp-builder/references/providers/data/sql-server-cursor.md",
+      ".claude/skills/rooty-mcp-builder/references/providers/data/sql-server.md",
+      ".claude/skills/rooty-mcp-builder/references/providers/observability",
+      ".claude/skills/rooty-mcp-builder/references/providers/observability/elasticsearch.md",
+      ".claude/skills/rooty-mcp-builder/references/providers/observability/grafana.md",
+      ".claude/skills/rooty-mcp-builder/references/providers/ticketing",
+      ".claude/skills/rooty-mcp-builder/references/providers/ticketing/azure-devops.md",
+      ".claude/skills/rooty-mcp-builder/references/providers/ticketing/jira.md",
+      ".claude/skills/rooty-mcp-builder/references/read-only-policy.md",
+      ".claude/skills/rooty-mcp-builder/SKILL.md",
+      ".claude/skills/rooty-setup",
+      ".claude/skills/rooty-setup/agents",
+      ".claude/skills/rooty-setup/agents/openai.yaml",
+      ".claude/skills/rooty-setup/references",
+      ".claude/skills/rooty-setup/references/docs-first-discovery.md",
+      ".claude/skills/rooty-setup/references/setup-lifecycle.md",
+      ".claude/skills/rooty-setup/SKILL.md",
+      ".gitignore",
+      ".rooty",
+      ".rooty/config",
+      ".rooty/config/project-context.json",
+      ".rooty/mcp",
+      ".rooty/mcp/custom",
+      ".rooty/mcp/data",
+      ".rooty/mcp/observability",
+      ".rooty/mcp/ticketing",
+      ".rooty/memory",
+      ".rooty/memory/approved",
+      ".rooty/memory/drafts",
+      ".rooty/state",
+      ".rooty/state/install-manifest.json",
+      "docs",
+      "docs/architecture.md",
+      "README.md",
+      "src",
+      "src/checkout.js"
+    ],
+    "treeSummary": {
+      "skillGroups": [
+        {
+          "label": ".agents/skills/rooty-setup/",
+          "files": 4
+        },
+        {
+          "label": ".agents/skills/rooty-mcp-builder/",
+          "files": 16
+        },
+        {
+          "label": ".agents/skills/root-cause-investigator/",
+          "files": 8
+        },
+        {
+          "label": ".claude/skills/rooty-setup/",
+          "files": 4
+        },
+        {
+          "label": ".claude/skills/rooty-mcp-builder/",
+          "files": 16
+        },
+        {
+          "label": ".claude/skills/root-cause-investigator/",
+          "files": 8
+        }
+      ],
+      "skillFileTotal": 56,
+      "rootyFiles": [
+        ".rooty/config/project-context.json",
+        ".rooty/state/install-manifest.json"
+      ],
+      "rootyDirectories": [
+        ".rooty",
+        ".rooty/config",
+        ".rooty/mcp",
+        ".rooty/mcp/custom",
+        ".rooty/mcp/data",
+        ".rooty/mcp/observability",
+        ".rooty/mcp/ticketing",
+        ".rooty/memory",
+        ".rooty/memory/approved",
+        ".rooty/memory/drafts",
+        ".rooty/state"
+      ]
+    },
+    "skills": [
+      "rooty-setup",
+      "rooty-mcp-builder",
+      "root-cause-investigator"
+    ],
+    "skillTargets": [
+      ".agents/skills",
+      ".claude/skills"
+    ],
+    "installationMode": "agent-led-v3",
+    "manifestFileCount": 56,
+    "trackedFileHashSample": [
+      {
+        "file": ".agents/skills/root-cause-investigator/agents/openai.yaml",
+        "hash": "b12f857a59611b91c457464593bbf968e658c258ef83e3a22368d76c8f3c8fc1"
+      },
+      {
+        "file": ".agents/skills/root-cause-investigator/references/evidence-standard.md",
+        "hash": "0a56c7e64a2d0ef833fba0e958789f89515fe0b78a40c8c22d9de3f8ba7e79e9"
+      },
+      {
+        "file": ".agents/skills/root-cause-investigator/references/investigation-workflow.md",
+        "hash": "8af8fcbd5d540919880e8eaf2f05721de0a54b0deb453e8b06345cd94527b787"
+      }
+    ],
+    "context": {
+      "schema_version": 1,
+      "documentation": {
+        "paths": []
+      }
+    },
+    "contextWithDocs": {
+      "schema_version": 1,
+      "documentation": {
+        "paths": [
+          "README.md",
+          "docs"
+        ]
+      }
+    },
+    "gitignoreBefore": [
+      "node_modules/",
+      "dist/"
+    ],
+    "gitignoreAfter": [
+      "node_modules/",
+      "dist/",
+      "",
+      "# Rooty runtime state",
+      ".investigator/discovery.json",
+      ".investigator/cases/",
+      ".investigator/memory/drafts/",
+      ".rooty/memory/drafts/",
+      ".rooty-cases/"
+    ],
+    "doctorLines": [
+      "PASS install-manifest: Rooty 0.2.3 uses agent-led-v3",
+      "PASS installed-skills: 3 skills are intact in 2 host locations",
+      "PASS rooty-layout: Canonical memory is available at .rooty/memory",
+      "PASS memory-gitignore: Memory drafts are excluded from Git",
+      "PASS documentation-context: 2 confirmed documentation path(s) are available to the setup agent",
+      "PASS skill: 3 Rooty skills are discoverable or packaged",
+      "PASS connector-recipes: 9 provider recipes have read-only allowlists and probes",
+      "PASS mcp-tools: 6 bundled tools are explicitly read-only",
+      "PASS mcp-startup: Bundled connector started as rooty-snapshot-readonly@0.2.3",
+      "PASS replay-suite: 15 independent frozen replay cases validate",
+      "PASS case-location: No investigation evidence is stored in the source tree",
+      "PASS gitignore: Packaged project gitignore template covers Rooty runtime evidence and drafts",
+      "Doctor: healthy"
+    ],
+    "refusalCommand": "npx rooty-investigator install",
+    "refusal": [
+      "rooty: Refusing to overwrite modified or unowned skill file: ~/work/checkout-api/.agents/skills/rooty-setup/SKILL.md"
+    ]
+  },
+  "investigation": {
+    "caseDir": "~/rooty-cases/INV-20260815-DEMO0001",
+    "prompt": "Investigate PAY-123. Root cause only.\nDo not propose or apply fixes.",
+    "runCommand": "rooty run ROOTY-101 --snapshot evals/mock-sources/confirmed-timeout.json --case-dir ~/rooty-cases/INV-20260815-DEMO0001",
+    "runOutput": [
+      "Case INV-20260815-DEMO0001: CONFIRMED",
+      "Report: ~/rooty-cases/INV-20260815-DEMO0001/report.md"
+    ],
+    "reportCommand": "rooty report --case-dir ~/rooty-cases/INV-20260815-DEMO0001",
+    "reportOutput": [
+      "Rendered ~/rooty-cases/INV-20260815-DEMO0001/report.md"
+    ],
+    "caseId": "INV-20260815-DEMO0001",
+    "ticket": {
+      "id": "ROOTY-101",
+      "reported_symptom": "Checkout returned 502 for payment pay_42 at 2026-08-14 13:04 EEST.",
+      "environment": "production",
+      "original_time_zone": "Africa/Cairo"
+    },
+    "expectedPath": [
+      "checkout-api accepts the request and creates an authorization span",
+      "payments-api receives authorization success before its 3000 ms deadline",
+      "payments-api persists an authorized state transition",
+      "checkout-api maps the successful payment result to HTTP 200"
+    ],
+    "hypotheses": [
+      {
+        "id": "H1",
+        "statement": "The database rejected the payment write.",
+        "status": "eliminated"
+      },
+      {
+        "id": "H2",
+        "statement": "The authorization provider exceeded the client deadline before persistence.",
+        "status": "confirmed"
+      }
+    ],
+    "analysis": {
+      "root_cause": "The authorization provider response exceeded the payments-api 3000 ms deadline, terminating the request before the authorized state could be persisted.",
+      "root_cause_class": "downstream-timeout-before-persistence",
+      "trigger": "Authorization-provider latency exceeded 3000 ms for the affected request.",
+      "trigger_class": "provider-latency-spike",
+      "first_bad_state": "The authorization span reached DEADLINE_EXCEEDED before any persistence span or authorized history event.",
+      "contributing_conditions": [
+        "The client timeout was shorter than the observed provider response latency."
+      ],
+      "causal_chain": [
+        {
+          "step": "The incident-time deployment enforced a 3000 ms authorization deadline.",
+          "evidence_refs": [
+            "E4"
+          ]
+        },
+        {
+          "step": "The provider call reached that deadline and ended DEADLINE_EXCEEDED before persistence.",
+          "evidence_refs": [
+            "E2"
+          ]
+        },
+        {
+          "step": "No authorized state transition was persisted for the affected payment.",
+          "evidence_refs": [
+            "E3"
+          ]
+        },
+        {
+          "step": "The failed path propagated as the reported checkout error; successful requests completed authorization below the deadline.",
+          "evidence_refs": [
+            "E5"
+          ]
+        }
+      ],
+      "competing_hypotheses": [
+        {
+          "statement": "The database rejected the write.",
+          "status": "eliminated",
+          "evidence_refs": [
+            "E2",
+            "E3",
+            "E5"
+          ]
+        },
+        {
+          "statement": "A deployment or configuration different from the recorded incident version caused the behavior.",
+          "status": "eliminated",
+          "evidence_refs": [
+            "E4"
+          ]
+        }
+      ],
+      "evidence_gaps": [
+        {
+          "description": "The downstream provider response body was redacted; span timing independently establishes the deadline path.",
+          "critical": false
+        }
+      ],
+      "handoff_notes": [
+        "A separate remediation owner should evaluate timeout and provider-latency handling."
+      ],
+      "services": [
+        "checkout-api",
+        "payments-api"
+      ],
+      "symptom_signature": {
+        "endpoint": "POST /checkout",
+        "response_code": 502,
+        "exception_fingerprint": "authorization-deadline-exceeded"
+      },
+      "useful_pivots": [
+        "trace_id",
+        "payment_id"
+      ],
+      "query_recipes": [
+        "payments-timeout-trace",
+        "payment-state-at-time"
+      ],
+      "validated_versions": [
+        "payments-api@8f13c7a"
+      ]
+    },
+    "assessment": {
+      "status": "CONFIRMED",
+      "chain_complete": true,
+      "chain_references_observed": true,
+      "distinct_evidence_per_step": true,
+      "independently_corroborated": true,
+      "reproducibly_verified": false,
+      "corroboration_satisfied": true,
+      "first_bad_state_established": true,
+      "alternatives_tested": true,
+      "critical_gaps": [],
+      "observed_support_count": 4,
+      "observed_source_count": 3
+    },
+    "snapshotSha256": "02b16e185b64b06daa7ee15b327e4b7ab73011cdd3aab50fe6f7ec4863bcbdb8",
+    "caseFiles": [
+      "case.json",
+      "evidence.ndjson",
+      "report.md"
+    ],
+    "ledger": [
+      {
+        "evidence_id": "E1",
+        "classification": "REPORTED",
+        "source_type": "ticket",
+        "source_system": "jira-snapshot",
+        "event_time_range": "2026-08-14T11:04:00Z/2026-08-14T11:05:00Z",
+        "query_or_locator": "ROOTY-101",
+        "observation": "Reporter states checkout returned 502 for pay_42.",
+        "limitations": "Ticket statement is not independent runtime proof.",
+        "supports": [],
+        "contradicts": [],
+        "sequence": 1,
+        "previous_hash": "GENESIS",
+        "entry_hash": "2cb523d035631287918aa3ccf544d2f0eb8ddcd2c7c2ba34d5c4e357642917a7"
+      },
+      {
+        "evidence_id": "E2",
+        "classification": "OBSERVED",
+        "source_type": "trace",
+        "source_system": "datadog-prod-snapshot",
+        "event_time_range": "2026-08-14T11:04:12Z/2026-08-14T11:04:16Z",
+        "query_or_locator": "trace_id=4bf92f3577b34da6a3ce929d0e0e4736",
+        "observation": "authorization span ended DEADLINE_EXCEEDED at 3000 ms before the persistence span could begin.",
+        "limitations": "Provider body is redacted.",
+        "supports": [
+          "H2"
+        ],
+        "contradicts": [
+          "H1"
+        ],
+        "sequence": 2,
+        "previous_hash": "2cb523d035631287918aa3ccf544d2f0eb8ddcd2c7c2ba34d5c4e357642917a7",
+        "entry_hash": "d0a191bbfb83542080af9563651d1689eecbdc877bcc61ba73bf8e3d17b60707"
+      },
+      {
+        "evidence_id": "E3",
+        "classification": "OBSERVED",
+        "source_type": "database-history",
+        "source_system": "payments-ro-snapshot",
+        "event_time_range": "2026-08-14T11:04:00Z/2026-08-14T11:05:00Z",
+        "query_or_locator": "SELECT state,event_time FROM payment_state_history WHERE payment_id=$1 AND event_time >= $2 AND event_time < $3 LIMIT 100",
+        "observation": "History contains created but no authorized or failed persistence event for pay_42 in the incident window.",
+        "limitations": "Snapshot includes temporal history, not only current state.",
+        "supports": [
+          "H2"
+        ],
+        "contradicts": [
+          "H1"
+        ],
+        "sequence": 3,
+        "previous_hash": "d0a191bbfb83542080af9563651d1689eecbdc877bcc61ba73bf8e3d17b60707",
+        "entry_hash": "6b05db553e7b02b6fb1aa8a50b954cec3432827cdaeaa374b1f8526289772d6d"
+      },
+      {
+        "evidence_id": "E4",
+        "classification": "OBSERVED",
+        "source_type": "deployment",
+        "source_system": "argocd-prod-snapshot",
+        "event_time_range": "2026-08-14T10:00:00Z/2026-08-14T12:00:00Z",
+        "query_or_locator": "application=payments-api-prod",
+        "observation": "payments-api version 8f13c7a and the 3000 ms authorization timeout were active at incident time.",
+        "limitations": "Frozen reviewed deployment snapshot.",
+        "supports": [
+          "H2"
+        ],
+        "contradicts": [],
+        "sequence": 4,
+        "previous_hash": "6b05db553e7b02b6fb1aa8a50b954cec3432827cdaeaa374b1f8526289772d6d",
+        "entry_hash": "0b4cff301d339428379036f2d7b1d527508bc82a7e170598946c871117823428"
+      },
+      {
+        "evidence_id": "E5",
+        "classification": "OBSERVED",
+        "source_type": "trace-comparison",
+        "source_system": "datadog-prod-snapshot",
+        "event_time_range": "2026-08-14T11:00:00Z/2026-08-14T11:10:00Z",
+        "query_or_locator": "service=payments-api endpoint=authorize compare(status:ok,status:error) LIMIT 200",
+        "observation": "Successful requests in the same version persisted only after authorization completed below 3000 ms; database latency was normal in both cohorts.",
+        "limitations": "Comparison is bounded to 200 unsampled traces.",
+        "supports": [
+          "H2"
+        ],
+        "contradicts": [
+          "H1"
+        ],
+        "sequence": 5,
+        "previous_hash": "0b4cff301d339428379036f2d7b1d527508bc82a7e170598946c871117823428",
+        "entry_hash": "1ab29f96bf444b14bca37094486814eb9e5f22c495e196c7c2e18c50bbe86afa"
+      }
+    ],
+    "reportMarkdown": "# Root-cause investigation INV-20260815-DEMO0001\n\n## 1. Investigation status\n\n**CONFIRMED**\n\n## 2. Reported symptom\n\nCheckout returned 502 for payment pay_42 at 2026-08-14 13:04 EEST. This statement remains **REPORTED** unless corroborated below.\n\n## 3. Confirmed scope and event timeline\n\n- 2026-08-14T11:04:12Z/2026-08-14T11:04:16Z: authorization span ended DEADLINE_EXCEEDED at 3000 ms before the persistence span could begin. (E2)\n- 2026-08-14T11:04:00Z/2026-08-14T11:05:00Z: History contains created but no authorized or failed persistence event for pay_42 in the incident window. (E3)\n- 2026-08-14T10:00:00Z/2026-08-14T12:00:00Z: payments-api version 8f13c7a and the 3000 ms authorization timeout were active at incident time. (E4)\n- 2026-08-14T11:00:00Z/2026-08-14T11:10:00Z: Successful requests in the same version persisted only after authorization completed below 3000 ms; database latency was normal in both cohorts. (E5)\n\n## 4. Expected request/data flow\n\n1. checkout-api accepts the request and creates an authorization span\n2. payments-api receives authorization success before its 3000 ms deadline\n3. payments-api persists an authorized state transition\n4. checkout-api maps the successful payment result to HTTP 200\n\n## 5. Root cause, trigger, and contributing conditions\n\n- Root cause: The authorization provider response exceeded the payments-api 3000 ms deadline, terminating the request before the authorized state could be persisted.\n- Trigger: Authorization-provider latency exceeded 3000 ms for the affected request.\n- First bad state: The authorization span reached DEADLINE_EXCEEDED before any persistence span or authorized history event.\n- Contributing conditions: The client timeout was shorter than the observed provider response latency.\n\n## 6. Causal chain\n\n1. The incident-time deployment enforced a 3000 ms authorization deadline. (E4)\n2. The provider call reached that deadline and ended DEADLINE_EXCEEDED before persistence. (E2)\n3. No authorized state transition was persisted for the affected payment. (E3)\n4. The failed path propagated as the reported checkout error; successful requests completed authorization below the deadline. (E5)\n\n## 7. Evidence\n\n| ID | Class | Source | Event time | Observation | Limitations |\n|---|---|---|---|---|---|\n| E1 | REPORTED | jira-snapshot | 2026-08-14T11:04:00Z/2026-08-14T11:05:00Z | Reporter states checkout returned 502 for pay_42. | Ticket statement is not independent runtime proof. |\n| E2 | OBSERVED | datadog-prod-snapshot | 2026-08-14T11:04:12Z/2026-08-14T11:04:16Z | authorization span ended DEADLINE_EXCEEDED at 3000 ms before the persistence span could begin. | Provider body is redacted. |\n| E3 | OBSERVED | payments-ro-snapshot | 2026-08-14T11:04:00Z/2026-08-14T11:05:00Z | History contains created but no authorized or failed persistence event for pay_42 in the incident window. | Snapshot includes temporal history, not only current state. |\n| E4 | OBSERVED | argocd-prod-snapshot | 2026-08-14T10:00:00Z/2026-08-14T12:00:00Z | payments-api version 8f13c7a and the 3000 ms authorization timeout were active at incident time. | Frozen reviewed deployment snapshot. |\n| E5 | OBSERVED | datadog-prod-snapshot | 2026-08-14T11:00:00Z/2026-08-14T11:10:00Z | Successful requests in the same version persisted only after authorization completed below 3000 ms; database latency was normal in both cohorts. | Comparison is bounded to 200 unsampled traces. |\n\nQueries and locators are retained in the append-only ledger; retrieval time, event-time coverage, environment, and limitations are recorded per entry.\n\n## 8. Competing hypotheses\n\n- The database rejected the write.: **eliminated** (E2, E3, E5)\n- A deployment or configuration different from the recorded incident version caused the behavior.: **eliminated** (E4)\n\n## 9. Evidence gaps and limitations\n\n- The downstream provider response body was redacted; span timing independently establishes the deadline path.\n\n## 10. Handoff notes\n\n- A separate remediation owner should evaluate timeout and provider-latency handling.\n\nRooty does not propose or apply remediation. A separate owner should decide corrective work.\n\n## 11. Proposed reusable learning card\n\n- Scope: project\n- Kind: failure_pattern\n- Canonical key: failure_pattern:downstream-timeout-before-persistence:provider-latency-spike\n- Root-cause class: downstream-timeout-before-persistence\n- Useful pivots: trace_id, payment_id\n- Proposed disposition: project_memory\n- Review status: draft\n",
+    "reportSections": [
+      "1. Investigation status",
+      "2. Reported symptom",
+      "3. Confirmed scope and event timeline",
+      "4. Expected request/data flow",
+      "5. Root cause, trigger, and contributing conditions",
+      "6. Causal chain",
+      "7. Evidence",
+      "8. Competing hypotheses",
+      "9. Evidence gaps and limitations",
+      "10. Handoff notes",
+      "11. Proposed reusable learning card"
+    ],
+    "proposeCommand": "rooty memory propose --case-dir ~/rooty-cases/INV-20260815-DEMO0001",
+    "proposeOutput": [
+      "Draft: ~/work/checkout-api/.rooty/memory/drafts/INV-20260815-DEMO0001.json"
+    ],
+    "approveCommand": "rooty memory approve --draft ... --reviewed-by team-payments",
+    "approveOutput": [
+      "Approved: ~/work/checkout-api/.rooty/memory/approved/INV-20260815-DEMO0001.json"
+    ],
+    "draft": {
+      "case_id": "INV-20260815-DEMO0001",
+      "scope": "project",
+      "kind": "failure_pattern",
+      "concern_key": "failure_pattern:downstream-timeout-before-persistence:provider-latency-spike",
+      "review_status": "draft",
+      "root_cause_class": "downstream-timeout-before-persistence",
+      "useful_pivots": [
+        "trace_id",
+        "payment_id"
+      ]
+    },
+    "approved": {
+      "case_id": "INV-20260815-DEMO0001",
+      "review_status": "approved",
+      "reviewed_by": "team-payments"
+    },
+    "retention_days": 180,
+    "evalCommand": "rooty eval",
+    "evalOutput": [
+      "Evaluation: 15/15 passed; mutations blocked 5/5; unsupported confirmations 0"
+    ]
+  }
+}

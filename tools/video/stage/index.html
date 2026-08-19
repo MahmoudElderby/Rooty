@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Rooty explainer stage</title>
+    <link rel="stylesheet" href="stage.css" />
+  </head>
+  <body>
+    <!-- The stage is authored at a fixed 1920x1080 and scaled to the render
+         viewport, so one design serves every output size. -->
+    <div id="stage" class="stage">
+      <div class="stage__grid" aria-hidden="true"></div>
+      <div class="stage__glow" aria-hidden="true"></div>
+      <header class="chrome">
+        <div class="chrome__brand">
+          <span class="chrome__mark" aria-hidden="true"></span>
+          <span class="chrome__word">Rooty</span>
+          <span class="chrome__tag">evidence-first root-cause investigation</span>
+        </div>
+        <div class="chrome__act" id="chrome-act"></div>
+      </header>
+      <main class="scenes" id="scenes"></main>
+      <footer class="chrome-foot">
+        <div class="progress"><div class="progress__fill" id="progress-fill"></div></div>
+      </footer>
+    </div>
+    <script src="stage.js"></script>
+  </body>
+</html>

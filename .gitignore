@@ -9,3 +9,6 @@ coverage/
 .investigator/cases/
 .investigator/memory/drafts/
 .rooty-cases/
+tools/video/generated/frames/
+tools/video/generated/check/
+tools/video/generated/timeline-*.json
