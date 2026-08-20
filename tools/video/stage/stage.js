@@ -26,6 +26,16 @@ function ramp(localMs, at, durationMs) {
   return clamp01((localMs - at) / durationMs);
 }
 
+/** Captions accept `**bold**` and `` `code` ``; everything else is escaped. */
+function formatInline(text) {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+    .replace(/`([^`]+)`/g, "<code>$1</code>");
+}
+
 function element(tag, className, text) {
   const node = document.createElement(tag);
   if (className) node.className = className;
@@ -59,8 +69,15 @@ class Track {
     return el;
   }
 
+  /** Steps through data-state values at fixed times, keeping the authored
+      initial state until the first transition is due. */
   states(el, states) {
-    this.animators.push({ kind: "states", el, states: [...states].sort((a, b) => a.at - b.at) });
+    this.animators.push({
+      kind: "states",
+      el,
+      initial: el.dataset.state ?? "",
+      states: [...states].sort((a, b) => a.at - b.at)
+    });
     return el;
   }
 
@@ -92,11 +109,10 @@ class Track {
         const visible = localMs >= animator.at && (!typed || blinkOn);
         el.style.opacity = visible ? "1" : "0";
       } else if (kind === "states") {
-        let value = animator.states[0]?.value ?? "";
+        let value = animator.initial;
         for (const state of animator.states) {
           if (localMs >= state.at) value = state.value;
         }
-        if (animator.states[0] && localMs < animator.states[0].at) value = animator.states[0].from ?? value;
         el.dataset.state = value;
       }
     }
@@ -433,7 +449,7 @@ class Stage {
 
       if (scene.caption) {
         const caption = element("p", "scene__caption");
-        caption.innerHTML = scene.caption.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+        caption.innerHTML = formatInline(scene.caption);
         root.append(track.rise(caption, scene.captionAt ?? 900, 380));
       }
 

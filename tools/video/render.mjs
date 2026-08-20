@@ -8,7 +8,7 @@
 //   node tools/video/render.mjs --variant full --sample 6   # smoke frames only
 import { spawn } from "node:child_process";
 import { createServer } from "node:http";
-import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { access, constants, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import process from "node:process";
@@ -52,12 +52,10 @@ export function parseFlags(argv) {
 async function resolveChrome() {
   for (const candidate of CHROME_CANDIDATES) {
     try {
-      await readFile(candidate);
+      await access(candidate, constants.X_OK);
       return candidate;
-    } catch (error) {
-      if (error.code === "EISDIR") continue;
-      if (error.code === "EACCES") return candidate; // executable but unreadable
-      if (error.code !== "ENOENT") throw error;
+    } catch {
+      /* try the next candidate */
     }
   }
   throw new Error(

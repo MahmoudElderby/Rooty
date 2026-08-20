@@ -44,9 +44,8 @@ export function installLine(text) {
 
 export function doctorLine(text) {
   const match = /^(PASS|WARN|FAIL)(\s+)(.*)$/.exec(text);
-  if (!match) {
-    return { tone: text.startsWith("Doctor:") ? "green" : "default", text, ...(text.startsWith("Doctor:") ? {} : {}) };
-  }
+  // The trailing "Doctor: healthy" summary carries no status column.
+  if (!match) return { tone: text.startsWith("Doctor:") ? "green" : "default", text };
   const tone = match[1] === "PASS" ? "green" : match[1] === "WARN" ? "amber" : "red";
   return { tone: "muted", text: `${match[2]}${match[3]}`, tag: { text: match[1], tone } };
 }

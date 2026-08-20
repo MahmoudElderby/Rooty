@@ -4,6 +4,7 @@ import { execFile } from "node:child_process";
 import { mkdir, readdir, stat } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
+import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 
 const run = promisify(execFile);
@@ -112,11 +113,7 @@ export function formatBytes(bytes) {
   return mb >= 1 ? `${mb.toFixed(2)} MB` : `${(bytes / 1024).toFixed(0)} KB`;
 }
 
-async function main() {
+if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
   process.stderr.write("encode.mjs is a library; run tools/video/generate.mjs instead.\n");
   process.exitCode = 1;
-}
-
-if (process.argv[1] && import.meta.url.endsWith(path.basename(process.argv[1]))) {
-  await main();
 }
