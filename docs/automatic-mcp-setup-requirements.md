@@ -50,7 +50,7 @@ Installation must place skills where those hosts discover project-scoped Agent S
 - `.agents/skills/` for Codex and Cursor
 - `.claude/skills/` for Claude Code
 
-The installer copies all skills to both locations so the install command does not need a host-selection wizard. MCP setup configures only the active host unless the developer explicitly requests another.
+Installation writes only the skill roots of the hosts it is installing for, selected by explicit `--cursor`, `--claude`, and `--codex` flags, otherwise by the hosts recorded in a previous install, otherwise by detected project markers, otherwise all hosts. No interactive host wizard is required. MCP setup configures only the active host unless the developer explicitly requests another.
 
 ## 5. Mechanical installation
 
@@ -59,11 +59,13 @@ The installer must:
 - require an existing project directory;
 - reject a filesystem root;
 - reject symlinked Rooty installation targets;
-- copy `rooty-setup`, `rooty-mcp-builder`, and `root-cause-investigator`;
-- create `.rooty/state/install-manifest.json` with Rooty-owned file hashes;
+- copy `rooty-setup`, `rooty-mcp-builder`, and `root-cause-investigator` into the selected hosts' skill roots only;
+- reject an unsupported host name;
+- create `.rooty/state/install-manifest.json` with Rooty-owned file hashes and the selected hosts;
 - create `.rooty/config/project-context.json` with only `documentation.paths`;
 - create `.rooty/memory/{drafts,approved}`, gitignore drafts, and safely copy any non-conflicting legacy memory cards while retaining their sources;
-- create `.rooty/mcp/{data,observability,ticketing,custom}` for general providers; SQL Server setup later creates the tested `.rooty/mcp-<domain>/dab-config.json` folders and shared `.rooty/start-dab.cjs` launcher after approval;
+- leave `.rooty/mcp/<category>/<provider>/` to the setup agent's first approved write and remove empty category folders created by earlier versions; SQL Server setup later creates the tested `.rooty/mcp/data/sql-server/<domain>/dab-config.json` folders and shared `.rooty/start-dab.cjs` launcher after approval;
+- report, without deleting, skill files left outside the selected hosts;
 - recognize and migrate the flat version 0.2.0 manifest/context paths;
 - accept optional `--docs PATH,...` values;
 - preserve confirmed paths when reinstall runs without `--docs`;
@@ -115,6 +117,8 @@ Rooty must not generate or persist:
 
 When paths are absent, the setup agent may perform a bounded search for likely documentation entry points, show candidates, and ask the developer to confirm or add locations. It must not recursively open the project root or filesystem roots.
 
+Questions must use the active host's own question experience: `AskQuestion` in Cursor, `AskUserQuestion` in Claude, and plain conversation in Codex, which has no structured question tool. Every structured question must offer an option that escapes the candidate list, and no question may substitute for a host approval.
+
 ## 7. Discovery behavior
 
 Discovery belongs to the setup skill. The agent must:
@@ -123,7 +127,7 @@ Discovery belongs to the setup skill. The agent must:
 2. Answer its setup questions from those docs where possible, marking conclusions provisional.
 3. Inspect targeted source/configuration only for missing or current facts.
 4. Avoid secret values, generated host folders, dependencies, build output, and unrelated project areas.
-5. Ask one focused question only after safe evidence cannot resolve a material choice.
+5. Ask only after safe evidence cannot resolve a material choice, batching the questions that block the same step into one prompt.
 
 The setup experience must explain what each step establishes, why a failure matters, and the smallest next action.
 
@@ -181,7 +185,7 @@ Every proposal must state:
 
 Use Microsoft's SQL MCP Server included with DAB. Automatically enumerate accessible online user databases from live `sys.databases`, then enumerate each catalog's current tables/views from `INFORMATION_SCHEMA`; documentation only orients discovery. Exclude system, offline, snapshot, and inaccessible databases.
 
-Generate one independent MCP server per catalog named `rooty-sql-{domain}`. Each uses `.rooty/mcp-{domain}/dab-config.json`, one credential reference, explicit entities only, one unique nonzero loopback port, and the shared `.rooty/start-dab.cjs` launcher. Every Codex, Cursor, and Claude entry uses absolute Node, launcher, DAB, and config paths. DAB starts with `--mcp-stdio role:rooty-reader --LogLevel Error`; only describe/read/aggregate tools are enabled and the database identity is `SELECT`-only.
+Generate one independent MCP server per catalog named `rooty-sql-{domain}`. Each uses `.rooty/mcp/data/sql-server/{domain}/dab-config.json`, one credential reference, explicit entities only, one unique nonzero loopback port, and the shared `.rooty/start-dab.cjs` launcher. Every Codex, Cursor, and Claude entry uses absolute Node, launcher, DAB, and config paths. DAB starts with `--mcp-stdio role:rooty-reader --LogLevel Error`; only describe/read/aggregate tools are enabled and the database identity is `SELECT`-only.
 
 Do not use a multi-catalog DAB, `data-source-files`, wildcard autoentities, `dbo.%`, `DAB_ENVIRONMENT`, command-shell wrappers, `--no-https-redirect`, or `ASPNETCORE_URLS=...:0`. Credential values remain outside Git and each host entry visibly names its binding. Verify every catalog independently through MCP initialize, exact tool listing, non-empty `describe_entities`, and a bounded read. Do not use `dab validate` on DAB 2.0.10 as the readiness gate.
 

@@ -7,7 +7,9 @@ const { existsSync, readFileSync, statSync } = require("node:fs");
 const path = require("node:path");
 
 const BINDING_PATTERN = /^ROOTY_SQL_[A-Z0-9]+(?:_[A-Z0-9]+)*$/;
-const DOMAIN_FOLDER_PATTERN = /^mcp-[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const DOMAIN_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const CANONICAL_CONFIG_ANCESTORS = Object.freeze([".rooty", "mcp", "data", "sql-server"]);
+const LEGACY_DOMAIN_FOLDER_PATTERN = /^mcp-[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const REQUIRED_TOOLS = Object.freeze({
   "describe-entities": true,
   "create-record": false,
@@ -36,6 +38,31 @@ function parseArgs(argv) {
   };
 }
 
+function trailingSegments(directory, count) {
+  const segments = [];
+  let current = directory;
+  for (let index = 0; index < count; index += 1) {
+    segments.unshift(path.basename(current).toLowerCase());
+    const parent = path.dirname(current);
+    if (parent === current) break;
+    current = parent;
+  }
+  return segments;
+}
+
+function isCanonicalConfigDirectory(configDirectory) {
+  const expected = CANONICAL_CONFIG_ANCESTORS.length + 1;
+  const segments = trailingSegments(configDirectory, expected);
+  if (segments.length !== expected) return false;
+  const domain = segments[segments.length - 1];
+  return DOMAIN_PATTERN.test(domain) && CANONICAL_CONFIG_ANCESTORS.every((name, index) => segments[index] === name);
+}
+
+function isLegacyConfigDirectory(configDirectory) {
+  const segments = trailingSegments(configDirectory, 2);
+  return segments.length === 2 && segments[0] === ".rooty" && LEGACY_DOMAIN_FOLDER_PATTERN.test(segments[1]);
+}
+
 function validateInvocation({ dabPath, configPath, credentialName }, env = process.env) {
   if (!path.isAbsolute(dabPath)) fail("DAB executable path must be absolute");
   if (!path.isAbsolute(configPath)) fail("DAB config path must be absolute");
@@ -47,11 +74,8 @@ function validateInvocation({ dabPath, configPath, credentialName }, env = proce
   }
 
   const configDirectory = path.dirname(configPath);
-  if (
-    !DOMAIN_FOLDER_PATTERN.test(path.basename(configDirectory).toLowerCase()) ||
-    path.basename(path.dirname(configDirectory)).toLowerCase() !== ".rooty"
-  ) {
-    fail("dab-config.json must be isolated in a .rooty/mcp-<domain> folder");
+  if (!isCanonicalConfigDirectory(configDirectory) && !isLegacyConfigDirectory(configDirectory)) {
+    fail("dab-config.json must be isolated in a .rooty/mcp/data/sql-server/<domain> folder");
   }
   if (!BINDING_PATTERN.test(credentialName)) {
     fail("credential binding must use the ROOTY_SQL_<DOMAIN> naming convention");
@@ -198,6 +222,8 @@ module.exports = {
   BINDING_PATTERN,
   childEnvironment,
   dabArgs,
+  isCanonicalConfigDirectory,
+  isLegacyConfigDirectory,
   launch,
   parseArgs,
   prepareLaunch,

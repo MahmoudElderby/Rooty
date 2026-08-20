@@ -17,9 +17,13 @@ const {
 
 const WINDOWS = process.platform === "win32";
 const dabPath = WINDOWS ? "C:\\tools\\dab.exe" : "/tools/dab";
-const configPath = WINDOWS
-  ? "C:\\project\\.rooty\\mcp-orders\\dab-config.json"
-  : "/project/.rooty/mcp-orders/dab-config.json";
+
+function projectPath(...segments) {
+  return path.join(WINDOWS ? "C:\\project" : "/project", ...segments);
+}
+
+const configPath = projectPath(".rooty", "mcp", "data", "sql-server", "orders", "dab-config.json");
+const legacyConfigPath = projectPath(".rooty", "mcp-orders", "dab-config.json");
 
 function config(overrides = {}) {
   return {
@@ -70,6 +74,29 @@ test("launcher parses one fixed absolute per-catalog invocation", () => {
     }),
     { configDirectory: path.dirname(configPath), port: 55101 }
   );
+});
+
+test("launcher isolates each catalog under the canonical provider layout and still accepts the legacy folder", () => {
+  const env = { ROOTY_SQL_ORDERS: "not-inspected", ASPNETCORE_URLS: "http://127.0.0.1:55101" };
+  const invocation = { dabPath, credentialName: "ROOTY_SQL_ORDERS" };
+
+  assert.equal(
+    validateInvocation({ ...invocation, configPath: legacyConfigPath }, env).configDirectory,
+    path.dirname(legacyConfigPath)
+  );
+  for (const rejected of [
+    projectPath(".rooty", "mcp", "data", "orders", "dab-config.json"),
+    projectPath(".rooty", "mcp", "observability", "sql-server", "orders", "dab-config.json"),
+    projectPath(".rooty", "mcp", "data", "sql-server", "dab-config.json"),
+    projectPath(".rooty", "mcp", "data", "sql-server", "orders_archive", "dab-config.json"),
+    projectPath("mcp", "data", "sql-server", "orders", "dab-config.json")
+  ]) {
+    assert.throws(
+      () => validateInvocation({ ...invocation, configPath: rejected }, env),
+      /must be isolated in a \.rooty\/mcp\/data\/sql-server\/<domain> folder/,
+      rejected
+    );
+  }
 });
 
 test("launcher uses only the reviewed DAB arguments", () => {
@@ -140,7 +167,7 @@ test("launcher removes DAB_ENVIRONMENT without touching the credential binding",
 test("launcher prepares the catalog CWD and refuses a neighboring credential file", async (context) => {
   const temporary = await mkdtemp(path.join(os.tmpdir(), "rooty-dab-launch-"));
   context.after(() => rm(temporary, { recursive: true, force: true }));
-  const catalogDirectory = path.join(temporary, ".rooty", "mcp-orders");
+  const catalogDirectory = path.join(temporary, ".rooty", "mcp", "data", "sql-server", "orders");
   await mkdir(catalogDirectory, { recursive: true });
   const localDab = path.join(temporary, WINDOWS ? "dab.exe" : "dab");
   const localConfig = path.join(catalogDirectory, "dab-config.json");

@@ -17,12 +17,13 @@ Pack the current worktree, then run the tarball from a temporary sandbox project
 
 Verify:
 
-- three skills exist under both host skill roots;
-- `.rooty/state/install-manifest.json` fingerprints every installed file;
+- three skills exist under the skill root of every selected host, and under no other;
+- `--cursor`, `--claude`, and `--codex` each write only that host's skill root, and a flagless install reuses the manifest hosts before falling back to marker detection;
+- `.rooty/state/install-manifest.json` fingerprints every installed file and records the selected hosts;
 - `.rooty/config/project-context.json` stores only documentation paths;
 - `.rooty/memory/{drafts,approved}` exists and draft cards are excluded from Git;
-- `.rooty/mcp/{data,observability,ticketing,custom}` exists for generated provider artifacts;
-- the packaged MCP-builder skill contains `assets/start-dab.cjs`; approved SQL setup later copies it once and creates `.rooty/mcp-<domain>/` folders;
+- `.rooty/mcp/` does not exist until a provider artifact is written, and a pre-existing empty category folder is removed;
+- the packaged MCP-builder skill contains `assets/start-dab.cjs`; approved SQL setup later copies it once and creates `.rooty/mcp/data/sql-server/<domain>/` folders;
 - a simulated version 0.2.0 flat layout migrates without losing documentation paths;
 - a second install changes no skill files;
 - a locally modified owned file blocks reinstall before any write;

@@ -73,6 +73,14 @@ Set up Rooty for this project.
 
 The CLI copies Rooty's skills and creates `.rooty/config/project-context.json`. The active agent reviews documentation, performs targeted discovery, proposes provider access, requests approvals, guides credentials, and verifies readiness.
 
+Name the host to install for, so Rooty writes nothing your editor will not read:
+
+```console
+npx rooty-investigator install --cursor
+```
+
+Without a host flag, Rooty reuses the hosts from the previous install, otherwise installs for every host it detects from a `.cursor/`, `.codex/`, `.claude/`, or `CLAUDE.md` marker, otherwise for all three.
+
 If you already know the documentation locations:
 
 ```console
@@ -82,12 +90,12 @@ npx rooty-investigator install --docs "README.md,docs,architecture"
 ## What installation creates
 
 ```text
-.agents/skills/
+.agents/skills/            # Cursor and Codex
 ├── rooty-setup/
 ├── rooty-mcp-builder/
 └── root-cause-investigator/
 
-.claude/skills/
+.claude/skills/            # Claude
 ├── rooty-setup/
 ├── rooty-mcp-builder/
 └── root-cause-investigator/
@@ -97,13 +105,14 @@ npx rooty-investigator install --docs "README.md,docs,architecture"
 │   └── project-context.json
 ├── state/
 │   └── install-manifest.json
-├── memory/
-│   ├── drafts/
-│   └── approved/
-└── mcp/
+└── memory/
+    ├── drafts/
+    └── approved/
 ```
 
-Codex and Cursor discover `.agents/skills`; Claude uses `.claude/skills`. Installation is safe to repeat: Rooty updates unchanged owned skill files and refuses to overwrite modified or unowned ones.
+Only the skill folders of the selected hosts are written. Provider artifacts arrive later at `.rooty/mcp/<category>/<provider>/`, created by the setup agent on first approved write.
+
+Installation is safe to repeat: Rooty updates unchanged owned skill files and refuses to overwrite modified or unowned ones.
 It also merges Rooty's runtime exclusions into `.gitignore`; drafts remain local while approved sanitized memory can be shared.
 
 ## Documentation-first, not documentation-trusting

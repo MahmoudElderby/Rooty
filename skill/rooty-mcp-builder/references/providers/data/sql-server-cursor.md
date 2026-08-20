@@ -9,11 +9,16 @@ For each live catalog, install one independently startable server:
 ```text
 .rooty/
 ├── start-dab.cjs
-├── mcp-orders/
-│   └── dab-config.json
-└── mcp-logger/
-    └── dab-config.json
+└── mcp/
+    └── data/
+        └── sql-server/
+            ├── orders/
+            │   └── dab-config.json
+            └── logger/
+                └── dab-config.json
 ```
+
+This is the canonical Rooty provider layout, `.rooty/mcp/<category>/<provider>/`, with one folder per catalog. The launcher still accepts the earlier `.rooty/mcp-<domain>/dab-config.json` location so an existing install keeps working; move those folders when convenient and update the host `--config` path in the same approved change.
 
 Host server names are `rooty-sql-orders` and `rooty-sql-logger`. Copy the packaged [launcher asset](../../../assets/start-dab.cjs) to `.rooty/start-dab.cjs` after the exact write is approved. Preserve an identical existing launcher; refuse an unrelated or modified file instead of replacing it.
 
@@ -37,7 +42,7 @@ Before startup, display a table containing server name, catalog, host config pat
 
 ## DAB config per catalog
 
-Generate one self-contained `.rooty/mcp-{domain}/dab-config.json` with explicit entities only. Every entity must come from live metadata and explicitly name a table or view. For example:
+Generate one self-contained `.rooty/mcp/data/sql-server/{domain}/dab-config.json` with explicit entities only. Every entity must come from live metadata and explicitly name a table or view. For example:
 
 ```json
 {
@@ -88,7 +93,7 @@ Add view primary-key metadata when the current DAB schema requires it. Do not ex
 Every host entry runs the same fixed process:
 
 ```text
-<absolute-node> <absolute-project>/.rooty/start-dab.cjs --dab <absolute-dab> --config <absolute-project>/.rooty/mcp-<domain>/dab-config.json --credential-env ROOTY_SQL_<DOMAIN>
+<absolute-node> <absolute-project>/.rooty/start-dab.cjs --dab <absolute-dab> --config <absolute-project>/.rooty/mcp/data/sql-server/<domain>/dab-config.json --credential-env ROOTY_SQL_<DOMAIN>
 ```
 
 The launcher starts DAB directly with `shell: false`, the catalog folder as CWD, inherited standard I/O, and exactly:
@@ -106,7 +111,7 @@ Merge one table per catalog into trusted-project `.codex/config.toml`:
 ```toml
 [mcp_servers.rooty-sql-orders]
 command = "C:\\Program Files\\nodejs\\node.exe"
-args = ["C:\\project\\.rooty\\start-dab.cjs", "--dab", "C:\\tools\\dab.exe", "--config", "C:\\project\\.rooty\\mcp-orders\\dab-config.json", "--credential-env", "ROOTY_SQL_ORDERS"]
+args = ["C:\\project\\.rooty\\start-dab.cjs", "--dab", "C:\\tools\\dab.exe", "--config", "C:\\project\\.rooty\\mcp\\data\\sql-server\\orders\\dab-config.json", "--credential-env", "ROOTY_SQL_ORDERS"]
 env_vars = ["ROOTY_SQL_ORDERS"]
 enabled = true
 required = false
@@ -134,7 +139,7 @@ Merge one entry per catalog into `.cursor/mcp.json`:
         "--dab",
         "C:/tools/dab.exe",
         "--config",
-        "C:/project/.rooty/mcp-orders/dab-config.json",
+        "C:/project/.rooty/mcp/data/sql-server/orders/dab-config.json",
         "--credential-env",
         "ROOTY_SQL_ORDERS"
       ],
@@ -163,7 +168,7 @@ Merge one entry per catalog into project `.mcp.json`:
         "--dab",
         "C:/tools/dab.exe",
         "--config",
-        "C:/project/.rooty/mcp-orders/dab-config.json",
+        "C:/project/.rooty/mcp/data/sql-server/orders/dab-config.json",
         "--credential-env",
         "ROOTY_SQL_ORDERS"
       ],

@@ -30,7 +30,7 @@ Produce a proposal before any mutation. Include:
 - official server identity and documentation URLs checked;
 - support status and any version or deployment constraints;
 - transport, command or URL, exact host config path, and merge scope;
-- generated artifact paths under `.rooty/mcp/<category>/<provider>/`; SQL Server is the tested exception and uses `.rooty/mcp-<domain>/dab-config.json` plus `.rooty/start-dab.cjs`;
+- generated artifact paths under `.rooty/mcp/<category>/<provider>/`, created on first approved write; SQL Server adds one catalog folder per server at `.rooty/mcp/data/sql-server/<domain>/dab-config.json` plus the shared `.rooty/start-dab.cjs`;
 - every credential binding name and where its value must be supplied;
 - provider-side read-only identity or role and server-side read-only controls;
 - explicit allowed and forbidden tool categories;

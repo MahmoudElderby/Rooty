@@ -13,8 +13,10 @@ Provider runtimes and credentials are not prerequisites for installation. The se
 ## Install inside the project
 
 ```console
-npx rooty-investigator install
+npx rooty-investigator install --cursor
 ```
+
+Use `--cursor`, `--claude`, or `--codex` to name the hosts you actually work in; combine them for more than one. Without a flag, Rooty reuses the hosts recorded by the previous install, otherwise every host it detects from a `.cursor/`, `.codex/`, `.claude/`, or `CLAUDE.md` marker, otherwise all three.
 
 If the documentation locations are already known:
 
@@ -22,7 +24,7 @@ If the documentation locations are already known:
 npx rooty-investigator install --docs "README.md,docs,architecture"
 ```
 
-Installation creates project-scoped copies of `rooty-setup`, `rooty-mcp-builder`, and `root-cause-investigator` under `.agents/skills/` and `.claude/skills/`. It also creates:
+Installation creates project-scoped copies of `rooty-setup`, `rooty-mcp-builder`, and `root-cause-investigator` under `.agents/skills/` for Cursor and Codex, `.claude/skills/` for Claude. It also creates:
 
 ```text
 .rooty/
@@ -30,19 +32,16 @@ Installation creates project-scoped copies of `rooty-setup`, `rooty-mcp-builder`
 │   └── project-context.json
 ├── state/
 │   └── install-manifest.json
-├── memory/
-│   ├── drafts/
-│   └── approved/
-└── mcp/
-    ├── data/
-    ├── observability/
-    ├── ticketing/
-    └── custom/
+└── memory/
+    ├── drafts/
+    └── approved/
 ```
 
-The manifest fingerprints Rooty-owned files so reinstall can update unchanged files without overwriting developer modifications. Project context stores only confirmed documentation paths. Draft memory is gitignored; approved sanitized cards can be shared with the team. General provider files live under `.rooty/mcp/<category>/<provider>/`. After an approved SQL setup, the tested runtime layout adds one `.rooty/mcp-<domain>/dab-config.json` per catalog and one shared `.rooty/start-dab.cjs` launcher.
+The manifest fingerprints Rooty-owned files so reinstall can update unchanged files without overwriting developer modifications, and records the selected hosts so reinstall neither widens nor narrows the install by accident. Project context stores only confirmed documentation paths. Draft memory is gitignored; approved sanitized cards can be shared with the team.
 
-Reinstalling automatically migrates the flat `.rooty/install-manifest.json` and `.rooty/project-context.json` layout created by version 0.2.0. It also copies legacy `.investigator/memory` JSON cards into `.rooty/memory` after collision checks while retaining the original files.
+Provider files live under `.rooty/mcp/<category>/<provider>/`, created by the setup agent on first approved write. After an approved SQL setup, the tested runtime layout adds one `.rooty/mcp/data/sql-server/<domain>/dab-config.json` per catalog and one shared `.rooty/start-dab.cjs` launcher.
+
+Reinstalling automatically migrates the flat `.rooty/install-manifest.json` and `.rooty/project-context.json` layout created by version 0.2.0, and removes the empty `.rooty/mcp` category folders that earlier versions created up front. It also copies legacy `.investigator/memory` JSON cards into `.rooty/memory` after collision checks while retaining the original files.
 
 Installation does not scan the source tree, execute a package, pull an image, start OAuth, collect credentials, or configure MCP servers.
 
@@ -56,7 +55,7 @@ Set up Rooty for this project.
 
 The setup skill:
 
-1. Confirms or asks for documentation paths.
+1. Confirms or asks for documentation paths, using the host's own structured question experience where one exists.
 2. Reads relevant documentation as a navigation reference.
 3. Checks current source/configuration only where needed.
 4. Identifies mandatory data and observability providers.

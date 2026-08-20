@@ -115,9 +115,16 @@ Status: implemented on `codex/sql-catalog-mcp-per-ide`.
 
 - Package `assets/start-dab.cjs` with the MCP-builder skill and copy it to `.rooty/start-dab.cjs` only after setup approval.
 - Reject multi-source/autoentity DAB config, mutation tools, `.env` credential files, shell wrappers, relative paths, `DAB_ENVIRONMENT`, and implicit ports at launcher startup.
-- Create `.rooty/mcp-{domain}/dab-config.json` and `rooty-sql-{domain}` host entries independently.
+- Create `.rooty/mcp/data/sql-server/{domain}/dab-config.json` and `rooty-sql-{domain}` host entries independently. The launcher still accepts the earlier `.rooty/mcp-{domain}/` location so existing installs keep working.
 - Declare the credential binding name through `--credential-env`; use Codex forwarding, Claude interpolation, and Cursor process-environment inheritance without committing values.
 - Keep Elasticsearch 8.19.15 on the official Docker image with `ES_VERSION=8` and `list_indices` readiness.
+
+### Host targeting and layout increment
+
+- Select install hosts from `--cursor`, `--claude`, and `--codex`, then the manifest, then project markers, then all hosts; record the result under `hosts` in the install manifest.
+- Write only the skill roots the selected hosts read, and report files left behind by a narrowed host list instead of deleting them.
+- Stop pre-creating `.rooty/mcp` category folders, remove empty ones left by earlier versions, and route provider artifacts through `.rooty/mcp/<category>/<provider>/`.
+- Route developer questions through the active host's structured question tool where one exists, with a plain-text fallback and a mandatory escape option.
 
 ## Phase 5: verification and UX hardening
 

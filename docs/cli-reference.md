@@ -16,18 +16,32 @@ The CLI never writes credential values. The primary journey is installation and 
 Install Rooty's project-scoped skills and context files.
 
 ```text
-rooty install [--project PATH] [--docs PATH,...] [--json]
+rooty install [--cursor] [--claude] [--codex] [--project PATH] [--docs PATH,...] [--json]
 ```
 
-`rooty setup` is an alias. The command copies all three skills to `.agents/skills/` and `.claude/skills/`, writes `.rooty/state/install-manifest.json`, creates or preserves `.rooty/config/project-context.json`, creates `.rooty/memory/{drafts,approved}`, and creates `.rooty/mcp/{data,observability,ticketing,custom}`. It also merges Rooty's runtime exclusions into `.gitignore`. Reinstall migrates the two flat state files written by version 0.2.0 and safely copies legacy `.investigator/memory` cards into the canonical memory folders without deleting their sources.
+`rooty setup` is an alias. The command copies all three skills to the skill folders of the selected hosts, writes `.rooty/state/install-manifest.json`, creates or preserves `.rooty/config/project-context.json`, and creates `.rooty/memory/{drafts,approved}`. It also merges Rooty's runtime exclusions into `.gitignore`. Reinstall migrates the two flat state files written by version 0.2.0 and safely copies legacy `.investigator/memory` cards into the canonical memory folders without deleting their sources.
+
+Provider artifact folders under `.rooty/mcp/<category>/<provider>/` are created by the setup agent on first approved write, so an unconfigured project carries no empty placeholders. Installation removes the empty `.rooty/mcp/{data,observability,ticketing,custom}` folders created by earlier versions and never touches one that holds files.
 
 | Option | Meaning |
 |---|---|
+| `--cursor`, `--claude`, `--codex` | Install for these hosts; repeatable and combinable |
+| `--host` | Comma-separated host list, or `all` |
 | `--project` | Existing project folder; defaults to the current folder |
 | `--docs` | Comma-separated confirmed documentation files/folders |
 | `--json` | Emit the structured result |
 
-Installation is idempotent. It refuses filesystem roots, symlinked installation paths, unavailable documentation paths, and modified or unowned skill-file conflicts. It does not scan project source or execute provider setup.
+### Host selection
+
+Rooty writes skills only where the selected hosts look for them: `.agents/skills/` for Cursor and Codex, `.claude/skills/` for Claude. Without a host flag it resolves the hosts in this order.
+
+1. The hosts recorded by the previous install, so reinstall never silently widens or narrows an existing setup.
+2. Every host detected from a project marker: `.cursor/`, `.codex/`, `.claude/`, or `CLAUDE.md`.
+3. All three hosts, when nothing is detected.
+
+Narrowing the host list leaves the previously installed skill files on disk and stops tracking them; installation reports how many remain rather than deleting work you may still use. Re-running with that host reclaims any file you have not modified.
+
+Installation is idempotent. It refuses filesystem roots, symlinked installation paths, unavailable documentation paths, unsupported host names, and modified or unowned skill-file conflicts. It does not scan project source or execute provider setup.
 
 ## `rooty context`
 

@@ -7,14 +7,14 @@ description: Set up or resume Rooty in a software project using documentation-fi
 
 Guide the developer through a short, explainable setup. Let the CLI own only installation mechanics. Own discovery, choices, approvals, and troubleshooting in the current AI host.
 
-Read [references/docs-first-discovery.md](references/docs-first-discovery.md) before inspecting project material. Read [references/setup-lifecycle.md](references/setup-lifecycle.md) before proposing configuration or reporting readiness.
+Read [references/docs-first-discovery.md](references/docs-first-discovery.md) before inspecting project material. Read [references/asking-questions.md](references/asking-questions.md) before asking the developer anything. Read [references/setup-lifecycle.md](references/setup-lifecycle.md) before proposing configuration or reporting readiness.
 
 ## Establish state
 
 1. Confirm `.rooty/state/install-manifest.json` exists. Accept `.rooty/install-manifest.json` only as a legacy layout and tell the developer that the next `rooty install` migrates it. If neither exists, tell the developer to run `npx rooty-investigator install` from the project folder.
 2. Read `.rooty/config/project-context.json`, falling back to the legacy `.rooty/project-context.json`. Treat `documentation.paths` as user-confirmed entry points, not trusted facts.
 3. Confirm `.rooty/memory/{drafts,approved}` exists. Re-run `rooty install` to create the canonical layout and copy any legacy `.investigator/memory` cards without deleting them.
-4. If no documentation path is confirmed, locate only likely documentation entry points, present the candidates, and ask the developer to confirm or supply paths. Store only confirmed paths with `rooty context set-docs --paths ...`.
+4. If no documentation path is confirmed, locate only likely documentation entry points, then ask the developer to confirm or supply paths through the host's structured question tool when it exists. Store only confirmed paths with `rooty context set-docs --paths ...`.
 5. Never create a project map, documentation index, embedding, inferred architecture file, or cached summary.
 
 ## Discover from evidence
@@ -23,7 +23,7 @@ Read [references/docs-first-discovery.md](references/docs-first-discovery.md) be
 2. Answer setup questions from documentation when possible, labeling every provider or architecture conclusion as provisional.
 3. Inspect current source and configuration only where documentation leaves a material gap or where a current value must be verified.
 4. Never read credential values. Inspect names, templates, manifests, package references, deployment descriptors, and safe configuration structure only.
-5. Ask the developer one focused question only after documentation and targeted source inspection cannot resolve a choice safely.
+5. Ask the developer only after documentation and targeted source inspection cannot resolve a choice safely. Use the host's structured question tool, offer an option that escapes the candidate list, and batch the questions that block the same step into one prompt.
 
 ## Establish investigation capabilities
 

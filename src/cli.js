@@ -6,13 +6,20 @@ import { runDoctor } from "./lib/doctor.js";
 import { assertCaseDirectoryOutsideProject, runFrozenCase, renderExistingCase, appendEvidence } from "./lib/cases.js";
 import { proposeMemory, approveMemory } from "./lib/memory.js";
 import { runEvaluation } from "./lib/evaluate.js";
-import { installRooty, readProjectContext, setDocumentationPaths, splitDocumentationPaths } from "./lib/installer.js";
+import {
+  installRooty,
+  readProjectContext,
+  setDocumentationPaths,
+  splitDocumentationPaths,
+  ROOTY_HOSTS,
+  ROOTY_HOST_IDS
+} from "./lib/installer.js";
 
 const HELP = `Rooty Investigator — evidence-first, read-only root-cause analysis
 
 Usage:
-  rooty install [--project PATH] [--docs PATH,...] [--json]
-  rooty setup [--project PATH] [--docs PATH,...] [--json]
+  rooty install [--cursor] [--claude] [--codex] [--project PATH] [--docs PATH,...] [--json]
+  rooty setup [--cursor] [--claude] [--codex] [--project PATH] [--docs PATH,...] [--json]
   rooty context show [--project PATH] [--json]
   rooty context set-docs --paths PATH,... [--project PATH] [--json]
   rooty init --host codex|claude|cursor|all [--project PATH] [--demo] [--activate-connectors]
@@ -30,10 +37,22 @@ Usage:
 Start with \`rooty install\`. It copies Rooty's agent skills and stores only
 confirmed documentation paths. The active AI agent performs discovery and MCP setup.
 
+Name the hosts to install for with \`--cursor\`, \`--claude\`, or \`--codex\`, or with
+\`--host cursor,claude\`. Without a host flag, Rooty reuses the hosts from the previous
+install, otherwise it installs for every host it detects in the project, otherwise for
+all of them.
+
 The CLI never writes secrets. Generated configuration contains only public
 endpoints, placeholders, and environment-variable references.`;
 
-const BOOLEAN_OPTIONS = new Set(["help", "demo", "activate-connectors", "json", "package-only"]);
+const BOOLEAN_OPTIONS = new Set([
+  "help",
+  "demo",
+  "activate-connectors",
+  "json",
+  "package-only",
+  ...ROOTY_HOST_IDS
+]);
 
 function assertOptionValues(options) {
   for (const [key, value] of Object.entries(options)) {
@@ -52,22 +71,36 @@ function color(code, value) {
   return `\u001b[${code}m${value}\u001b[0m`;
 }
 
+const HOST_SELECTION_REASON = Object.freeze({
+  requested: "requested",
+  "previous-install": "reused from the previous install",
+  detected: "detected in this project",
+  undetected: "no host detected; installed for all"
+});
+
 function installOutput(result) {
+  const labels = result.hosts.map((host) => ROOTY_HOSTS[host].label);
   const lines = [
-    `${color("1;32", "INSTALLED")} Rooty skills for Codex, Cursor, and Claude`,
+    `${color("1;32", "INSTALLED")} Rooty skills for ${labels.join(", ")}`,
+    `${color("1;36", "HOSTS")}     ${result.hosts.join(", ")} (${HOST_SELECTION_REASON[result.hostSelection]})`,
     `${color("1;36", "PROJECT")}   ${result.projectRoot}`,
-    `${color("1;36", "SKILLS")}    ${result.skills.join(", ")}`,
-    `${color("1;36", "ROOTY")}     .rooty/{config,state,memory/{drafts,approved},mcp/{data,observability,ticketing,custom}}`,
+    `${color("1;36", "SKILLS")}    ${result.skills.join(", ")} in ${result.targets.join(", ")}`,
+    `${color("1;36", "ROOTY")}     .rooty/{config,state,memory/{drafts,approved}}`,
     result.memory.migratedFiles.length
       ? `${color("1;36", "MEMORY")}    copied ${result.memory.migratedFiles.length} legacy card(s); legacy files retained`
       : `${color("1;36", "MEMORY")}    ${result.memory.drafts}`,
     result.documentationPaths.length
       ? `${color("1;36", "DOCS")}      ${result.documentationPaths.join(", ")}`
-      : `${color("1;33", "DOCS")}      not selected; the setup agent will ask`,
-    "",
-    `${color("1", "Next:")} Open Codex, Cursor, or Claude in this project and ask:`,
-    `  ${color("36", "Set up Rooty for this project.")}`
+      : `${color("1;33", "DOCS")}      not selected; the setup agent will ask`
   ];
+  if (result.unmanagedFiles.length) {
+    lines.push(`${color("1;33", "UNTRACKED")} ${result.unmanagedFiles.length} skill file(s) from hosts you did not select remain on disk; delete them yourself or re-run with that host`);
+  }
+  lines.push(
+    "",
+    `${color("1", "Next:")} Open ${labels.join(", ")} in this project and ask:`,
+    `  ${color("36", "Set up Rooty for this project.")}`
+  );
   return `${lines.join("\n")}\n`;
 }
 
@@ -84,7 +117,11 @@ export async function main(argv) {
     const result = await installRooty({
       packageRoot: PACKAGE_ROOT,
       projectRoot: projectFrom(options),
-      documentationPaths: splitDocumentationPaths(options.docs)
+      documentationPaths: splitDocumentationPaths(options.docs),
+      hosts: [
+        ...ROOTY_HOST_IDS.filter((host) => options[host] !== undefined),
+        ...(options.host === undefined ? [] : [String(options.host)])
+      ]
     });
     if (options.json) process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
     else process.stdout.write(installOutput(result));

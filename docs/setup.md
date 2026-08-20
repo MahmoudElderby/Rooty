@@ -19,10 +19,10 @@ Rooty uses a mechanical installer followed by agent-led setup. The CLI establish
 Run from the project folder:
 
 ```console
-npx rooty-investigator install
+npx rooty-investigator install --cursor
 ```
 
-Rooty writes the same three skills to `.agents/skills/` for Codex and Cursor and to `.claude/skills/` for Claude. It creates `.rooty/memory/{drafts,approved}` and protects drafts through `.gitignore`. Reinstallation is idempotent, refuses to overwrite modified or unowned skill files, and copies non-conflicting legacy memory without deleting the source.
+Rooty writes the same three skills to the skill folder each selected host reads: `.agents/skills/` for Codex and Cursor, `.claude/skills/` for Claude. Name hosts with `--cursor`, `--claude`, or `--codex`; without a flag Rooty reuses the previous install's hosts, otherwise every host it detects, otherwise all three. It creates `.rooty/memory/{drafts,approved}` and protects drafts through `.gitignore`. Reinstallation is idempotent, refuses to overwrite modified or unowned skill files, and copies non-conflicting legacy memory without deleting the source.
 
 Rooty does not install always-on host methodology rules. The canonical investigator skill owns universal behavior; reviewed project learning remains separate under `.rooty/memory`.
 
@@ -35,7 +35,7 @@ npx rooty-investigator install --docs "README.md,docs"
 npx rooty-investigator context set-docs --paths "README.md,docs"
 ```
 
-When no location is stored, the setup agent performs a bounded search for likely entry points such as `README*`, `docs/`, `architecture/`, and ADR folders, then asks the developer to confirm them. External local documentation folders are allowed when explicitly supplied.
+When no location is stored, the setup agent performs a bounded search for likely entry points such as `README*`, `docs/`, `architecture/`, and ADR folders, then asks the developer to confirm them through the host's own structured question tool where one exists. External local documentation folders are allowed when explicitly supplied.
 
 Only paths are stored. Rooty does not create a map, index, embedding, cached summary, or inferred architecture.
 
@@ -43,7 +43,9 @@ Only paths are stored. Rooty does not create a map, index, embedding, cached sum
 
 The setup agent reads the relevant confirmed documents first. Documentation helps find likely components, communication paths, database technology, telemetry, index patterns, identifiers, and source folders. It remains provisional.
 
-The agent inspects current safe project files only to verify material choices or fill gaps. It never recursively scans a filesystem root and never reads credential values. If a choice remains ambiguous, it asks one focused question.
+The agent inspects current safe project files only to verify material choices or fill gaps. It never recursively scans a filesystem root and never reads credential values.
+
+If a choice remains ambiguous, the agent asks. It uses the active host's structured question mechanism when one exists (`AskQuestion` in Cursor, `AskUserQuestion` in Claude) and plain conversation in Codex, always offering an option that escapes the candidate list. A question collects a preference and is never an approval: writes, commands, packages, images, and OAuth still require the host's approval experience.
 
 Required capabilities:
 
@@ -110,7 +112,7 @@ providers/
 
 SQL Server uses Microsoft's SQL MCP Server through DAB. Elasticsearch 8.19.15 uses Elastic's official standalone Docker image with `ES_VERSION=8` and the `list_indices` readiness probe; Rooty asks separately before installing Docker, pulling the image, or starting a container. MongoDB, Grafana, Azure DevOps, and custom providers require review of current official documentation and the live tool surface.
 
-For SQL Server, Rooty enumerates live catalogs and `INFORMATION_SCHEMA` objects, then creates one `rooty-sql-{domain}` MCP per catalog. Each has an isolated `.rooty/mcp-{domain}/dab-config.json` with explicit entities, a named credential reference, a unique nonzero loopback port, and absolute paths through `.rooty/start-dab.cjs`. The same pattern applies to Codex, Cursor, and Claude. Readiness is independent MCP initialization, exact read-only tools, non-empty `describe_entities`, and a bounded read per catalog; `dab validate` on 2.0.10 is not a readiness check.
+For SQL Server, Rooty enumerates live catalogs and `INFORMATION_SCHEMA` objects, then creates one `rooty-sql-{domain}` MCP per catalog. Each has an isolated `.rooty/mcp/data/sql-server/{domain}/dab-config.json` with explicit entities, a named credential reference, a unique nonzero loopback port, and absolute paths through `.rooty/start-dab.cjs`. The same pattern applies to Codex, Cursor, and Claude. Readiness is independent MCP initialization, exact read-only tools, non-empty `describe_entities`, and a bounded read per catalog; `dab validate` on 2.0.10 is not a readiness check.
 
 ## Advanced compatibility commands
 

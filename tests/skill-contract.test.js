@@ -25,7 +25,7 @@ test("SQL Server skill requires one explicit MCP per live catalog", async () => 
     "sys.databases",
     "INFORMATION_SCHEMA.TABLES",
     "rooty-sql-{domain}",
-    ".rooty/mcp-{domain}/dab-config.json",
+    ".rooty/mcp/data/sql-server/{domain}/dab-config.json",
     "each catalog independently"
   ]);
   requires(recipe, [
@@ -96,4 +96,22 @@ test("investigation method includes validated preflight and governed learning be
   ]);
   requires(setup, [".rooty/memory/{drafts,approved}", "Do not create always-on host investigation rules"]);
   assert.match(cursorAdapter, /alwaysApply:\s*false/);
+});
+
+test("setup routes developer questions through the active host's own question experience", async () => {
+  const setup = await content("skill/rooty-setup/SKILL.md");
+  const questions = await content("skill/rooty-setup/references/asking-questions.md");
+
+  assert.match(setup, /references\/asking-questions\.md/);
+  requires(setup, ["structured question tool", "escapes the candidate list"]);
+  requires(questions, [
+    "AskQuestion",
+    "AskUserQuestion",
+    "Codex",
+    "no structured question tool exists",
+    "ask the same question in plain text",
+    "include an option that escapes the list",
+    "It is not an approval surface",
+    "rooty context set-docs"
+  ]);
 });

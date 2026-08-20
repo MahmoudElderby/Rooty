@@ -35,11 +35,13 @@ There is no Rooty gateway or central credential store. Each host connects direct
 
 - validates the project and target paths;
 - refuses filesystem roots and symlinked installation targets;
-- copies `rooty-setup`, `rooty-mcp-builder`, and `root-cause-investigator` into `.agents/skills/` and `.claude/skills/`;
+- resolves the target hosts from explicit flags, then the previous install, then project markers, then all hosts;
+- copies `rooty-setup`, `rooty-mcp-builder`, and `root-cause-investigator` into `.agents/skills/` for Cursor and Codex and `.claude/skills/` for Claude, writing only the selected hosts and recording them in the manifest;
 - records SHA-256 ownership fingerprints in `.rooty/state/install-manifest.json`;
 - stores only confirmed documentation paths in `.rooty/config/project-context.json`;
 - creates `.rooty/memory/{drafts,approved}`, gitignores drafts, and copies non-conflicting legacy `.investigator/memory` cards without deleting the originals;
-- creates category roots under `.rooty/mcp/` for general provider artifacts; approved SQL setup uses the tested `.rooty/mcp-<domain>/dab-config.json` layout and one shared `.rooty/start-dab.cjs` launcher;
+- leaves `.rooty/mcp/` to the setup agent, which creates `<category>/<provider>/` on first approved write; approved SQL setup uses `.rooty/mcp/data/sql-server/<domain>/dab-config.json` and one shared `.rooty/start-dab.cjs` launcher;
+- removes the empty `.rooty/mcp` category folders created by earlier versions and reports skill files left behind by a narrowed host list without deleting them;
 - migrates the two flat version 0.2.0 state files during reinstall;
 - updates unchanged Rooty-owned files and refuses modified/unowned conflicts.
 

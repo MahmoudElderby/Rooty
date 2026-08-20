@@ -6,6 +6,7 @@ import {
   readFile,
   readdir,
   rename,
+  rmdir,
   stat,
   unlink,
   writeFile
@@ -14,7 +15,29 @@ import path from "node:path";
 import { MEMORY_PATHS, migrateLegacyMemory } from "./memory-store.js";
 
 export const ROOTY_SKILLS = ["rooty-setup", "rooty-mcp-builder", "root-cause-investigator"];
-export const ROOTY_SKILL_TARGETS = [".agents/skills", ".claude/skills"];
+
+export const ROOTY_HOSTS = Object.freeze({
+  claude: Object.freeze({
+    label: "Claude",
+    skillTargets: Object.freeze([".claude/skills"]),
+    markers: Object.freeze([".claude", "CLAUDE.md"]),
+    mcpConfig: ".mcp.json"
+  }),
+  codex: Object.freeze({
+    label: "Codex",
+    skillTargets: Object.freeze([".agents/skills"]),
+    markers: Object.freeze([".codex"]),
+    mcpConfig: ".codex/config.toml"
+  }),
+  cursor: Object.freeze({
+    label: "Cursor",
+    skillTargets: Object.freeze([".agents/skills"]),
+    markers: Object.freeze([".cursor"]),
+    mcpConfig: ".cursor/mcp.json"
+  })
+});
+export const ROOTY_HOST_IDS = Object.freeze(Object.keys(ROOTY_HOSTS).sort());
+export const ROOTY_SKILL_TARGETS = Object.freeze(skillTargetsForHosts(ROOTY_HOST_IDS));
 
 const INSTALLATION_MODE = "agent-led-v3";
 export const ROOTY_PATHS = Object.freeze({
@@ -27,12 +50,14 @@ export const ROOTY_PROJECT_DIRECTORIES = Object.freeze([
   ".rooty/config",
   ".rooty/state",
   MEMORY_PATHS.drafts,
-  MEMORY_PATHS.approved,
-  ".rooty/mcp/data",
-  ".rooty/mcp/observability",
-  ".rooty/mcp/ticketing",
-  ".rooty/mcp/custom"
+  MEMORY_PATHS.approved
 ]);
+
+// Provider artifacts live at .rooty/mcp/<category>/<provider>/, created by the setup
+// agent on first write so an unconfigured project carries no empty placeholders.
+export const ROOTY_MCP_ROOT = ".rooty/mcp";
+export const ROOTY_MCP_CATEGORIES = Object.freeze(["custom", "data", "observability", "ticketing"]);
+const LEGACY_MCP_DIRECTORIES = Object.freeze(ROOTY_MCP_CATEGORIES.map((category) => `${ROOTY_MCP_ROOT}/${category}`));
 
 function slash(value) {
   return value.split(path.sep).join("/");
@@ -53,6 +78,72 @@ async function exists(candidate) {
     return true;
   } catch (error) {
     if (error?.code === "ENOENT") return false;
+    throw error;
+  }
+}
+
+export function skillTargetsForHosts(hosts) {
+  const targets = new Set();
+  for (const host of hosts) {
+    for (const target of ROOTY_HOSTS[host].skillTargets) targets.add(target);
+  }
+  return [...targets].sort();
+}
+
+export function normalizeHosts(values) {
+  const requested = (Array.isArray(values) ? values : [values])
+    .filter((value) => value !== undefined && value !== null && value !== "")
+    .flatMap((value) => String(value).split(","))
+    .map((value) => value.trim().toLowerCase())
+    .filter(Boolean);
+  const hosts = new Set();
+  for (const value of requested) {
+    if (value === "all") {
+      for (const host of ROOTY_HOST_IDS) hosts.add(host);
+      continue;
+    }
+    if (!ROOTY_HOST_IDS.includes(value)) {
+      throw new Error(`Unsupported host: ${value}. Choose ${ROOTY_HOST_IDS.join(", ")}, or all.`);
+    }
+    hosts.add(value);
+  }
+  return [...hosts].sort();
+}
+
+export async function detectProjectHosts(projectRoot) {
+  const detected = [];
+  for (const host of ROOTY_HOST_IDS) {
+    for (const marker of ROOTY_HOSTS[host].markers) {
+      if (await exists(path.join(projectRoot, marker))) {
+        detected.push(host);
+        break;
+      }
+    }
+  }
+  return detected;
+}
+
+async function resolveInstallHosts(projectRoot, requestedHosts, manifest) {
+  const requested = normalizeHosts(requestedHosts);
+  if (requested.length) return { hosts: requested, selection: "requested" };
+  const recorded = normalizeHosts(manifest?.hosts ?? []);
+  if (recorded.length) return { hosts: recorded, selection: "previous-install" };
+  // Installs written before host targeting existed covered every host.
+  if (manifest) return { hosts: [...ROOTY_HOST_IDS], selection: "previous-install" };
+  const detected = await detectProjectHosts(projectRoot);
+  if (detected.length) return { hosts: detected, selection: "detected" };
+  return { hosts: [...ROOTY_HOST_IDS], selection: "undetected" };
+}
+
+async function pruneEmptyDirectory(target) {
+  if (!await exists(target)) return false;
+  const details = await lstat(target);
+  if (!details.isDirectory() || details.isSymbolicLink()) return false;
+  try {
+    await rmdir(target);
+    return true;
+  } catch (error) {
+    if (["ENOTEMPTY", "EEXIST", "ENOENT", "EPERM", "EACCES"].includes(error?.code)) return false;
     throw error;
   }
 }
@@ -113,6 +204,9 @@ async function readManifest(projectRoot) {
     const manifest = JSON.parse(await readFile(file, "utf8"));
     if (manifest?.schema_version !== 1 || manifest?.installation !== INSTALLATION_MODE || typeof manifest?.files !== "object") {
       throw new Error("unsupported manifest shape");
+    }
+    if (manifest.hosts !== undefined && (!Array.isArray(manifest.hosts) || manifest.hosts.some((host) => !ROOTY_HOST_IDS.includes(host)))) {
+      throw new Error("unsupported host list");
     }
     return manifest;
   } catch (error) {
@@ -206,7 +300,7 @@ export async function setDocumentationPaths({ projectRoot, documentationPaths })
   return { file: contextFile, context };
 }
 
-export async function installRooty({ packageRoot, projectRoot, documentationPaths = [] }) {
+export async function installRooty({ packageRoot, projectRoot, documentationPaths = [], hosts = [] }) {
   const resolved = await assertProjectRoot(projectRoot);
   for (const relative of [
     ROOTY_PATHS.manifest,
@@ -217,10 +311,12 @@ export async function installRooty({ packageRoot, projectRoot, documentationPath
     await assertNoSymlinkSegments(resolved, path.join(resolved, relative));
   }
   const manifest = await readManifest(resolved);
+  const { hosts: selectedHosts, selection } = await resolveInstallHosts(resolved, hosts, manifest);
+  const targets = skillTargetsForHosts(selectedHosts);
   const planned = [];
   const nextFiles = {};
 
-  for (const targetRoot of ROOTY_SKILL_TARGETS) {
+  for (const targetRoot of targets) {
     for (const skill of ROOTY_SKILLS) {
       const sourceRoot = path.join(packageRoot, "skill", skill);
       const targetSkillRoot = path.join(resolved, targetRoot, skill);
@@ -278,6 +374,10 @@ export async function installRooty({ packageRoot, projectRoot, documentationPath
   for (const directory of ROOTY_PROJECT_DIRECTORIES) {
     await mkdir(path.join(resolved, directory), { recursive: true });
   }
+  const prunedDirectories = [];
+  for (const directory of [...LEGACY_MCP_DIRECTORIES, ROOTY_MCP_ROOT]) {
+    if (await pruneEmptyDirectory(path.join(resolved, directory))) prunedDirectories.push(directory);
+  }
   for (const item of planned) {
     await mkdir(path.dirname(item.target), { recursive: true });
     await writeFile(item.target, item.content);
@@ -285,12 +385,22 @@ export async function installRooty({ packageRoot, projectRoot, documentationPath
   await atomicJson(contextFile, context);
   const gitignore = await ensureProjectGitignore(packageRoot, resolved);
 
+  // Narrowing the host list leaves previously installed skill files behind. Rooty stops
+  // tracking them and reports them instead of deleting anything the developer may still use.
+  const unmanagedFiles = [];
+  for (const relative of Object.keys(manifest?.files ?? {})) {
+    if (nextFiles[relative] !== undefined) continue;
+    if (await exists(path.join(resolved, relative))) unmanagedFiles.push(relative);
+  }
+  unmanagedFiles.sort();
+
   const packageManifest = JSON.parse(await readFile(path.join(packageRoot, "package.json"), "utf8"));
   const nextManifest = {
     schema_version: 1,
     installation: INSTALLATION_MODE,
     package: { name: packageManifest.name, version: packageManifest.version },
-    skill_targets: ROOTY_SKILL_TARGETS,
+    hosts: selectedHosts,
+    skill_targets: targets,
     skills: ROOTY_SKILLS,
     files: Object.fromEntries(Object.entries(nextFiles).sort(([left], [right]) => left.localeCompare(right))),
     project_context: ROOTY_PATHS.context
@@ -312,8 +422,13 @@ export async function installRooty({ packageRoot, projectRoot, documentationPath
       legacyFilesRetained: memoryMigration.legacyFilesRetained
     },
     gitignore,
+    hosts: selectedHosts,
+    hostSelection: selection,
     skills: ROOTY_SKILLS,
-    targets: ROOTY_SKILL_TARGETS,
+    targets,
+    mcpRoot: path.join(resolved, ROOTY_MCP_ROOT),
+    prunedDirectories,
+    unmanagedFiles,
     writtenFiles: planned.map((item) => item.target)
   };
 }
@@ -329,8 +444,9 @@ export async function inspectRootyInstall(projectRoot) {
     add("PASS", "install-manifest", `Rooty ${manifest.package?.version ?? "unknown"} uses ${manifest.installation}`);
   } catch (error) {
     add("FAIL", "install-manifest", error.message);
-    return { ok: false, installation: undefined, checks };
+    return { ok: false, installation: undefined, hosts: [], checks };
   }
+  const hosts = manifest.hosts?.length ? [...manifest.hosts] : [...ROOTY_HOST_IDS];
 
   const missing = [];
   const modified = [];
@@ -350,7 +466,7 @@ export async function inspectRootyInstall(projectRoot) {
   if (missing.length || modified.length) {
     add("FAIL", "installed-skills", `Missing: ${missing.length}; modified: ${modified.length}. Re-run \`rooty install\` after reviewing local changes.`);
   } else {
-    add("PASS", "installed-skills", `${manifest.skills.length} skills are intact in ${manifest.skill_targets.length} host locations`);
+    add("PASS", "installed-skills", `${manifest.skills.length} skills are intact for ${hosts.map((host) => ROOTY_HOSTS[host].label).join(", ")}`);
   }
 
   const missingDirectories = [];
@@ -388,5 +504,5 @@ export async function inspectRootyInstall(projectRoot) {
   } catch (error) {
     add("FAIL", "documentation-context", error.message);
   }
-  return { ok: !checks.some((check) => check.status === "FAIL"), installation: manifest.installation, checks };
+  return { ok: !checks.some((check) => check.status === "FAIL"), installation: manifest.installation, hosts, checks };
 }

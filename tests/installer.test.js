@@ -6,22 +6,42 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import {
+  detectProjectHosts,
   installRooty,
   inspectRootyInstall,
+  normalizeHosts,
   readProjectContext,
+  ROOTY_HOST_IDS,
   ROOTY_PATHS,
   ROOTY_PROJECT_DIRECTORIES,
   ROOTY_SKILLS,
   ROOTY_SKILL_TARGETS,
-  setDocumentationPaths
+  setDocumentationPaths,
+  skillTargetsForHosts
 } from "../src/lib/installer.js";
 import { detectSetupModel } from "../src/lib/setup-model.js";
 import { runDoctor } from "../src/lib/doctor.js";
+import { main } from "../src/cli.js";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 async function project(name) {
   return mkdtemp(path.join(os.tmpdir(), `${name}-`));
+}
+
+async function cliJson(argv) {
+  const chunks = [];
+  const write = process.stdout.write;
+  process.stdout.write = (chunk) => {
+    chunks.push(String(chunk));
+    return true;
+  };
+  try {
+    await main([...argv, "--json"]);
+  } finally {
+    process.stdout.write = write;
+  }
+  return JSON.parse(chunks.join(""));
 }
 
 test("agent-led install copies all Rooty skills for supported hosts", async () => {
@@ -48,19 +68,138 @@ test("agent-led install copies all Rooty skills for supported hosts", async () =
   }
 
   assert.deepEqual(await readProjectContext(projectRoot), { schema_version: 1, documentation: { paths: [] } });
-  assert.deepEqual((await readdir(path.join(projectRoot, ".rooty"))).sort(), ["config", "mcp", "memory", "state"]);
+  assert.deepEqual((await readdir(path.join(projectRoot, ".rooty"))).sort(), ["config", "memory", "state"]);
   for (const directory of ROOTY_PROJECT_DIRECTORIES) {
     await readdir(path.join(projectRoot, directory));
   }
   assert.match(await readFile(path.join(projectRoot, ".gitignore"), "utf8"), /\.rooty\/memory\/drafts\//);
   const manifest = JSON.parse(await readFile(path.join(projectRoot, ROOTY_PATHS.manifest), "utf8"));
   assert.equal(manifest.project_context, ROOTY_PATHS.context);
+  assert.deepEqual(manifest.hosts, [...ROOTY_HOST_IDS]);
   assert.equal(await detectSetupModel(projectRoot), "agent-led-v3");
+  assert.equal(result.hostSelection, "undetected");
   const inspected = await inspectRootyInstall(projectRoot);
   assert.equal(inspected.ok, true, JSON.stringify(inspected.checks));
+  assert.deepEqual(inspected.hosts, [...ROOTY_HOST_IDS]);
   assert.equal(inspected.checks.find((check) => check.name === "documentation-context")?.status, "WARN");
   assert.equal(inspected.checks.find((check) => check.name === "rooty-layout")?.status, "PASS");
   assert.equal(inspected.checks.find((check) => check.name === "memory-gitignore")?.status, "PASS");
+});
+
+test("install writes skills only for the requested hosts", async () => {
+  const projectRoot = await project("rooty-host-claude");
+  const result = await installRooty({ packageRoot: ROOT, projectRoot, hosts: ["claude"] });
+
+  assert.deepEqual(result.hosts, ["claude"]);
+  assert.equal(result.hostSelection, "requested");
+  assert.deepEqual(result.targets, [".claude/skills"]);
+  await readdir(path.join(projectRoot, ".claude/skills/rooty-setup"));
+  await assert.rejects(() => readdir(path.join(projectRoot, ".agents")), /ENOENT/);
+
+  const manifest = JSON.parse(await readFile(path.join(projectRoot, ROOTY_PATHS.manifest), "utf8"));
+  assert.deepEqual(manifest.hosts, ["claude"]);
+  assert.deepEqual(manifest.skill_targets, [".claude/skills"]);
+  assert.equal(Object.keys(manifest.files).every((file) => file.startsWith(".claude/skills/")), true);
+
+  const inspected = await inspectRootyInstall(projectRoot);
+  assert.equal(inspected.ok, true, JSON.stringify(inspected.checks));
+  assert.match(inspected.checks.find((check) => check.name === "installed-skills").message, /Claude/);
+
+  await assert.rejects(
+    () => installRooty({ packageRoot: ROOT, projectRoot, hosts: ["windsurf"] }),
+    /Unsupported host: windsurf/
+  );
+});
+
+test("install accepts host names through the CLI shorthand and the --host list", async () => {
+  const shorthand = await project("rooty-cli-shorthand");
+  assert.deepEqual((await cliJson(["install", "--project", shorthand, "--codex"])).hosts, ["codex"]);
+
+  const list = await project("rooty-cli-host-list");
+  assert.deepEqual((await cliJson(["install", "--project", list, "--host", "claude,cursor"])).hosts, ["claude", "cursor"]);
+
+  await assert.rejects(
+    () => main(["install", "--project", list, "--host", "windsurf"]),
+    /Unsupported host: windsurf/
+  );
+});
+
+test("host selection falls back to detection, then to the previous install", async () => {
+  const projectRoot = await project("rooty-host-detect");
+  await mkdir(path.join(projectRoot, ".cursor"));
+
+  const detected = await detectProjectHosts(projectRoot);
+  assert.deepEqual(detected, ["cursor"]);
+  const first = await installRooty({ packageRoot: ROOT, projectRoot });
+  assert.deepEqual(first.hosts, ["cursor"]);
+  assert.equal(first.hostSelection, "detected");
+  assert.deepEqual(first.targets, [".agents/skills"]);
+
+  // A later Claude marker must not silently widen an install that already recorded its hosts.
+  await mkdir(path.join(projectRoot, ".claude"));
+  const second = await installRooty({ packageRoot: ROOT, projectRoot });
+  assert.deepEqual(second.hosts, ["cursor"]);
+  assert.equal(second.hostSelection, "previous-install");
+  assert.equal(second.writtenFiles.length, 0);
+  await assert.rejects(() => readdir(path.join(projectRoot, ".claude/skills")), /ENOENT/);
+
+  const widened = await installRooty({ packageRoot: ROOT, projectRoot, hosts: ["cursor", "claude"] });
+  assert.deepEqual(widened.hosts, ["claude", "cursor"]);
+  assert.deepEqual(widened.targets, skillTargetsForHosts(["claude", "cursor"]));
+  assert.deepEqual(widened.unmanagedFiles, []);
+});
+
+test("a manifest written before host targeting keeps covering every host", async () => {
+  const projectRoot = await project("rooty-host-upgrade");
+  await mkdir(path.join(projectRoot, ".cursor"));
+  await installRooty({ packageRoot: ROOT, projectRoot });
+  const manifestFile = path.join(projectRoot, ROOTY_PATHS.manifest);
+  const manifest = JSON.parse(await readFile(manifestFile, "utf8"));
+  delete manifest.hosts;
+  await writeFile(manifestFile, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
+
+  const result = await installRooty({ packageRoot: ROOT, projectRoot });
+  assert.deepEqual(result.hosts, [...ROOTY_HOST_IDS]);
+  assert.equal(result.hostSelection, "previous-install");
+  assert.deepEqual(result.targets, [...ROOTY_SKILL_TARGETS]);
+  assert.deepEqual(result.unmanagedFiles, []);
+  assert.deepEqual(await inspectRootyInstall(projectRoot).then((check) => check.hosts), [...ROOTY_HOST_IDS]);
+});
+
+test("narrowing the host list stops tracking files instead of deleting them", async () => {
+  const projectRoot = await project("rooty-host-narrow");
+  await installRooty({ packageRoot: ROOT, projectRoot });
+  const claudeSkill = path.join(projectRoot, ".claude/skills/rooty-setup/SKILL.md");
+
+  const narrowed = await installRooty({ packageRoot: ROOT, projectRoot, hosts: ["cursor"] });
+  assert.deepEqual(narrowed.hosts, ["cursor"]);
+  assert.equal(narrowed.unmanagedFiles.some((file) => file.startsWith(".claude/skills/")), true);
+  await readFile(claudeSkill, "utf8");
+
+  const manifest = JSON.parse(await readFile(path.join(projectRoot, ROOTY_PATHS.manifest), "utf8"));
+  assert.equal(Object.keys(manifest.files).some((file) => file.startsWith(".claude/skills/")), false);
+  assert.equal((await inspectRootyInstall(projectRoot)).ok, true);
+
+  // Re-adding the host reclaims the untouched files without a conflict.
+  const restored = await installRooty({ packageRoot: ROOT, projectRoot, hosts: ["cursor", "claude"] });
+  assert.deepEqual(restored.unmanagedFiles, []);
+  assert.equal(restored.writtenFiles.length, 0);
+});
+
+test("install removes the empty MCP category placeholders and preserves provider artifacts", async () => {
+  const projectRoot = await project("rooty-mcp-layout");
+  await installRooty({ packageRoot: ROOT, projectRoot, hosts: ["cursor"] });
+  await assert.rejects(() => readdir(path.join(projectRoot, ".rooty/mcp")), /ENOENT/);
+
+  await mkdir(path.join(projectRoot, ".rooty/mcp/observability"), { recursive: true });
+  await mkdir(path.join(projectRoot, ".rooty/mcp/data/sql-server/orders"), { recursive: true });
+  await writeFile(path.join(projectRoot, ".rooty/mcp/data/sql-server/orders/dab-config.json"), "{}\n", "utf8");
+
+  const result = await installRooty({ packageRoot: ROOT, projectRoot, hosts: ["cursor"] });
+  assert.deepEqual(result.prunedDirectories, [".rooty/mcp/observability"]);
+  assert.deepEqual((await readdir(path.join(projectRoot, ".rooty/mcp"))).sort(), ["data"]);
+  await readFile(path.join(projectRoot, ".rooty/mcp/data/sql-server/orders/dab-config.json"), "utf8");
+  assert.deepEqual(normalizeHosts(["cursor", "all", "CLAUDE"]), [...ROOTY_HOST_IDS]);
 });
 
 test("install copies legacy memory into the canonical Rooty layout without deleting the source", async () => {

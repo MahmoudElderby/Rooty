@@ -66,7 +66,7 @@ The per-catalog SQL entry is present, but the named connection-string variable i
 
 Open that server's host MCP log and use the launcher message to correct only the named catalog. Confirm:
 
-- absolute Node, `.rooty/start-dab.cjs`, DAB, and `.rooty/mcp-<domain>/dab-config.json` paths;
+- absolute Node, `.rooty/start-dab.cjs`, DAB, and `.rooty/mcp/data/sql-server/<domain>/dab-config.json` paths;
 - a unique explicit `ASPNETCORE_URLS=http://127.0.0.1:<port>` value, not port zero;
 - explicit live-metadata entities and the `rooty-reader` read permission;
 - no `.env`, `data-source-files`, autoentities, `DAB_ENVIRONMENT`, shell wrapper, or mutation-enabled tool;
@@ -149,6 +149,7 @@ Rooty prevents an empty host installation. Choose one supported journey:
 Check:
 
 - `rooty install` completed in the project the host opened.
+- That host was among the installed hosts. `rooty doctor` names them, and `install-manifest.json` records them under `hosts`. If the host is missing, re-run `rooty install --cursor`, `--claude`, or `--codex` for it.
 - All three skills exist under `.agents/skills/` for Codex/Cursor or `.claude/skills/` for Claude.
 - Codex/Cursor started within the repository path that contains `.agents/skills/`.
 - The host-specific MCP configuration exists after the setup proposal was approved.

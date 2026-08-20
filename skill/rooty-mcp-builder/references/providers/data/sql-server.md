@@ -34,7 +34,7 @@ For each discovered catalog, query `INFORMATION_SCHEMA.TABLES` and related colum
 
 Each catalog is an independent MCP server named `rooty-sql-{domain}` with:
 
-- `.rooty/mcp-{domain}/dab-config.json` containing one `mssql` data source and explicit entities;
+- `.rooty/mcp/data/sql-server/{domain}/dab-config.json` containing one `mssql` data source and explicit entities;
 - one `ROOTY_SQL_<DOMAIN>` credential reference selecting that exact catalog;
 - only `describe_entities`, `read_records`, and bounded `aggregate_records` tools;
 - a dedicated `rooty-reader` database identity with `SELECT` only;
