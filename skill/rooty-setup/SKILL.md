@@ -21,7 +21,7 @@ Read [references/docs-first-discovery.md](references/docs-first-discovery.md) be
 ## Discover and confirm environments
 
 1. Run `rooty env discover --json`. Treat every result as `UNCONFIRMED`.
-2. Review only the safe evidence paths behind candidates. Environment names may come from documentation, deployment descriptors, infrastructure, CI/CD stages, non-secret configuration templates, telemetry structure, existing MCP entries, and credential binding names. Never read credential values.
+2. Review only the safe evidence paths behind candidates. Environment names may come from documentation, deployment descriptors, infrastructure, CI/CD stages, non-secret configuration templates, telemetry structure, existing MCP entries, and setting key names. Never read setting values.
 3. Ask which candidates are real environments, which names are aliases, which environments to configure, and which one to activate initially. Do not infer that `prod`, `preprod`, `stage`, or `qa` is currently active.
 4. Prefer configuring every confirmed environment needed for investigation when the developer approves it; readiness remains independent per environment.
 5. Persist confirmed/selected environment IDs and the active host with `rooty setup selections`, then checkpoint `ENVIRONMENTS_CONFIRMED`.
@@ -31,7 +31,7 @@ Read [references/docs-first-discovery.md](references/docs-first-discovery.md) be
 1. Read the relevant confirmed documentation first. Use it to locate likely business flows, components, communications, environments, data stores, telemetry, and identifiers.
 2. Answer setup questions from documentation when possible, labeling every provider or architecture conclusion as provisional.
 3. Inspect current source and configuration only where documentation leaves a material gap or where a current value must be verified.
-4. Never read credential values. Inspect names, templates, manifests, package references, deployment descriptors, and safe configuration structure only.
+4. Never read credential values. Inspect names, templates, manifests, package references, deployment descriptors, and safe configuration structure only. MCP values belong only in `.rooty/config/mcp-settings.local.json`.
 5. Ask the developer only after documentation and targeted source inspection cannot resolve a choice safely. Use the host's structured question tool, offer an option that escapes the candidate list, and batch the questions that block the same step into one prompt.
 
 ## Establish investigation capabilities
@@ -43,11 +43,11 @@ Read [references/docs-first-discovery.md](references/docs-first-discovery.md) be
 
 ## Apply with approval
 
-1. Show the provider, official server, transport, exact host config path, credential binding names, read-only controls, allowed tools, harmless probe, and any runtime installation before changing anything.
+1. Show the provider, official server, transport, exact host config path, local setting key names, read-only controls, allowed tools, harmless probe, and any runtime installation before changing anything.
 2. Request host-native approval for every file write, command, package execution, image pull, or OAuth flow.
 3. Configure only the active host unless the developer explicitly asks for additional hosts.
-4. Put credential **references** in that host's MCP entry. Never put credential values in project files or chat.
-5. After configuration, display every unresolved credential binding with its host config path and the smallest action that resolves it.
+4. Put only the `.rooty/start-mcp.cjs` launcher, local JSON path, and setting key names in that host's MCP entry. Never use machine environment-variable forwarding or put values in host files or chat.
+5. Create missing placeholders with `rooty settings init --keys ...`, then display every unresolved key with the local settings path and smallest action that resolves it. Never display a value.
 6. Verify server initialization, tool discovery, absence or blocking of mutation tools, and one bounded harmless read.
 7. Do not create always-on host investigation rules. Universal methodology belongs in the installed `root-cause-investigator` skill; reviewed project learning belongs in `.rooty/memory`.
 

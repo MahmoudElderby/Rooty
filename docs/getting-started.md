@@ -28,9 +28,11 @@ Installation creates project-scoped copies of `rooty-setup`, `rooty-mcp-builder`
 
 ```text
 .rooty/
+├── start-mcp.cjs
 ├── config/
 │   ├── project-context.json
-│   └── environment-profiles.json   # created after environment targets are approved
+│   ├── environment-profiles.json   # created after environment targets are approved
+│   └── mcp-settings.local.json     # local, Git-ignored MCP values
 ├── state/
 │   ├── install-manifest.json
 │   ├── setup-progress.json
@@ -42,11 +44,11 @@ Installation creates project-scoped copies of `rooty-setup`, `rooty-mcp-builder`
 
 The manifest fingerprints Rooty-owned files so reinstall can update unchanged files without overwriting developer modifications, and records the selected hosts so reinstall neither widens nor narrows the install by accident. Project context stores only the documentation decision and confirmed paths. Setup progress and the active host environment are local, gitignored state; skipped or cancelled setup resumes at the saved stage without storing prompt transcripts, credentials, or inferred architecture. Draft memory is gitignored; approved sanitized cards can be shared with the team.
 
-Provider files live under `.rooty/mcp/<category>/<provider>/`, created by the setup agent on first approved write. Environment-specific SQL targets use `.rooty/mcp/data/sql-server/<environment>/<domain>/dab-config.json` and one shared `.rooty/start-dab.cjs` launcher.
+Provider files live under `.rooty/mcp/<category>/<provider>/`, created by the setup agent on first approved write. Rooty installs `.rooty/start-mcp.cjs`; every settings-backed MCP entry invokes it with declared key names, and the launcher reads their values from `.rooty/config/mcp-settings.local.json`. Environment-specific SQL targets additionally use one shared `.rooty/start-dab.cjs` launcher.
 
 Reinstalling automatically migrates the flat `.rooty/install-manifest.json` and `.rooty/project-context.json` layout created by version 0.2.0, and removes the empty `.rooty/mcp` category folders that earlier versions created up front. It also copies legacy `.investigator/memory` JSON cards into `.rooty/memory` after collision checks while retaining the original files.
 
-Installation does not scan the source tree, execute a package, pull an image, start OAuth, collect credentials, or configure MCP servers.
+Installation does not scan the source tree, execute a package, pull an image, start OAuth, collect credentials, or configure MCP servers. It creates the local settings file with an empty `settings` object so installed versus configured state is explicit.
 
 ## Start agent-led setup
 
@@ -65,7 +67,7 @@ The setup skill:
 5. Identifies mandatory data and observability providers; ticketing remains optional.
 6. Proposes one logical MCP source with reviewed targets for each selected environment.
 7. Requests approval for writes, execution, packages, containers, or OAuth.
-8. Activates exactly one environment target per logical source, shows missing credential bindings, and verifies harmless environment-identity reads.
+8. Activates exactly one environment target per logical source, shows missing local setting keys, and verifies harmless environment-identity reads.
 
 Documentation is never accepted as proof. Material findings are checked against current code, configuration, or runtime evidence. Rooty stores no generated project map or documentation summary.
 
@@ -81,6 +83,16 @@ Change confirmed documentation locations with:
 ```console
 npx rooty-investigator context set-docs --paths knowledge
 ```
+
+Populate settings without exposing values in shell arguments:
+
+```console
+npx rooty-investigator settings init --keys ROOTY_PROVIDER_URL,ROOTY_PROVIDER_TOKEN
+npx rooty-investigator settings configure --file C:/private/rooty-settings.json
+npx rooty-investigator settings status
+```
+
+The private source and `.rooty/config/mcp-settings.local.json` use `{ "schema_version": 1, "settings": { ... } }`. Neither should be committed; status output contains key names only.
 
 Rooty recommends `knowledge/` when that folder exists; otherwise confirm the actual project entry points such as `README.md,docs`. To explicitly confirm there is no documentation entry point, use `context set-docs --none`. Inspect resumable setup with `setup status`.
 

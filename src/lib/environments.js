@@ -3,6 +3,7 @@ import { lstat, readdir, readFile, unlink } from "node:fs/promises";
 import path from "node:path";
 import { assertNoEmbeddedSecrets } from "./core.js";
 import { inspectRootyInstall, ROOTY_HOSTS, ROOTY_HOST_IDS } from "./installer.js";
+import { MCP_SETTINGS_KEY_PATTERN, MCP_SETTINGS_PATH, readMcpSettings, resolveMcpSettingValues } from "./mcp-settings.js";
 import { atomicWriteJson, atomicWriteText, assertNoSymlinkPath, ensureProjectPath, readOptionalJson, readOptionalText, resolveProjectRoot } from "./project-state.js";
 import { readSetupProgress } from "./setup-progress.js";
 
@@ -74,6 +75,38 @@ function validateHostEntry(entry, host, location) {
   }
 }
 
+function validateSettingsBackedEntry(entry, keys, location) {
+  if (!keys.length) return;
+  if (entry.url) throw new Error(`Settings-backed host entry must use the Rooty stdio launcher at ${location}`);
+  if (entry.env_vars?.length) throw new Error(`Machine env_vars are forbidden for settings-backed entry at ${location}`);
+  if (entry.env && Object.keys(entry.env).length) throw new Error(`Host env is forbidden for settings-backed entry at ${location}`);
+  if (entry.headers && Object.keys(entry.headers).length) throw new Error(`Host headers are forbidden for settings-backed entry at ${location}`);
+  if (entry.bearer_token_env_var || entry.env_http_headers) throw new Error(`Host environment authentication is forbidden for settings-backed entry at ${location}`);
+  const args = entry.args ?? [];
+  const launcher = String(args[0] ?? "").replaceAll("\\", "/").toLowerCase();
+  if (!launcher.endsWith("/.rooty/start-mcp.cjs")) throw new Error(`Settings-backed entry must invoke .rooty/start-mcp.cjs at ${location}`);
+  const settingsIndex = args.indexOf("--settings");
+  const settingsPath = String(args[settingsIndex + 1] ?? "").replaceAll("\\", "/").toLowerCase();
+  if (settingsIndex < 0 || !settingsPath.endsWith(`/${MCP_SETTINGS_PATH}`)) throw new Error(`Settings-backed entry must reference ${MCP_SETTINGS_PATH} at ${location}`);
+  const keysIndex = args.indexOf("--keys");
+  const bindings = String(args[keysIndex + 1] ?? "").split(",").map((item) => item.trim()).filter(Boolean);
+  if (bindings.some((binding) => {
+    const parts = binding.split("=");
+    return parts.length > 2 || parts.some((part) => !MCP_SETTINGS_KEY_PATTERN.test(part));
+  })) throw new Error(`Settings-backed entry has invalid key bindings at ${location}`);
+  const declared = new Set(bindings.map((item) => item.split("=")[0]));
+  const missing = keys.filter((key) => !declared.has(key));
+  const extra = [...declared].filter((key) => !keys.includes(key));
+  if (keysIndex < 0 || missing.length || extra.length) throw new Error(`Settings-backed entry keys must exactly match settings_keys at ${location}; missing: ${missing.join(", ") || "none"}; extra: ${extra.join(", ") || "none"}`);
+  for (let index = 0; index < args.length; index += 1) {
+    if (args[index] !== "--header") continue;
+    const header = String(args[index + 1] ?? "");
+    if (/^(authorization|api[-_]?key)\s*:/i.test(header) && !keys.some((key) => header.includes(`\${${key}}`))) {
+      throw new Error(`Credential header must reference a declared JSON setting key at ${location}`);
+    }
+  }
+}
+
 export function validateEnvironmentProfiles(profile) {
   if (!profile || typeof profile !== "object" || Array.isArray(profile) || profile.schema_version !== 1) {
     throw new Error("Invalid environment profile schema");
@@ -114,19 +147,17 @@ export function validateEnvironmentProfiles(profile) {
         throw new Error(`MCP name ${target.name} must visibly identify environment ${environment}`);
       }
       validateStringArray(target.artifacts, `${logicalId}.${environment}.artifacts`);
-      validateStringArray(target.credential_envs, `${logicalId}.${environment}.credential_envs`);
+      if ((target.credential_envs ?? []).length) throw new Error(`Legacy credential_envs are unsupported for ${logicalId}.${environment}; use settings_keys and ${MCP_SETTINGS_PATH}`);
+      validateStringArray(target.settings_keys, `${logicalId}.${environment}.settings_keys`);
+      if ((target.settings_keys ?? []).some((key) => !MCP_SETTINGS_KEY_PATTERN.test(key))) throw new Error(`Invalid MCP setting key for ${logicalId}.${environment}`);
       validateStringArray(target.allowed_tools, `${logicalId}.${environment}.allowed_tools`);
       if (!target.hosts || typeof target.hosts !== "object" || Array.isArray(target.hosts)) throw new Error(`Target ${logicalId}.${environment} requires hosts`);
       for (const [host, entry] of Object.entries(target.hosts)) {
         if (!ROOTY_HOST_IDS.includes(host)) throw new Error(`Unsupported host ${host} in ${logicalId}.${environment}`);
         validateHostEntry(entry, host, `${logicalId}.${environment}.hosts`);
-        for (const variable of target.credential_envs ?? []) {
-          if (!JSON.stringify(entry).includes(variable)) {
-            throw new Error(`Credential ${variable} must be explicitly referenced in ${logicalId}.${environment}.${host}`);
-          }
-          if (entry.env?.[variable] !== undefined && ![`\${${variable}}`, `\${env:${variable}}`].includes(entry.env[variable])) {
-            throw new Error(`Credential ${variable} must be referenced, never embedded, in ${logicalId}.${environment}.${host}`);
-          }
+        validateSettingsBackedEntry(entry, target.settings_keys ?? [], `${logicalId}.${environment}.${host}`);
+        if (!(target.settings_keys ?? []).length && (entry.env_vars?.length || /\$\{(?:env:)?[A-Za-z_][A-Za-z0-9_]*\}/.test(JSON.stringify(entry)))) {
+          throw new Error(`Machine environment interpolation is unsupported at ${logicalId}.${environment}.${host}; use settings_keys and ${MCP_SETTINGS_PATH}`);
         }
         const key = `${host}:${target.name}`;
         if (renderedNames.has(key)) throw new Error(`Duplicate rendered MCP name ${target.name} for ${host}; every logical environment target needs a distinct name`);
@@ -337,7 +368,9 @@ function selectedTargets(profiles, environment, host) {
 
 async function validateTargetRuntime(projectRoot, selected) {
   const missingArtifacts = [];
-  const missingCredentials = [];
+  const requiredKeys = selected.flatMap((item) => item.target.settings_keys ?? []);
+  const settings = requiredKeys.length ? await readMcpSettings(projectRoot, { required: false }) : undefined;
+  const missingSettings = resolveMcpSettingValues(settings, requiredKeys).missing;
   for (const item of selected) {
     for (const artifact of item.target.artifacts ?? []) {
       const file = ensureProjectPath(projectRoot, path.resolve(projectRoot, artifact));
@@ -349,9 +382,8 @@ async function validateTargetRuntime(projectRoot, selected) {
         else throw error;
       }
     }
-    for (const variable of item.target.credential_envs ?? []) if (!process.env[variable]) missingCredentials.push(variable);
   }
-  return { missingArtifacts: [...new Set(missingArtifacts)], missingCredentials: [...new Set(missingCredentials)] };
+  return { missingArtifacts: [...new Set(missingArtifacts)], missingSettings: [...new Set(missingSettings)] };
 }
 
 export async function planEnvironmentSwitch({ projectRoot, environment, host, allHosts = false }) {
@@ -376,7 +408,7 @@ export async function planEnvironmentSwitch({ projectRoot, environment, host, al
       removed,
       added,
       retained: desiredNames.filter((name) => current.names.has(name)).sort(),
-      missing: [...selection.missing, ...runtime.missingArtifacts.map((item) => `missing artifact: ${item}`), ...runtime.missingCredentials.map((item) => `missing credential: ${item}`)],
+      missing: [...selection.missing, ...runtime.missingArtifacts.map((item) => `missing artifact: ${item}`), ...runtime.missingSettings.map((item) => `missing MCP setting: ${item}`)],
       targets: selection.targets
     });
   }
@@ -536,6 +568,14 @@ export async function inspectEnvironmentProject(projectRoot, host) {
       });
     } else if (selection.targets.some((item) => (item.target.artifacts ?? []).length)) {
       checks.push({ status: "PASS", name: `${targetHost}-provider-artifacts`, message: "All active environment provider artifacts exist as regular project files" });
+    }
+    const requiredSettingKeys = [...new Set(selection.targets.flatMap((item) => item.target.settings_keys ?? []))];
+    if (requiredSettingKeys.length) {
+      const settings = await readMcpSettings(resolved, { required: false });
+      const absent = requiredSettingKeys.filter((key) => !Object.prototype.hasOwnProperty.call(settings?.settings ?? {}, key));
+      if (!settings) checks.push({ status: "FAIL", name: `${targetHost}-mcp-settings`, message: `MCP settings file is missing: ${MCP_SETTINGS_PATH}` });
+      else if (absent.length) checks.push({ status: "FAIL", name: `${targetHost}-mcp-settings`, message: `MCP settings file does not declare: ${absent.join(", ")}` });
+      else checks.push({ status: "PASS", name: `${targetHost}-mcp-settings`, message: `${requiredSettingKeys.length} required MCP setting key(s) are declared locally` });
     }
     const desired = new Set(selection.targets.map((item) => item.target.name));
     const missing = [...desired].filter((name) => !current.names.has(name));

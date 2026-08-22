@@ -55,7 +55,7 @@ flowchart LR
 - Codex, Claude Code, or Cursor
 - Read-only identities for the evidence providers Rooty will use
 - Any provider runtime required by an approved MCP proposal
-- Credentials supplied through environment variables, an approved secret manager, or host-managed OAuth
+- A private local JSON file for MCP settings, or host-managed OAuth where a provider requires it
 
 Rooty has no runtime npm dependencies and no gateway. Each host connects directly to the configured MCP providers.
 
@@ -101,9 +101,11 @@ npx rooty-investigator install --docs "README.md,docs,architecture"
 └── root-cause-investigator/
 
 .rooty/
+├── start-mcp.cjs                    # settings-backed MCP launcher
 ├── config/
 │   ├── project-context.json
-│   └── environment-profiles.json       # after approved setup
+│   ├── environment-profiles.json       # after approved setup
+│   └── mcp-settings.local.json         # local values, always Git-ignored
 ├── state/
 │   ├── install-manifest.json
 │   ├── setup-progress.json              # local, resumable
@@ -116,7 +118,7 @@ npx rooty-investigator install --docs "README.md,docs,architecture"
 Only the skill folders of the selected hosts are written. Provider artifacts arrive later at `.rooty/mcp/<category>/<provider>/`, created by the setup agent on first approved write.
 
 Installation is safe to repeat: Rooty updates unchanged owned skill files and refuses to overwrite modified or unowned ones.
-It also merges Rooty's runtime exclusions into `.gitignore`; drafts remain local while approved sanitized memory can be shared.
+It also merges Rooty's runtime exclusions into `.gitignore`; MCP setting values and drafts remain local while approved sanitized memory can be shared.
 
 ## Documentation-first, not documentation-trusting
 
@@ -175,13 +177,13 @@ install
   -> propose exact read-only MCP access
   -> request host-native approval
   -> render host configuration
-  -> show missing credential bindings
+  -> show missing local setting keys
   -> verify tools and harmless probes
 ```
 
 Data and observability are mandatory investigation capabilities. Ticketing is optional because the developer can paste a ticket. Documentation is never treated as guaranteed truth, and Rooty does not generate a persistent project map.
 
-Every MCP entry declares all credential bindings, but never credential values. Rooty shows the exact host config path, each missing binding, why it is needed, and the smallest next action.
+Every MCP entry declares all local setting keys, but never their values. Rooty shows the exact host config path, each missing key, why it is needed, and the smallest next action. Values live only in `.rooty/config/mcp-settings.local.json` and are never printed.
 
 When setup reports data and observability as ready, ask:
 

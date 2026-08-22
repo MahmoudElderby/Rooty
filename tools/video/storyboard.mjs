@@ -27,6 +27,7 @@ const INSTALL_LABEL_TONES = {
   PROJECT: "cyan",
   SKILLS: "cyan",
   ROOTY: "cyan",
+  SETTINGS: "cyan",
   MEMORY: "cyan",
   DOCS: "cyan"
 };
@@ -98,10 +99,11 @@ function installScenes(capture) {
     });
   }
   treeItems.push({ name: ".rooty/", kind: "dir", badge: "project state" });
+  treeItems.push({ name: "start-mcp.cjs", kind: "file", depth: 1, badge: "settings-backed launcher" });
   treeItems.push({ name: "config/project-context.json", kind: "file", depth: 1, badge: "confirmed doc paths" });
+  treeItems.push({ name: "config/mcp-settings.local.json", kind: "file", depth: 1, badge: "local, Git-ignored" });
   treeItems.push({ name: "state/install-manifest.json", kind: "file", depth: 1, badge: "SHA-256 per owned file" });
   treeItems.push({ name: "memory/drafts/ + memory/approved/", kind: "file", depth: 1, badge: "learning, gated" });
-  treeItems.push({ name: "mcp/{data,observability,ticketing,custom}/", kind: "file", depth: 1, badge: "provider configs" });
 
   const gitignoreAdded = new Set(
     install.gitignoreAfter.filter((line) => !install.gitignoreBefore.includes(line) && line !== "")
@@ -250,7 +252,7 @@ function installScenes(capture) {
       kicker: "05 \u00b7 Verify",
       title: "rooty doctor \u2014 deterministic, offline, no production access",
       sub: `Ownership, layout, documentation context, read-only tool annotations, and ${capture.investigation.evalOutput[0]?.match(/\d+/)?.[0] ?? "15"} frozen replay cases.`,
-      durationMs: 5600,
+      durationMs: 6200,
       layout: "single",
       captionAt: 4400,
       caption: `Docs supplied on install: **${docsLine ? docsLine.text.trim() : install.contextWithDocs.documentation.paths.join(", ")}**`,

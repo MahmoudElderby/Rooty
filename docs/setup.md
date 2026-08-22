@@ -12,7 +12,7 @@ Rooty uses a mechanical installer followed by agent-led setup. The CLI establish
 | Discovered | Read docs first, then targeted current source/config | Evidence for data and observability candidates |
 | Proposed | Build one provider/host MCP proposal | Config path, command/URL, credentials, controls, probe |
 | Approved | Request host-native approval | Exact writes and external actions |
-| Configured | Merge active-host MCP entry | Every credential binding declared in host config |
+| Configured | Merge active-host MCP entry | Every settings key declared in host config |
 | Verified | Initialize, list tools, enforce read-only, harmless read | `READY` or an actionable unresolved state |
 
 ## 1. Install project skills
@@ -65,7 +65,7 @@ The `rooty-mcp-builder` skill prepares one logical server proposal per provider 
 - supported versions and deployment constraints;
 - STDIO or Streamable HTTP transport;
 - exact host config file and minimal merge;
-- every credential environment-variable, secret-manager, or OAuth binding;
+- every local JSON setting key or host-managed OAuth requirement;
 - provider-side least privilege and server read-only mode;
 - allowed and forbidden tools;
 - a bounded harmless probe;
@@ -83,13 +83,13 @@ No configuration or external action occurs before the proposal is visible and ap
 
 The agent configures only the host where setup is running unless the developer requests more. Existing unrelated host configuration is preserved; ambiguous or malformed configuration blocks the merge. Each logical source has only one active rendering, and the rendered name visibly includes the environment, such as `rooty-prod-sql-orders` or `rooty-preprod-sql-orders`.
 
-Every MCP entry must declare all required credential references. Values stay in the environment, approved secret manager, or host-managed OAuth. After rendering, the agent reports each missing binding, its config path, its purpose, and the smallest resolution action.
+Every MCP entry must invoke `.rooty/start-mcp.cjs` and declare all required local JSON keys. Values stay only in the Git-ignored `.rooty/config/mcp-settings.local.json`; host-managed OAuth remains separate where required. After rendering, the agent reports each missing key, its config path, its purpose, and the smallest resolution action.
 
 ## 6. Verify safely
 
 Verification checks:
 
-1. Credential names resolve without revealing values.
+1. Declared local settings resolve without revealing values.
 2. The MCP server initializes.
 3. The live advertised tool list matches the reviewed allowlist.
 4. Mutation and administration tools are absent, disabled, or blocked.
@@ -106,7 +106,7 @@ npx rooty-investigator env plan preprod
 npx rooty-investigator env use preprod
 ```
 
-`env plan` shows the current environment, removed names, added names, config files, missing artifacts, and missing credential bindings without writing. `env use` revalidates that plan and atomically updates Rooty's entries and local active state. If any selected host cannot be completed, none are changed. Unrelated servers survive the merge.
+`env plan` shows the current environment, removed names, added names, config files, missing artifacts, and missing local settings without writing. `env use` revalidates that plan and atomically updates Rooty's entries and local active state. If any selected host cannot be completed, none are changed. Unrelated servers survive the merge.
 
 You normally do not pass `--host`: Rooty infers the only configured host, the active setup host, or the only installed host. If multiple configured hosts exist, choose one with `--host cursor` or explicitly switch all configured hosts with `--all-hosts`.
 
@@ -128,46 +128,27 @@ For example, after switching Orders from production to preprod, Cursor contains 
       "type": "stdio",
       "command": "C:/Program Files/nodejs/node.exe",
       "args": [
+        "C:/project/.rooty/start-mcp.cjs",
+        "--settings", "C:/project/.rooty/config/mcp-settings.local.json",
+        "--keys", "ROOTY_SQL_ORDERS_PREPROD,ROOTY_SQL_ORDERS_PREPROD_URLS=ASPNETCORE_URLS",
+        "--", "C:/Program Files/nodejs/node.exe",
         "C:/project/.rooty/start-dab.cjs",
         "--dab", "C:/tools/dab.exe",
         "--config", "C:/project/.rooty/mcp/data/sql-server/preprod/orders/dab-config.json",
         "--credential-env", "ROOTY_SQL_ORDERS_PREPROD"
-      ],
-      "env": { "ASPNETCORE_URLS": "http://127.0.0.1:55111" }
+      ]
     }
   }
 }
 ```
 
-Claude uses the same `mcpServers` shape in `.mcp.json`; the credential may be explicitly interpolated when that host supports it:
-
-```json
-{
-  "mcpServers": {
-    "rooty-preprod-sql-orders": {
-      "type": "stdio",
-      "command": "C:/Program Files/nodejs/node.exe",
-      "args": ["C:/project/.rooty/start-dab.cjs", "--dab", "C:/tools/dab.exe", "--config", "C:/project/.rooty/mcp/data/sql-server/preprod/orders/dab-config.json", "--credential-env", "ROOTY_SQL_ORDERS_PREPROD"],
-      "env": {
-        "ROOTY_SQL_ORDERS_PREPROD": "${ROOTY_SQL_ORDERS_PREPROD}",
-        "ASPNETCORE_URLS": "http://127.0.0.1:55111"
-      }
-    }
-  }
-}
-```
-
-Codex renders the selected target in `.codex/config.toml`:
+Claude uses the same settings-backed `mcpServers` entry in `.mcp.json`. Codex renders the selected target in TOML with the same arguments:
 
 ```toml
 [mcp_servers."rooty-preprod-sql-orders"]
 type = "stdio"
 command = "C:/Program Files/nodejs/node.exe"
-args = ["C:/project/.rooty/start-dab.cjs", "--dab", "C:/tools/dab.exe", "--config", "C:/project/.rooty/mcp/data/sql-server/preprod/orders/dab-config.json", "--credential-env", "ROOTY_SQL_ORDERS_PREPROD"]
-env_vars = ["ROOTY_SQL_ORDERS_PREPROD"]
-
-[mcp_servers."rooty-preprod-sql-orders".env]
-ASPNETCORE_URLS = "http://127.0.0.1:55111"
+args = ["C:/project/.rooty/start-mcp.cjs", "--settings", "C:/project/.rooty/config/mcp-settings.local.json", "--keys", "ROOTY_SQL_ORDERS_PREPROD,ROOTY_SQL_ORDERS_PREPROD_URLS=ASPNETCORE_URLS", "--", "C:/Program Files/nodejs/node.exe", "C:/project/.rooty/start-dab.cjs", "--dab", "C:/tools/dab.exe", "--config", "C:/project/.rooty/mcp/data/sql-server/preprod/orders/dab-config.json", "--credential-env", "ROOTY_SQL_ORDERS_PREPROD"]
 ```
 
 The production target remains in `.rooty/config/environment-profiles.json` as reviewed switchable intent, but `rooty-prod-sql-orders` is removed from the active host file. This preserves a single Orders MCP while making the current environment visible to the developer.
@@ -190,7 +171,7 @@ providers/
 
 SQL Server uses Microsoft's SQL MCP Server through DAB. Elasticsearch 8.19.15 uses Elastic's official standalone Docker image with `ES_VERSION=8` and the `list_indices` readiness probe; Rooty asks separately before installing Docker, pulling the image, or starting a container. MongoDB, Grafana, Azure DevOps, and custom providers require review of current official documentation and the live tool surface.
 
-For SQL Server, Rooty enumerates live catalogs and `INFORMATION_SCHEMA` objects, then creates one logical Orders/Logger/etc. MCP per catalog with a target named `rooty-{environment}-sql-{domain}`. Each target has an isolated `.rooty/mcp/data/sql-server/{environment}/{domain}/dab-config.json` with explicit entities, a named credential reference, a unique nonzero loopback port, and absolute paths through `.rooty/start-dab.cjs`. The same pattern applies to Codex, Cursor, and Claude. Readiness is independent MCP initialization, exact read-only tools, non-empty entity description, and a bounded environment-identity read per catalog; `dab validate` on 2.0.10 is not a readiness check.
+For SQL Server, Rooty enumerates live catalogs and `INFORMATION_SCHEMA` objects, then creates one logical Orders/Logger/etc. MCP per catalog with a target named `rooty-{environment}-sql-{domain}`. Each target has an isolated `.rooty/mcp/data/sql-server/{environment}/{domain}/dab-config.json` with explicit entities, named local JSON setting keys, a unique nonzero loopback port, and absolute paths through `.rooty/start-mcp.cjs` and `.rooty/start-dab.cjs`. The same pattern applies to Codex, Cursor, and Claude. Readiness is independent MCP initialization, exact read-only tools, non-empty entity description, and a bounded environment-identity read per catalog; `dab validate` on 2.0.10 is not a readiness check.
 
 ## Advanced compatibility commands
 

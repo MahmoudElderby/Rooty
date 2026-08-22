@@ -15,7 +15,7 @@ Ticketing is optional for Rooty. Prefer pasted work-item text when a safely cons
 - Use an Entra-backed account or narrowly scoped PAT with read permissions only for the target organization and projects.
 - Allow only project/team/work-item query and read tools verified from the live server.
 - Forbid creating/updating work items, comments, relation changes, repository writes, pipeline actions, test-plan changes, and security administration.
-- Reference PAT or other credential bindings through the host config; never put the value in arguments or files.
+- Reference PAT or other settings through declared JSON keys and `.rooty/start-mcp.cjs`; never put the value in arguments or committed files.
 
 ## Probe
 

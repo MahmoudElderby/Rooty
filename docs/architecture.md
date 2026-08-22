@@ -27,7 +27,7 @@ flowchart TB
     X --> E["Evidence-backed outcome"]
 ```
 
-There is no Rooty gateway or central credential store. Each host connects directly to reviewed MCP servers.
+There is no Rooty gateway or central credential store. Each host invokes the project-local Rooty launcher, which resolves only declared values from a Git-ignored local JSON before connecting to the reviewed MCP server.
 
 ## Mechanical installer
 
@@ -39,6 +39,7 @@ There is no Rooty gateway or central credential store. Each host connects direct
 - copies `rooty-setup`, `rooty-mcp-builder`, and `root-cause-investigator` into `.agents/skills/` for Cursor and Codex and `.claude/skills/` for Claude, writing only the selected hosts and recording them in the manifest;
 - records SHA-256 ownership fingerprints in `.rooty/state/install-manifest.json`;
 - stores only confirmed documentation paths in `.rooty/config/project-context.json`;
+- installs `.rooty/start-mcp.cjs` and initializes the Git-ignored `.rooty/config/mcp-settings.local.json` without overwriting existing values;
 - creates `.rooty/memory/{drafts,approved}`, gitignores drafts, and copies non-conflicting legacy `.investigator/memory` cards without deleting the originals;
 - leaves `.rooty/mcp/` to the setup agent, which creates `<category>/<provider>/` on first approved write; approved environment-specific SQL setup uses `.rooty/mcp/data/sql-server/<environment>/<domain>/dab-config.json` and one shared `.rooty/start-dab.cjs` launcher;
 - removes the empty `.rooty/mcp` category folders created by earlier versions and reports skill files left behind by a narrowed host list without deleting them;
@@ -67,7 +68,7 @@ references/
     └── custom/custom-provider.md
 ```
 
-It researches official setup, creates a reviewable proposal, requests native approvals, declares credential references in host configuration, and verifies a harmless read.
+It researches official setup, creates a reviewable proposal, requests native approvals, declares local JSON setting keys in host configuration, and verifies a harmless read.
 
 SQL Server has one deliberate cross-host runtime contract: one stable logical server per catalog and one active `rooty-{environment}-sql-{domain}` process. Codex, Cursor, and Claude all call the same hardened launcher with absolute paths; the launcher sets DAB's CWD to the isolated environment/catalog folder and starts only the read-only MCP tool surface. This avoids provider-by-host divergence, makes the active environment visible, and keeps catalog failures independent without duplicate logical servers.
 
@@ -91,7 +92,7 @@ The next engine contract will accept a canonical agent-authored provider proposa
 
 ## Credentials
 
-Every active-host MCP entry declares all required credential bindings. The binding may name an environment variable, approved secret-manager reference, or host-managed OAuth flow. Credential values never belong in Rooty project state, host files, proposals, logs, or chat.
+Every active-host MCP entry declares all required JSON setting keys and invokes `.rooty/start-mcp.cjs`. Values belong only in `.rooty/config/mcp-settings.local.json`, never in committed state, host files, profiles, proposals, logs, or chat. Host-managed OAuth remains separate when a provider requires interactive authorization.
 
 Provider-side read-only identities are the security boundary. Server read-only modes and host tool allowlists provide additional layers.
 

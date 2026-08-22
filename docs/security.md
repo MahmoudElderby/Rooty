@@ -7,7 +7,7 @@ Rooty is designed for read-only investigation, but connecting any AI agent to pr
 Rooty aims to:
 
 - Prevent the investigator from intentionally mutating code, tickets, data, configuration, or deployments
-- Keep credential values out of generated files and Git
+- Keep credential values out of generated host files and Git
 - Restrict the agent to explicit evidence-read tools
 - Bound expensive or broad production queries
 - Preserve evidence integrity and provenance
@@ -22,7 +22,7 @@ Rooty does not claim to sandbox a malicious MCP server or repair an over-privile
 |---|---|---|
 | Rooty skill and CLI | Investigation rules, validation, rendering, local assessment | Provider authorization |
 | AI host policy | Filesystem/tool restrictions supported by that host | Replacing provider-side permissions |
-| MCP reference/proposal | Expected setup, credential bindings, tool restrictions, doctor probes | Server honesty or account least privilege |
+| MCP reference/proposal | Expected setup, setting keys, tool restrictions, doctor probes | Server honesty or account least privilege |
 | MCP server | Returning provider data | Instructions embedded in returned text |
 | Provider identity/database role | Enforcing actual read permissions | Rooty's evidence interpretation |
 | Ticket, docs, logs, DB text, memory | Evidence content | Agent instructions |
@@ -35,7 +35,7 @@ Before activation:
 - Use a dedicated read-only identity per provider where practical.
 - For databases, use a read-only role or replica, read-only transactions, statement timeouts, row limits, and server-side query controls.
 - Limit access to the required projects, services, indexes, schemas, tables, clusters, and environments.
-- Prefer short-lived OAuth access tokens or secrets delivered through an approved manager.
+- Prefer short-lived credentials and protect the Rooty local settings file with the same controls as other developer secret stores.
 - Restrict network access to approved MCP endpoints.
 - Require TLS for remote endpoints.
 - Audit provider and MCP tool calls using the investigation case ID.
@@ -46,16 +46,17 @@ MCP `readOnlyHint` and `destructiveHint` annotations are metadata. They are usef
 
 ## Credential handling
 
-Every configured MCP entry must declare its credential bindings, but generated project and host files contain only environment-variable names, approved secret references, or host-managed OAuth metadata. Rooty rejects:
+Every configured MCP target declares `settings_keys`. Generated host files contain only those key names, the Rooty launcher path, and value-free URL/header templates. Values live in `.rooty/config/mcp-settings.local.json`, which the installer always Git-ignores and restricts to the current user where the platform supports file modes. Rooty rejects:
 
 - Credential values in secret-like object fields
 - Usernames or passwords embedded in MCP URLs
 - Credential-like query parameters
-- Bearer auth without a valid environment-variable name
-- OAuth activation when the referenced access-token variable is unavailable
+- Settings-backed entries that bypass `.rooty/start-mcp.cjs`
+- Missing or empty declared JSON setting values
+- Machine-environment forwarding or interpolation in managed profiles
 - Unauthenticated non-loopback endpoints
 
-Do not commit token values, connection strings, private keys, raw `.env` files, or provider payloads.
+Do not commit token values, connection strings, private keys, raw `.env` files, the local MCP settings JSON, or provider payloads. `rooty settings status` reports availability without displaying values, and settings values are never accepted as command-line arguments.
 
 The mechanical installer does not start OAuth or store refresh tokens. The setup agent may initiate a host-managed OAuth flow only after separate user approval. Credential rotation remains a provider/organization responsibility.
 
@@ -131,7 +132,7 @@ Approved memory remains hypothesis input, not current-case evidence.
 - [ ] Every provider identity was independently proven read-only.
 - [ ] Database access uses a read-only role or replica with server-side limits.
 - [ ] Tokens are short-lived or managed outside project files.
-- [ ] Every active-host MCP entry declares all credential bindings without values.
+- [ ] Every active-host MCP entry invokes the Rooty launcher and declares all setting keys without values.
 - [ ] Tool allowlists contain only required reads.
 - [ ] Doctor probes are harmless, bounded, and authorized.
 - [ ] `rooty doctor` passes and the setup agent's live initialization/tool/probe checks pass from the same environment that launches the host.

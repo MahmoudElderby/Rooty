@@ -125,7 +125,8 @@ async function captureInstall(workspace) {
 
   const withDocs = await rooty(["install", "--project", projectRoot, "--docs", "README.md,docs"]);
   const contextWithDocs = await readJson(path.join(projectRoot, ".rooty/config/project-context.json"));
-  const doctor = await rooty(["doctor", "--project", projectRoot]);
+  // A freshly installed project is package-ready but intentionally not yet MCP-configured.
+  const doctor = await rooty(["doctor", "--project", projectRoot], { expectFailure: true });
 
   // Safety beat: a locally edited skill file must block the next install.
   const editedSkill = path.join(projectRoot, ".agents/skills/rooty-setup/SKILL.md");

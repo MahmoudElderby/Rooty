@@ -123,6 +123,7 @@ test("captured doctor and install facts match a live run", async () => {
 
   const doctor = await runDoctor({ packageRoot: ROOT, projectRoot, requireActivatedConnectors: true });
   const capturedNames = capture.install.doctorLines
+    .map((line) => line.trim())
     .filter((line) => /^(PASS|WARN|FAIL)/.test(line))
     .map((line) => doctorLine(line).text.trim().split(":")[0]);
   assert.deepEqual(

@@ -58,7 +58,7 @@ Define a versioned provider proposal schema containing:
 - official-source provenance and support status;
 - transport, command/URL, and runtime requirements;
 - host config target and expected ownership;
-- credential binding declarations without values;
+- local JSON setting-key declarations without values;
 - provider/server/host read-only controls;
 - allowed/forbidden tools;
 - harmless probe;
@@ -89,7 +89,7 @@ Requirements:
 - preserve unrelated configuration;
 - refuse malformed or ambiguous files;
 - emit a preview before writing;
-- declare every credential reference in each MCP entry;
+- declare every local JSON setting key and Rooty launcher invocation in each MCP entry;
 - never write credential values;
 - use atomic writes and ownership metadata;
 - configure only the active/requested host.
@@ -116,7 +116,7 @@ Status: implemented on `codex/sql-catalog-mcp-per-ide`.
 - Package `assets/start-dab.cjs` with the MCP-builder skill and copy it to `.rooty/start-dab.cjs` only after setup approval.
 - Reject multi-source/autoentity DAB config, mutation tools, `.env` credential files, shell wrappers, relative paths, `DAB_ENVIRONMENT`, and implicit ports at launcher startup.
 - Create `.rooty/mcp/data/sql-server/{environment}/{domain}/dab-config.json` targets and one active `rooty-{environment}-sql-{domain}` host entry per logical catalog. The launcher still accepts the earlier environmentless and `.rooty/mcp-{domain}/` locations so existing installs keep working.
-- Declare the credential binding name through `--credential-env`; use Codex forwarding, Claude interpolation, and Cursor process-environment inheritance without committing values.
+- Wrap every host entry with `.rooty/start-mcp.cjs`; read declared values from `.rooty/config/mcp-settings.local.json` and inject them only into the selected child process. Map environment-specific port keys to `ASPNETCORE_URLS` with `SOURCE_KEY=ASPNETCORE_URLS`.
 - Keep Elasticsearch 8.19.15 on the official Docker image with `ES_VERSION=8` and `list_indices` readiness.
 
 ### Host targeting and layout increment

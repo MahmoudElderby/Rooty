@@ -85,7 +85,7 @@ function validateInvocation({ dabPath, configPath, credentialName }, env = proce
     fail("credential binding must use the ROOTY_SQL_<DOMAIN> naming convention");
   }
   if (!Object.prototype.hasOwnProperty.call(env, credentialName) || env[credentialName] === "") {
-    fail(`credential binding ${credentialName} is missing from the host process environment`);
+    fail(`credential setting ${credentialName} was not injected by the Rooty MCP launcher`);
   }
 
   const binding = env.ASPNETCORE_URLS;
@@ -182,7 +182,7 @@ function prepareLaunch(argv = process.argv.slice(2), env = process.env) {
     if (!existsSync(file) || !statSync(file).isFile()) fail(`required file is unavailable: ${file}`);
   }
   if (existsSync(path.join(configDirectory, ".env"))) {
-    fail("credential files beside dab-config.json are forbidden; configure the named host environment binding");
+    fail("credential files beside dab-config.json are forbidden; configure the named key in .rooty/config/mcp-settings.local.json");
   }
 
   let config;

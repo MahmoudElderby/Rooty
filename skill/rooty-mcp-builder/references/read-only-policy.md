@@ -14,7 +14,7 @@ Forbid create, update, delete, write, execute, transition, comment, upload, expo
 
 ## Credentials
 
-The host MCP entry must declare all required credential bindings, but values must remain outside committed files and chat. Use environment-variable names, approved secret-manager references, or host-managed OAuth. A connection string containing a password is a credential value; reference it through an environment variable.
+The host MCP entry must declare all required `settings_keys` and invoke `.rooty/start-mcp.cjs`. Values must remain only in the Git-ignored `.rooty/config/mcp-settings.local.json`, outside committed files and chat. A connection string containing a password is a credential value; store it under a declared JSON key. Host-managed OAuth remains separate when a provider requires interactive authorization.
 
 Report credentials as:
 

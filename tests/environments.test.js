@@ -8,6 +8,7 @@ import { fileURLToPath } from "node:url";
 import { runDoctor } from "../src/lib/doctor.js";
 import { configureEnvironmentProfiles, discoverEnvironments, inspectEnvironmentProject, planEnvironmentSwitch, readActiveEnvironments, useEnvironment, validateEnvironmentProfiles } from "../src/lib/environments.js";
 import { installRooty, setDocumentationPaths } from "../src/lib/installer.js";
+import { configureMcpSettings, MCP_SETTINGS_PATH, readMcpSettings } from "../src/lib/mcp-settings.js";
 import { checkpointSetup, readSetupProgress } from "../src/lib/setup-progress.js";
 import { main } from "../src/cli.js";
 
@@ -18,24 +19,24 @@ async function project(name) {
   return mkdtemp(path.join(os.tmpdir(), `${name}-`));
 }
 
-function target(environment, capability, artifact) {
+function target(environment, capability, artifact, projectRoot) {
   const short = environment === "production" ? "prod" : environment;
+  const settingKey = `ROOTY_TEST_ENV_${environment.toUpperCase()}`;
   return {
     name: `rooty-${short}-${capability}`,
-    artifacts: [artifact],
-    credential_envs: [],
+    artifacts: [artifact, ".rooty/start-mcp.cjs"],
+    settings_keys: [settingKey],
     allowed_tools: ["bounded_read"],
     probe: { tool: "bounded_read", arguments: {}, expect_contains: `environment=${environment}` },
     hosts: Object.fromEntries(["cursor", "claude", "codex"].map((host) => [host, {
         type: "stdio",
         command: process.execPath,
-        args: [FIXTURE],
-        env: { ROOTY_TEST_ENV: environment }
+        args: [path.join(projectRoot, ".rooty/start-mcp.cjs"), "--settings", path.join(projectRoot, MCP_SETTINGS_PATH), "--keys", settingKey, "--", process.execPath, FIXTURE]
       }]))
   };
 }
 
-function profiles(artifact) {
+function profiles(artifact, projectRoot = "C:/project") {
   return {
     schema_version: 1,
     environments: {
@@ -47,16 +48,16 @@ function profiles(artifact) {
         capability: "data",
         required: true,
         targets: {
-          production: target("production", "data", artifact),
-          preprod: target("preprod", "data", artifact)
+          production: target("production", "data", artifact, projectRoot),
+          preprod: target("preprod", "data", artifact, projectRoot)
         }
       },
       observability: {
         capability: "observability",
         required: true,
         targets: {
-          production: target("production", "observability", artifact),
-          preprod: target("preprod", "observability", artifact)
+          production: target("production", "observability", artifact, projectRoot),
+          preprod: target("preprod", "observability", artifact, projectRoot)
         }
       }
     }
@@ -71,8 +72,11 @@ async function configuredProject() {
   await mkdir(path.join(projectRoot, path.dirname(artifact)), { recursive: true });
   await writeFile(path.join(projectRoot, artifact), "{}\n", "utf8");
   const profileFile = path.join(projectRoot, "profiles.json");
-  await writeFile(profileFile, `${JSON.stringify(profiles(artifact), null, 2)}\n`, "utf8");
+  await writeFile(profileFile, `${JSON.stringify(profiles(artifact, projectRoot), null, 2)}\n`, "utf8");
   await configureEnvironmentProfiles({ projectRoot, sourceFile: profileFile });
+  const settingsSource = path.join(projectRoot, "settings-source.json");
+  await writeFile(settingsSource, `${JSON.stringify({ schema_version: 1, settings: { ROOTY_TEST_ENV_PRODUCTION: "production", ROOTY_TEST_ENV_PREPROD: "preprod" } }, null, 2)}\n`);
+  await configureMcpSettings({ projectRoot, sourceFile: settingsSource });
   await checkpointSetup({ projectRoot, stage: "CONFIGURED", activeHost: "cursor" });
   return projectRoot;
 }
@@ -106,8 +110,11 @@ test("explicit all-host switch renders Cursor, Claude, and Codex without touchin
   await mkdir(path.join(projectRoot, path.dirname(artifact)), { recursive: true });
   await writeFile(path.join(projectRoot, artifact), "{}\n");
   const profileFile = path.join(projectRoot, "profiles.json");
-  await writeFile(profileFile, `${JSON.stringify(profiles(artifact), null, 2)}\n`);
+  await writeFile(profileFile, `${JSON.stringify(profiles(artifact, projectRoot), null, 2)}\n`);
   await configureEnvironmentProfiles({ projectRoot, sourceFile: profileFile });
+  const settingsSource = path.join(projectRoot, "settings-source.json");
+  await writeFile(settingsSource, `${JSON.stringify({ schema_version: 1, settings: { ROOTY_TEST_ENV_PRODUCTION: "production", ROOTY_TEST_ENV_PREPROD: "preprod" } }, null, 2)}\n`);
+  await configureMcpSettings({ projectRoot, sourceFile: settingsSource });
   await mkdir(path.join(projectRoot, ".cursor"), { recursive: true });
   await mkdir(path.join(projectRoot, ".codex"), { recursive: true });
   await writeFile(path.join(projectRoot, ".cursor/mcp.json"), '{"mcpServers":{"unrelated":{"url":"https://example.test/mcp"}}}\n');
@@ -148,11 +155,46 @@ test("switch validation blocks missing runtime artifacts before creating host co
   await assert.rejects(readFile(path.join(projectRoot, ".cursor/mcp.json"), "utf8"), { code: "ENOENT" });
 });
 
-test("environment profiles reject literal credential material", () => {
+test("environment profiles reject legacy machine environment credentials", () => {
   const profile = profiles(".rooty/mcp/shared/config.json");
   profile.logical_servers.data.targets.preprod.credential_envs = ["ROOTY_TOKEN"];
-  profile.logical_servers.data.targets.preprod.hosts.cursor.headers = { Authorization: "Bearer literal-secret" };
-  assert.throws(() => validateEnvironmentProfiles(profile), /Credential header must use environment interpolation/);
+  assert.throws(() => validateEnvironmentProfiles(profile), /Legacy credential_envs are unsupported/);
+});
+
+test("settings-backed profiles require the Rooty launcher for every host", () => {
+  const profile = profiles(".rooty/mcp/shared/config.json");
+  profile.logical_servers.data.targets.preprod.hosts.cursor = { command: process.execPath, args: [FIXTURE] };
+  assert.throws(() => validateEnvironmentProfiles(profile), /must invoke \.rooty\/start-mcp\.cjs/);
+});
+
+test("settings-backed profiles reject host env values and undeclared launcher keys", () => {
+  const profile = profiles(".rooty/mcp/shared/config.json");
+  const entry = profile.logical_servers.data.targets.production.hosts.cursor;
+  entry.env = { ROOTY_TOKEN: "value" };
+  assert.throws(() => validateEnvironmentProfiles(profile), /Host env is forbidden/);
+  delete entry.env;
+  entry.args[entry.args.indexOf("--keys") + 1] += ",UNDECLARED";
+  assert.throws(() => validateEnvironmentProfiles(profile), /exactly match settings_keys/);
+});
+
+test("settings CLI never prints configured values", async () => {
+  const projectRoot = await project("rooty-settings-output");
+  await installRooty({ packageRoot: ROOT, projectRoot, hosts: ["cursor"] });
+  const sourceFile = path.join(projectRoot, "settings-source.json");
+  const secret = "do-not-print-this-value";
+  await writeFile(sourceFile, `${JSON.stringify({ schema_version: 1, settings: { ROOTY_API_TOKEN: secret } })}\n`);
+  const outputs = [];
+  const write = process.stdout.write;
+  process.stdout.write = (value) => { outputs.push(String(value)); return true; };
+  try {
+    await main(["settings", "configure", "--file", sourceFile, "--project", projectRoot, "--json"]);
+    await main(["settings", "status", "--project", projectRoot]);
+  } finally {
+    process.stdout.write = write;
+  }
+  assert.doesNotMatch(outputs.join(""), new RegExp(secret));
+  assert.match(outputs.join(""), /ROOTY_API_TOKEN/);
+  assert.equal((await readMcpSettings(projectRoot)).settings.ROOTY_API_TOKEN, secret);
 });
 
 test("environment discovery reports bounded unconfirmed candidates without reading secret files", async () => {
@@ -192,7 +234,7 @@ test("setup pause persists cancellation and a later checkpoint resumes it", asyn
 test("agent-led doctor separates package, project, and live environment readiness", async () => {
   const projectRoot = await configuredProject();
   await useEnvironment({ projectRoot, environment: "preprod" });
-  const result = await runDoctor({ packageRoot: ROOT, projectRoot, connectorTimeoutMs: 2000, host: "cursor" });
+  const result = await runDoctor({ packageRoot: ROOT, projectRoot, connectorTimeoutMs: 10000, host: "cursor" });
   assert.equal(result.sections.package.status, "READY", JSON.stringify(result.checks));
   assert.equal(result.sections.project.status, "READY", JSON.stringify(result.checks));
   assert.equal(result.sections.investigation.status, "READY", JSON.stringify(result.checks));

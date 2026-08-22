@@ -18,7 +18,8 @@ input.on("line", (line) => {
     return;
   }
   if (request.method === "tools/call" && request.params?.name === "bounded_read") {
-    send({ jsonrpc: "2.0", id: request.id, result: { content: [{ type: "text", text: `environment=${process.env.ROOTY_TEST_ENV}` }] } });
+    const environment = process.env.ROOTY_TEST_ENV_PRODUCTION ?? process.env.ROOTY_TEST_ENV_PREPROD ?? process.env.ROOTY_TEST_ENV;
+    send({ jsonrpc: "2.0", id: request.id, result: { content: [{ type: "text", text: `environment=${environment}` }] } });
     return;
   }
   if (request.id !== undefined) send({ jsonrpc: "2.0", id: request.id, error: { code: -32601, message: "Method not found" } });

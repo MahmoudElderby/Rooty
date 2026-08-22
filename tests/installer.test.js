@@ -65,10 +65,23 @@ test("agent-led install copies all Rooty skills for supported hosts", async () =
       "utf8"
     );
     assert.equal(installedLauncher, packagedLauncher);
+    const installedSettingsLauncher = await readFile(
+      path.join(projectRoot, target, "rooty-mcp-builder", "assets", "start-mcp.cjs"),
+      "utf8"
+    );
+    const packagedSettingsLauncher = await readFile(
+      path.join(ROOT, "skill", "rooty-mcp-builder", "assets", "start-mcp.cjs"),
+      "utf8"
+    );
+    assert.equal(installedSettingsLauncher, packagedSettingsLauncher);
   }
 
   assert.deepEqual(await readProjectContext(projectRoot), { schema_version: 2, documentation: { status: "pending", paths: [] } });
-  assert.deepEqual((await readdir(path.join(projectRoot, ".rooty"))).sort(), ["config", "memory", "state"]);
+  assert.deepEqual((await readdir(path.join(projectRoot, ".rooty"))).sort(), ["config", "memory", "start-mcp.cjs", "state"]);
+  assert.equal(
+    await readFile(path.join(projectRoot, ".rooty/start-mcp.cjs"), "utf8"),
+    await readFile(path.join(ROOT, "skill/rooty-mcp-builder/assets/start-mcp.cjs"), "utf8")
+  );
   for (const directory of ROOTY_PROJECT_DIRECTORIES) {
     await readdir(path.join(projectRoot, directory));
   }
@@ -99,7 +112,7 @@ test("install writes skills only for the requested hosts", async () => {
   const manifest = JSON.parse(await readFile(path.join(projectRoot, ROOTY_PATHS.manifest), "utf8"));
   assert.deepEqual(manifest.hosts, ["claude"]);
   assert.deepEqual(manifest.skill_targets, [".claude/skills"]);
-  assert.equal(Object.keys(manifest.files).every((file) => file.startsWith(".claude/skills/")), true);
+  assert.equal(Object.keys(manifest.files).every((file) => file.startsWith(".claude/skills/") || file === ".rooty/start-mcp.cjs"), true);
 
   const inspected = await inspectRootyInstall(projectRoot);
   assert.equal(inspected.ok, true, JSON.stringify(inspected.checks));
