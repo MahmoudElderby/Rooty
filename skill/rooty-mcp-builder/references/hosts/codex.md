@@ -7,36 +7,34 @@ Official references:
 
 Use the trusted project's `.codex/config.toml`. Preserve unrelated settings and existing MCP servers. If the file already exists, show a minimal merge rather than replacing it.
 
-For SQL Server, also read the provider's [tested per-catalog pattern](../providers/data/sql-server-cursor.md). Its absolute Node + shared launcher + absolute DAB/config invocation overrides the generic `cwd` example below and must be repeated once per catalog.
+For SQL Server, also read the provider's [tested per-catalog pattern](../providers/data/sql-server-cursor.md). Its absolute Node + shared launcher + absolute DAB/config invocation must be repeated once per catalog.
 
 ## STDIO shape
 
 ```toml
 [mcp_servers.rooty_provider]
-command = "provider-command"
-args = ["provider-arguments"]
-cwd = "absolute-provider-config-directory"
-env_vars = ["ROOTY_REQUIRED_CREDENTIAL"]
+command = "absolute-node"
+args = ["C:/project/.rooty/start-mcp.cjs", "--settings", "C:/project/.rooty/config/mcp-settings.local.json", "--keys", "ROOTY_REQUIRED_SETTING", "--", "provider-command", "provider-arguments"]
 enabled = true
 required = true
 enabled_tools = ["verified_read_tool"]
 default_tools_approval_mode = "prompt"
 ```
 
-Use `cwd` when a generic local server resolves files or defaults from its working directory. SQL Server uses the launcher instead. Use `env_vars` to forward credential names already present in the Codex process environment. Use `[mcp_servers.<name>.env]` only for non-secret constants. Never put a secret value in `env`.
+Declare every required value in `settings_keys` and put the local value only in `.rooty/config/mcp-settings.local.json`. The launcher reads those keys and injects them into the child process. Use `SOURCE_KEY=CHILD_ENV_KEY` in `--keys` when the provider expects a fixed name. Do not use `env_vars` or `[mcp_servers.<name>.env]` for managed settings.
 
 ## Streamable HTTP shape
 
 ```toml
 [mcp_servers.rooty_provider]
-url = "https://provider.example/mcp"
-bearer_token_env_var = "ROOTY_PROVIDER_TOKEN"
+command = "absolute-node"
+args = ["C:/project/.rooty/start-mcp.cjs", "--settings", "C:/project/.rooty/config/mcp-settings.local.json", "--keys", "ROOTY_PROVIDER_URL,ROOTY_PROVIDER_TOKEN", "--url", "${ROOTY_PROVIDER_URL}", "--header", "Authorization: Bearer ${ROOTY_PROVIDER_TOKEN}"]
 enabled = true
 required = true
 enabled_tools = ["verified_read_tool"]
 default_tools_approval_mode = "prompt"
 ```
 
-Use `auth = "oauth"` and `codex mcp login <name>` when the official server uses OAuth. Treat login as a separate approval action. Prefer `env_http_headers` when a nonstandard header must resolve from an environment variable.
+The Rooty launcher bridges stdio to Streamable HTTP, so Codex does not need access to the values. Host-managed OAuth remains a separate supported flow for providers that require interactive OAuth; do not copy OAuth tokens into project files.
 
 Verify with `codex mcp list` or `/mcp`, then compare the advertised tools with the reviewed allowlist and run the provider's harmless probe.

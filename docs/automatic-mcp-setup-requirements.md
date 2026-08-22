@@ -33,7 +33,7 @@ The CLI declares and copies Rooty's project folder structure and skills. The act
 5. Treat documentation as navigation reference, never as guaranteed truth.
 6. Persist only confirmed documentation paths during semantic setup discovery; reviewed memory and mechanical provider artifacts follow their own schemas. Do not build a project map.
 7. Require data and observability capabilities; make ticketing optional.
-8. Declare all credential bindings in each active host MCP entry, never values.
+8. Declare all MCP setting keys in each active host entry; keep values only in the Git-ignored local settings JSON.
 9. Use the host's visible approval flow for meaningful external actions.
 10. Separate provider knowledge from host syntax for scalability.
 
@@ -63,6 +63,7 @@ The installer must:
 - reject an unsupported host name;
 - create `.rooty/state/install-manifest.json` with Rooty-owned file hashes and the selected hosts;
 - create `.rooty/config/project-context.json` with only `documentation.paths`;
+- install `.rooty/start-mcp.cjs` and initialize `.rooty/config/mcp-settings.local.json` without overwriting existing values;
 - create `.rooty/memory/{drafts,approved}`, gitignore drafts, and safely copy any non-conflicting legacy memory cards while retaining their sources;
 - leave `.rooty/mcp/<category>/<provider>/` to the setup agent's first approved write and remove empty category folders created by earlier versions; SQL Server setup later creates tested `.rooty/mcp/data/sql-server/<environment>/<domain>/dab-config.json` targets and the shared `.rooty/start-dab.cjs` launcher after approval;
 - report, without deleting, skill files left outside the selected hosts;
@@ -172,7 +173,7 @@ Every proposal must state:
 - official server and sources checked;
 - support and lifecycle constraints;
 - command/URL, transport, and exact host config path;
-- every credential binding;
+- every local JSON setting key;
 - provider identity/role and server read-only mode;
 - allowed and forbidden tools;
 - harmless bounded probe;
@@ -185,9 +186,9 @@ Every proposal must state:
 
 Use Microsoft's SQL MCP Server included with DAB. Automatically enumerate accessible online user databases from live `sys.databases`, then enumerate each catalog's current tables/views from `INFORMATION_SCHEMA`; documentation only orients discovery. Exclude system, offline, snapshot, and inaccessible databases.
 
-Generate one stable logical MCP server per catalog with reviewed `rooty-{environment}-sql-{domain}` targets. Each target uses `.rooty/mcp/data/sql-server/{environment}/{domain}/dab-config.json`, one environment-specific credential reference, explicit entities only, one unique nonzero loopback port, and the shared `.rooty/start-dab.cjs` launcher. Render exactly one target per logical catalog in each active host. Every Codex, Cursor, and Claude entry uses absolute Node, launcher, DAB, and config paths. DAB starts with `--mcp-stdio role:rooty-reader --LogLevel Error`; only describe/read/aggregate tools are enabled and the database identity is `SELECT`-only.
+Generate one stable logical MCP server per catalog with reviewed `rooty-{environment}-sql-{domain}` targets. Each target uses `.rooty/mcp/data/sql-server/{environment}/{domain}/dab-config.json`, environment-specific connection and loopback-port setting keys, explicit entities only, `.rooty/start-mcp.cjs`, and the shared `.rooty/start-dab.cjs` launcher. Render exactly one target per logical catalog in each active host. Every Codex, Cursor, and Claude entry uses absolute Node, launcher, DAB, and config paths. DAB starts with `--mcp-stdio role:rooty-reader --LogLevel Error`; only describe/read/aggregate tools are enabled and the database identity is `SELECT`-only.
 
-Do not use a multi-catalog DAB, `data-source-files`, wildcard autoentities, `dbo.%`, `DAB_ENVIRONMENT`, command-shell wrappers, `--no-https-redirect`, or `ASPNETCORE_URLS=...:0`. Credential values remain outside Git and each host entry visibly names its binding. Verify every catalog independently through MCP initialize, exact tool listing, non-empty `describe_entities`, and a bounded read. Do not use `dab validate` on DAB 2.0.10 as the readiness gate.
+Do not use a multi-catalog DAB, `data-source-files`, wildcard autoentities, `dbo.%`, `DAB_ENVIRONMENT`, command-shell wrappers, `--no-https-redirect`, or `ASPNETCORE_URLS=...:0`. Values remain outside Git in `.rooty/config/mcp-settings.local.json`, and each host entry visibly names its keys. Verify every catalog independently through MCP initialize, exact tool listing, non-empty `describe_entities`, and a bounded read. Do not use `dab validate` on DAB 2.0.10 as the readiness gate.
 
 ### Elasticsearch 8.19.15
 
@@ -201,20 +202,20 @@ Use Atlassian's official Rovo MCP service for Jira Cloud. Because the service ca
 
 MongoDB, Grafana, and Azure DevOps must be configured from current official guidance and marked `REVIEW_REQUIRED` until the exact server version, read-only controls, and live tool surface are verified.
 
-## 11. Credentials
+## 11. MCP settings and credentials
 
-Every active-host MCP entry must declare every credential binding it requires. Acceptable forms are:
+Every active-host MCP entry must invoke `.rooty/start-mcp.cjs` and declare every key it requires. The canonical local document is:
 
-- environment-variable name/interpolation;
-- approved secret-manager reference supported by the host/runtime;
-- host-managed OAuth metadata.
+```json
+{ "schema_version": 1, "settings": { "ROOTY_PROVIDER_TOKEN": "<local value>" } }
+```
 
-Credential values must never be stored in Git, `.rooty`, proposals, generated project files, logs, doctor output, or chat.
+The file is always Git-ignored and is the only Rooty project-state exception permitted to contain credential values. Values must never be stored in Git, profiles, proposals, generated host files, logs, doctor output, command arguments, or chat. Host-managed OAuth metadata remains acceptable when interactive OAuth is required.
 
 After rendering, Rooty must show:
 
 - exact host config path;
-- each required binding name;
+- each required setting key;
 - `AVAILABLE` or `MISSING` without reading or printing the value;
 - the provider/server purpose;
 - the smallest action to resolve it.

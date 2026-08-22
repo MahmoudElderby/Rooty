@@ -136,7 +136,7 @@ test("launcher rejects multi-source, autoentity, and mutation-enabled configs", 
   assert.throws(() => validateDabConfig(unsafe, "ROOTY_SQL_ORDERS"), /update-record must be false/);
 });
 
-test("launcher rejects literal credentials, missing bindings, implicit ports, and wrappers", () => {
+test("launcher rejects literal credentials, missing settings, implicit ports, and wrappers", () => {
   const literal = config();
   literal["data-source"]["connection-string"] = "Server=example;Password=secret";
   assert.throws(() => validateDabConfig(literal, "ROOTY_SQL_ORDERS"), /connection string must be exactly/);
@@ -144,7 +144,7 @@ test("launcher rejects literal credentials, missing bindings, implicit ports, an
   const invocation = { dabPath, configPath, credentialName: "ROOTY_SQL_ORDERS" };
   assert.throws(
     () => validateInvocation(invocation, { ASPNETCORE_URLS: "http://127.0.0.1:55101" }),
-    /credential binding ROOTY_SQL_ORDERS is missing/
+    /credential setting ROOTY_SQL_ORDERS was not injected/
   );
   assert.throws(
     () => validateInvocation(invocation, { ROOTY_SQL_ORDERS: "x", ASPNETCORE_URLS: "http://127.0.0.1:0" }),

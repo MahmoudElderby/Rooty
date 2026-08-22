@@ -47,4 +47,4 @@ Add provider guidance under the matching capability category. Include vendor-own
 
 A reference is not automatically a deterministic recipe. Promotion requires a canonical proposal schema, validator coverage, safe host rendering tests, mutation tests, and a lifecycle owner.
 
-For SQL Server, test launcher argument/path validation, a host process whose CWD is unrelated, missing credential names, explicit unique ports, `.env` refusal, and rejection of multi-source, autoentity, mutation-enabled, or shell-wrapper configurations. Test each catalog's `describe_entities` and bounded-read readiness independently on Codex, Cursor, and Claude.
+For SQL Server, test both launchers' argument/path validation, JSON-key-to-child-variable mapping, a host process whose CWD is unrelated, missing setting names, explicit unique ports, `.env` refusal, and rejection of multi-source, autoentity, mutation-enabled, or shell-wrapper configurations. Test each catalog's `describe_entities` and bounded-read readiness independently on Codex, Cursor, and Claude.

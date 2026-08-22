@@ -24,6 +24,7 @@ import {
   useEnvironment
 } from "./lib/environments.js";
 import { checkpointSetup, readSetupProgress, updateSetupSelections } from "./lib/setup-progress.js";
+import { configureMcpSettings, initializeMcpSettings, MCP_SETTINGS_PATH, readMcpSettings, settingsStatus } from "./lib/mcp-settings.js";
 
 const HELP = `Rooty Investigator — evidence-first, read-only root-cause analysis
 
@@ -41,6 +42,9 @@ Usage:
   rooty env list [--project PATH] [--json]
   rooty env plan NAME [--host HOST | --all-hosts] [--project PATH] [--json]
   rooty env use NAME [--host HOST | --all-hosts] [--project PATH] [--json]
+  rooty settings init [--keys KEY,...] [--project PATH] [--json]
+  rooty settings configure --file FILE [--project PATH] [--json]
+  rooty settings status [--keys KEY,...] [--project PATH] [--json]
   rooty init --host codex|claude|cursor|all [--project PATH] [--demo] [--activate-connectors]
   rooty sources discover [--project PATH] [--output FILE] [--json]
   rooty sources configure [--project PATH] [--discovery FILE] [--<capability>-provider ID] [--<capability>-mcp-url URL] [--<capability>-auth oauth|bearer-env|none] [--<capability>-oauth-token-env NAME] [--<capability>-bearer-token-env NAME]
@@ -61,8 +65,8 @@ Name the hosts to install for with \`--cursor\`, \`--claude\`, or \`--codex\`, o
 install, otherwise it installs for every host it detects in the project, otherwise for
 all of them.
 
-The CLI never writes secrets. Generated configuration contains only public
-endpoints, placeholders, and environment-variable references.`;
+MCP values live only in the local, Git-ignored ${MCP_SETTINGS_PATH}. Host
+configuration contains key names and a Rooty launcher reference, never values.`;
 
 const BOOLEAN_OPTIONS = new Set([
   "help",
@@ -115,7 +119,8 @@ function installOutput(result) {
     `${color("1;36", "HOSTS")}     ${result.hosts.join(", ")} (${HOST_SELECTION_REASON[result.hostSelection]})`,
     `${color("1;36", "PROJECT")}   ${result.projectRoot}`,
     `${color("1;36", "SKILLS")}    ${result.skills.join(", ")} in ${result.targets.join(", ")}`,
-    `${color("1;36", "ROOTY")}     .rooty/{config,state,memory/{drafts,approved}}`,
+    `${color("1;36", "ROOTY")}     .rooty/start-mcp.cjs + {config,state,memory/{drafts,approved}}`,
+    `${color("1;36", "SETTINGS")}  ${MCP_SETTINGS_PATH} (local, Git-ignored)`,
     result.memory.migratedFiles.length
       ? `${color("1;36", "MEMORY")}    copied ${result.memory.migratedFiles.length} legacy card(s); legacy files retained`
       : `${color("1;36", "MEMORY")}    ${result.memory.drafts}`,
@@ -295,6 +300,35 @@ export async function main(argv) {
       if (subcommand === "use") process.stdout.write("Reload the host MCP servers, then run `rooty doctor`.\n");
     }
     if (!result.ok) process.exitCode = 1;
+    return;
+  }
+
+  if (command === "settings" && ["init", "configure", "status"].includes(subcommand)) {
+    const projectRoot = projectFrom(options);
+    const keys = splitList(options.keys) ?? [];
+    let file = path.join(projectRoot, MCP_SETTINGS_PATH);
+    let status;
+    if (subcommand === "init") {
+      const result = await initializeMcpSettings({ projectRoot, keys });
+      file = result.file;
+      status = result.status;
+    } else if (subcommand === "configure") {
+      if (!options.file) throw new Error("settings configure requires --file");
+      const result = await configureMcpSettings({ projectRoot, sourceFile: String(options.file) });
+      file = result.file;
+      status = keys.length ? settingsStatus(result.settings, keys) : result.status;
+    } else {
+      const settings = await readMcpSettings(projectRoot, { required: false });
+      status = settingsStatus(settings, keys);
+    }
+    const result = { file, status };
+    if (options.json) process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+    else {
+      process.stdout.write(`MCP_SETTINGS ${file}\n`);
+      if (!status.length) process.stdout.write("  no keys declared\n");
+      for (const item of status) process.stdout.write(`  ${item.status.padEnd(9)} ${item.key}\n`);
+    }
+    if (subcommand === "status" && status.some((item) => item.status === "MISSING")) process.exitCode = 1;
     return;
   }
 

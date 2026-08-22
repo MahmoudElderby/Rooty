@@ -9,6 +9,7 @@ import { inspectRootyInstall, ROOTY_HOSTS, ROOTY_PATHS, ROOTY_SKILLS } from "./i
 import { detectSetupModel } from "./setup-model.js";
 import { inspectEnvironmentProject, readActiveEnvironments, readEnvironmentProfiles, resolveEnvironmentId, targetsForEnvironment } from "./environments.js";
 import { readSetupProgress } from "./setup-progress.js";
+import { readMcpSettings, resolveMcpSettingValues } from "./mcp-settings.js";
 
 const REQUIRED_CAPABILITIES = ["ticketing", "documentation", "observability", "database", "deployments"];
 const REQUIRED_GITIGNORE_ENTRIES = [
@@ -18,6 +19,7 @@ const REQUIRED_GITIGNORE_ENTRIES = [
   ".rooty/memory/drafts/",
   ".rooty/state/active-environments.json",
   ".rooty/state/setup-progress.json",
+  ".rooty/config/mcp-settings.local.json",
   ".rooty-cases/"
 ];
 
@@ -242,6 +244,7 @@ function headersForEntry(entry) {
 async function runAgentLedInvestigationChecks({ projectRoot, host, environment, connectorTimeoutMs }) {
   const checks = [];
   const profiles = await readEnvironmentProfiles(projectRoot);
+  const mcpSettings = await readMcpSettings(projectRoot, { required: false });
   const requestedEnvironment = environment ? resolveEnvironmentId(profiles, environment) : undefined;
   const active = await readActiveEnvironments(projectRoot);
   const hosts = host ? [host] : Object.keys(active.hosts);
@@ -278,9 +281,9 @@ async function runAgentLedInvestigationChecks({ projectRoot, host, environment, 
         checks.push({ status: "FAIL", name: `${prefix}-artifacts`, message: `Missing provider artifacts: ${missingArtifacts.join(", ")}` });
         continue;
       }
-      const missingCredentials = (item.target.credential_envs ?? []).filter((name) => !process.env[name]);
-      if (missingCredentials.length) {
-        checks.push({ status: "FAIL", name: `${prefix}-credentials`, message: `Credential bindings are unavailable: ${missingCredentials.join(", ")}` });
+      const missingSettings = resolveMcpSettingValues(mcpSettings, item.target.settings_keys ?? []).missing;
+      if (missingSettings.length) {
+        checks.push({ status: "FAIL", name: `${prefix}-settings`, message: `MCP settings are unavailable: ${missingSettings.join(", ")}` });
         continue;
       }
       if (!Array.isArray(item.target.allowed_tools) || !item.target.allowed_tools.length || !item.target.probe?.tool || !item.target.probe?.expect_contains) {

@@ -5,4 +5,5 @@
 .rooty/memory/drafts/
 .rooty/state/active-environments.json
 .rooty/state/setup-progress.json
+.rooty/config/mcp-settings.local.json
 .rooty-cases/

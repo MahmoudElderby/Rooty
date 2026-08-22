@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "generator": "tools/video/capture.mjs",
-  "rooty_version": "0.3.0",
-  "node_version": "v22.14.0",
+  "rooty_version": "0.4.0",
+  "node_version": "v20.20.0",
   "display_project": "~/work/checkout-api",
   "display_case_dir": "~/rooty-cases/INV-20260815-DEMO0001",
   "install": {
@@ -13,8 +13,9 @@
       "HOSTS     claude, codex, cursor (no host detected; installed for all)",
       "PROJECT   ~/work/checkout-api",
       "SKILLS    rooty-setup, rooty-mcp-builder, root-cause-investigator in .agents/skills, .claude/skills",
-      "ROOTY     .rooty/{config,state,memory/{drafts,approved}}",
-      "MEMORY    ~/work/checkout-api/.rooty/memory/drafts",
+      "ROOTY     .rooty/start-mcp.cjs + {config,state,memory/{drafts,approved}}",
+      "SETTINGS  .rooty/config/mcp-settings.local.json (local, Git-ignored)",
+      "MEMORY    ~/work/checkout-api\\.rooty\\memory\\drafts",
       "DOCS      not selected; the setup agent will ask",
       "",
       "Next: Open Claude, Codex, Cursor in this project and ask:",
@@ -25,8 +26,9 @@
       "HOSTS     claude, codex, cursor (reused from the previous install)",
       "PROJECT   ~/work/checkout-api",
       "SKILLS    rooty-setup, rooty-mcp-builder, root-cause-investigator in .agents/skills, .claude/skills",
-      "ROOTY     .rooty/{config,state,memory/{drafts,approved}}",
-      "MEMORY    ~/work/checkout-api/.rooty/memory/drafts",
+      "ROOTY     .rooty/start-mcp.cjs + {config,state,memory/{drafts,approved}}",
+      "SETTINGS  .rooty/config/mcp-settings.local.json (local, Git-ignored)",
+      "MEMORY    ~/work/checkout-api\\.rooty\\memory\\drafts",
       "DOCS      README.md, docs",
       "",
       "Next: Open Claude, Codex, Cursor in this project and ask:",
@@ -53,6 +55,7 @@
       ".agents/skills/rooty-mcp-builder/agents/openai.yaml",
       ".agents/skills/rooty-mcp-builder/assets",
       ".agents/skills/rooty-mcp-builder/assets/start-dab.cjs",
+      ".agents/skills/rooty-mcp-builder/assets/start-mcp.cjs",
       ".agents/skills/rooty-mcp-builder/references",
       ".agents/skills/rooty-mcp-builder/references/environment-profiles.md",
       ".agents/skills/rooty-mcp-builder/references/hosts",
@@ -102,6 +105,7 @@
       ".claude/skills/rooty-mcp-builder/agents/openai.yaml",
       ".claude/skills/rooty-mcp-builder/assets",
       ".claude/skills/rooty-mcp-builder/assets/start-dab.cjs",
+      ".claude/skills/rooty-mcp-builder/assets/start-mcp.cjs",
       ".claude/skills/rooty-mcp-builder/references",
       ".claude/skills/rooty-mcp-builder/references/environment-profiles.md",
       ".claude/skills/rooty-mcp-builder/references/hosts",
@@ -135,10 +139,12 @@
       ".gitignore",
       ".rooty",
       ".rooty/config",
+      ".rooty/config/mcp-settings.local.json",
       ".rooty/config/project-context.json",
       ".rooty/memory",
       ".rooty/memory/approved",
       ".rooty/memory/drafts",
+      ".rooty/start-mcp.cjs",
       ".rooty/state",
       ".rooty/state/install-manifest.json",
       ".rooty/state/setup-progress.json",
@@ -156,7 +162,7 @@
         },
         {
           "label": ".agents/skills/rooty-mcp-builder/",
-          "files": 17
+          "files": 18
         },
         {
           "label": ".agents/skills/root-cause-investigator/",
@@ -168,16 +174,18 @@
         },
         {
           "label": ".claude/skills/rooty-mcp-builder/",
-          "files": 17
+          "files": 18
         },
         {
           "label": ".claude/skills/root-cause-investigator/",
           "files": 8
         }
       ],
-      "skillFileTotal": 60,
+      "skillFileTotal": 62,
       "rootyFiles": [
+        ".rooty/config/mcp-settings.local.json",
         ".rooty/config/project-context.json",
+        ".rooty/start-mcp.cjs",
         ".rooty/state/install-manifest.json",
         ".rooty/state/setup-progress.json"
       ],
@@ -200,7 +208,7 @@
       ".claude/skills"
     ],
     "installationMode": "agent-led-v3",
-    "manifestFileCount": 60,
+    "manifestFileCount": 63,
     "trackedFileHashSample": [
       {
         "file": ".agents/skills/root-cause-investigator/agents/openai.yaml",
@@ -247,31 +255,37 @@
       ".rooty/memory/drafts/",
       ".rooty/state/active-environments.json",
       ".rooty/state/setup-progress.json",
+      ".rooty/config/mcp-settings.local.json",
       ".rooty-cases/"
     ],
     "doctorLines": [
-      "PASS package-version: rooty-investigator@0.3.0",
-      "PASS node-version: Node 20 or newer",
-      "PASS skill: 3 Rooty skills are discoverable or packaged",
-      "PASS connector-recipes: 9 provider recipes have read-only allowlists and probes",
-      "PASS mcp-tools: 6 bundled tools are explicitly read-only",
-      "PASS mcp-startup: Bundled connector started as rooty-snapshot-readonly@0.3.0",
-      "PASS replay-suite: 15 independent frozen replay cases validate",
-      "PASS gitignore: Packaged project gitignore template covers Rooty runtime evidence and drafts",
-      "PASS install-manifest: Rooty 0.3.0 uses agent-led-v3",
-      "PASS installed-skills: 3 skills are intact for Claude, Codex, Cursor",
-      "PASS rooty-layout: Canonical memory is available at .rooty/memory",
-      "PASS memory-gitignore: Memory drafts and local setup/environment state are excluded from Git",
-      "PASS documentation-context: 2 confirmed documentation path(s) are available to the setup agent",
-      "PASS project-version: Project and CLI both use Rooty 0.3.0",
-      "PASS setup-progress: Setup progress is in_progress at INSTALLED",
-      "FAIL environment-profiles: No confirmed environment profiles found",
-      "FAIL host-mcp-config: No active Rooty host MCP config is confirmed",
-      "FAIL investigation-blocked: Project configuration is incomplete; live environment probes were not run"
+      "VERSION 0.4.0 (project 0.4.0)",
+      "PACKAGE_READY READY",
+      "  PASS package-version: rooty-investigator@0.4.0",
+      "  PASS node-version: Node 20.20.0; Rooty requires Node 20 or newer",
+      "  PASS skill: 3 Rooty skills are discoverable or packaged",
+      "  PASS connector-recipes: 9 provider recipes have read-only allowlists and probes",
+      "  PASS mcp-tools: 6 bundled tools are explicitly read-only",
+      "  PASS mcp-startup: Bundled connector started as rooty-snapshot-readonly@0.4.0",
+      "  PASS replay-suite: 15 independent frozen replay cases validate",
+      "  PASS gitignore: Packaged project gitignore template covers Rooty runtime evidence and drafts",
+      "PROJECT_CONFIGURED NOT_READY",
+      "  PASS install-manifest: Rooty 0.4.0 uses agent-led-v3",
+      "  PASS installed-skills: 3 skills are intact for Claude, Codex, Cursor",
+      "  PASS rooty-layout: Canonical memory is available at .rooty/memory",
+      "  PASS memory-gitignore: MCP settings, memory drafts, and local setup/environment state are excluded from Git",
+      "  PASS documentation-context: 2 confirmed documentation path(s) are available to the setup agent",
+      "  PASS mcp-settings: .rooty/config/mcp-settings.local.json is available and valid",
+      "  PASS project-version: Project and CLI both use Rooty 0.4.0",
+      "  PASS setup-progress: Setup progress is in_progress at INSTALLED",
+      "  FAIL environment-profiles: No confirmed environment profiles found",
+      "  FAIL host-mcp-config: No active Rooty host MCP config is confirmed; expected one of: .mcp.json, .codex/config.toml, .cursor/mcp.json",
+      "INVESTIGATION_READY NOT_READY",
+      "  FAIL investigation-blocked: Project configuration is incomplete; live environment probes were not run"
     ],
     "refusalCommand": "npx rooty-investigator install",
     "refusal": [
-      "rooty: Refusing to overwrite modified or unowned skill file: ~/work/checkout-api/.agents/skills/rooty-setup/SKILL.md"
+      "rooty: Refusing to overwrite modified or unowned skill file: ~/work/checkout-api\\.agents\\skills\\rooty-setup\\SKILL.md"
     ]
   },
   "investigation": {
@@ -280,11 +294,11 @@
     "runCommand": "rooty run ROOTY-101 --snapshot evals/mock-sources/confirmed-timeout.json --case-dir ~/rooty-cases/INV-20260815-DEMO0001",
     "runOutput": [
       "Case INV-20260815-DEMO0001: CONFIRMED",
-      "Report: ~/rooty-cases/INV-20260815-DEMO0001/report.md"
+      "Report: ~/rooty-cases/INV-20260815-DEMO0001\\report.md"
     ],
     "reportCommand": "rooty report --case-dir ~/rooty-cases/INV-20260815-DEMO0001",
     "reportOutput": [
-      "Rendered ~/rooty-cases/INV-20260815-DEMO0001/report.md"
+      "Rendered ~/rooty-cases/INV-20260815-DEMO0001\\report.md"
     ],
     "caseId": "INV-20260815-DEMO0001",
     "ticket": {
@@ -521,11 +535,11 @@
     ],
     "proposeCommand": "rooty memory propose --case-dir ~/rooty-cases/INV-20260815-DEMO0001",
     "proposeOutput": [
-      "Draft: ~/work/checkout-api/.rooty/memory/drafts/INV-20260815-DEMO0001.json"
+      "Draft: ~/work/checkout-api\\.rooty\\memory\\drafts\\INV-20260815-DEMO0001.json"
     ],
     "approveCommand": "rooty memory approve --draft ... --reviewed-by team-payments",
     "approveOutput": [
-      "Approved: ~/work/checkout-api/.rooty/memory/approved/INV-20260815-DEMO0001.json"
+      "Approved: ~/work/checkout-api\\.rooty\\memory\\approved\\INV-20260815-DEMO0001.json"
     ],
     "draft": {
       "case_id": "INV-20260815-DEMO0001",

@@ -30,6 +30,7 @@ test("SQL Server skill requires one explicit MCP per live catalog", async () => 
   ]);
   requires(recipe, [
     "Codex, Cursor, and Claude",
+    ".rooty/start-mcp.cjs",
     ".rooty/start-dab.cjs",
     "explicit entities",
     "--credential-env",
@@ -131,7 +132,8 @@ test("setup supports confirmed environment discovery and conversational determin
   ]);
   requires(profiles, [
     "logical_servers",
-    "credential_envs",
+    "settings_keys",
+    "mcp-settings.local.json",
     "allowed_tools",
     "expect_contains",
     "exactly one target per logical catalog"

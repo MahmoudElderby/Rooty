@@ -13,6 +13,7 @@ import {
 } from "node:fs/promises";
 import path from "node:path";
 import { MEMORY_PATHS, migrateLegacyMemory } from "./memory-store.js";
+import { initializeMcpSettings, MCP_SETTINGS_PATH, readMcpSettings } from "./mcp-settings.js";
 
 export const ROOTY_SKILLS = ["rooty-setup", "rooty-mcp-builder", "root-cause-investigator"];
 
@@ -45,6 +46,8 @@ export const ROOTY_PATHS = Object.freeze({
   context: ".rooty/config/project-context.json",
   setupProgress: ".rooty/state/setup-progress.json",
   activeEnvironments: ".rooty/state/active-environments.json",
+  mcpSettings: MCP_SETTINGS_PATH,
+  mcpLauncher: ".rooty/start-mcp.cjs",
   legacyManifest: ".rooty/install-manifest.json",
   legacyContext: ".rooty/project-context.json"
 });
@@ -337,6 +340,23 @@ export async function installRooty({ packageRoot, projectRoot, documentationPath
   const planned = [];
   const nextFiles = {};
 
+  const runtimeSource = path.join(packageRoot, "skill/rooty-mcp-builder/assets/start-mcp.cjs");
+  const runtimeTarget = path.join(resolved, ROOTY_PATHS.mcpLauncher);
+  if (!await exists(runtimeSource)) throw new Error(`Packaged Rooty MCP launcher is missing: ${runtimeSource}`);
+  await assertNoSymlinkSegments(resolved, runtimeTarget);
+  const runtimeContent = await readFile(runtimeSource);
+  const runtimeKey = slash(path.relative(resolved, runtimeTarget));
+  const runtimeHash = digest(runtimeContent);
+  if (await exists(runtimeTarget)) {
+    const details = await lstat(runtimeTarget);
+    if (!details.isFile() || details.isSymbolicLink()) throw new Error(`Refusing non-file Rooty runtime target: ${runtimeTarget}`);
+    const currentHash = digest(await readFile(runtimeTarget));
+    const ownedAndUnmodified = manifest?.files?.[runtimeKey] && currentHash === manifest.files[runtimeKey];
+    if (!ownedAndUnmodified && currentHash !== runtimeHash) throw new Error(`Refusing to overwrite modified or unowned Rooty runtime file: ${runtimeTarget}`);
+    if (currentHash !== runtimeHash) planned.push({ target: runtimeTarget, content: runtimeContent });
+  } else planned.push({ target: runtimeTarget, content: runtimeContent });
+  nextFiles[runtimeKey] = runtimeHash;
+
   for (const targetRoot of targets) {
     for (const skill of ROOTY_SKILLS) {
       const sourceRoot = path.join(packageRoot, "skill", skill);
@@ -404,6 +424,7 @@ export async function installRooty({ packageRoot, projectRoot, documentationPath
     await writeFile(item.target, item.content);
   }
   await atomicJson(contextFile, context);
+  await initializeMcpSettings({ projectRoot: resolved });
   const setupProgressFile = path.join(resolved, ROOTY_PATHS.setupProgress);
   await assertNoSymlinkSegments(resolved, setupProgressFile);
   if (!await exists(setupProgressFile)) {
@@ -523,10 +544,10 @@ export async function inspectRootyInstall(projectRoot) {
   try {
     const ignore = await readFile(path.join(resolved, ".gitignore"), "utf8");
     const lines = new Set(ignore.split(/\r?\n/).map((line) => line.trim()).filter(Boolean));
-    const required = [`${MEMORY_PATHS.drafts}/`, ROOTY_PATHS.activeEnvironments, ROOTY_PATHS.setupProgress];
+    const required = [`${MEMORY_PATHS.drafts}/`, ROOTY_PATHS.activeEnvironments, ROOTY_PATHS.setupProgress, ROOTY_PATHS.mcpSettings];
     const missing = required.filter((entry) => !lines.has(entry));
     if (missing.length) throw new Error(`Missing ${missing.join(", ")}`);
-    add("PASS", "memory-gitignore", "Memory drafts and local setup/environment state are excluded from Git");
+    add("PASS", "memory-gitignore", "MCP settings, memory drafts, and local setup/environment state are excluded from Git");
   } catch (error) {
     add("FAIL", "memory-gitignore", `${error.message}. Re-run \`rooty install\`.`);
   }
@@ -540,6 +561,12 @@ export async function inspectRootyInstall(projectRoot) {
       : "No documentation decision is confirmed; the setup agent will ask before source inspection");
   } catch (error) {
     add("FAIL", "documentation-context", error.message);
+  }
+  try {
+    await readMcpSettings(resolved);
+    add("PASS", "mcp-settings", `${ROOTY_PATHS.mcpSettings} is available and valid`);
+  } catch (error) {
+    add("FAIL", "mcp-settings", `${error.message}. Re-run \`rooty install\`.`);
   }
   return { ok: !checks.some((check) => check.status === "FAIL"), installation: manifest.installation, hosts, checks };
 }

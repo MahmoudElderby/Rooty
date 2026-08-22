@@ -16,7 +16,7 @@ rooty --version
 rooty -V
 ```
 
-The CLI never writes credential values. The primary journey is installation and context management; the active AI agent performs project discovery and MCP setup.
+The CLI writes MCP values only when explicitly copying a private settings JSON into the Git-ignored local settings file. It never prints those values. The primary journey is installation and context management; the active AI agent performs project discovery and MCP setup.
 
 ## `rooty install`
 
@@ -26,7 +26,7 @@ Install Rooty's project-scoped skills and context files.
 rooty install [--cursor] [--claude] [--codex] [--project PATH] [--docs PATH,...] [--json]
 ```
 
-Bare `rooty setup` is an install alias. The command copies all three skills to the skill folders of the selected hosts, writes `.rooty/state/install-manifest.json`, creates or preserves `.rooty/config/project-context.json`, initializes `.rooty/state/setup-progress.json`, and creates `.rooty/memory/{drafts,approved}`. It also merges Rooty's runtime exclusions into `.gitignore`. Reinstall migrates the two flat state files written by version 0.2.0 and safely copies legacy `.investigator/memory` cards into the canonical memory folders without deleting their sources.
+Bare `rooty setup` is an install alias. The command copies all three skills to the skill folders of the selected hosts, installs `.rooty/start-mcp.cjs`, writes `.rooty/state/install-manifest.json`, creates or preserves `.rooty/config/project-context.json`, initializes `.rooty/config/mcp-settings.local.json` and `.rooty/state/setup-progress.json`, and creates `.rooty/memory/{drafts,approved}`. It also merges Rooty's runtime exclusions into `.gitignore`. Reinstall preserves local setting values, migrates the two flat state files written by version 0.2.0, and safely copies legacy `.investigator/memory` cards without deleting their sources.
 
 Provider artifact folders under `.rooty/mcp/<category>/<provider>/` are created by the setup agent on first approved write, so an unconfigured project carries no empty placeholders. Installation removes the empty `.rooty/mcp/{data,observability,ticketing,custom}` folders created by earlier versions and never touches one that holds files.
 
@@ -79,6 +79,18 @@ rooty setup selections [--documentation STATUS] [--confirmed NAME,...] [--select
 
 Setup persists only stage/status, confirmed selections, the active host, and a concise next action. It never persists prompt transcripts, credential values, discovered content, inferred architecture, or investigation conclusions. A later setup request reads this state and resumes from the recorded stage.
 
+## `rooty settings`
+
+Initialize placeholders, replace the local document from a private file, or inspect availability without printing values:
+
+```text
+rooty settings init [--keys KEY,...] [--project PATH] [--json]
+rooty settings configure --file FILE [--project PATH] [--json]
+rooty settings status [--keys KEY,...] [--project PATH] [--json]
+```
+
+The canonical file is `.rooty/config/mcp-settings.local.json` with schema `{ "schema_version": 1, "settings": { "KEY": "value" } }`. `init` preserves existing values and adds missing keys as empty strings. `configure` validates and atomically copies the whole document. `status` emits only key names and `AVAILABLE` or `MISSING`; it exits nonzero when a requested key is missing. The file is always Git-ignored and must be protected as a local secret store.
+
 ## `rooty env`
 
 Discover environment candidates without treating them as confirmed:
@@ -98,7 +110,7 @@ rooty env plan NAME [--host HOST | --all-hosts] [--project PATH] [--json]
 rooty env use NAME [--host HOST | --all-hosts] [--project PATH] [--json]
 ```
 
-Each profile has stable logical servers and one reviewed target per environment. Applying a switch atomically removes every Rooty-managed name for the other environments and adds exactly one environment-visible name per logical server. Unrelated MCP entries are preserved. Missing required targets, provider artifacts, or credential bindings block all writes.
+Each profile has stable logical servers and one reviewed target per environment. Applying a switch atomically removes every Rooty-managed name for the other environments and adds exactly one environment-visible name per logical server. Unrelated MCP entries are preserved. Missing required targets, provider artifacts, or declared local setting values block all writes.
 
 The host is inferred from the existing managed configuration, then from setup state, then from a single installed host. If several configured hosts exist, Rooty requires `--host`; `--all-hosts` is always an explicit request. After applying, reload the host and run doctor so the live tool surface and bounded identity read prove the new environment.
 

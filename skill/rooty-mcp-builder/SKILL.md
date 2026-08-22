@@ -1,6 +1,6 @@
 ---
 name: rooty-mcp-builder
-description: Research, propose, configure, and verify a provider-specific read-only MCP connection for Rooty on Codex, Cursor, or Claude. Use when Rooty setup needs SQL Server, MongoDB, Elasticsearch, Grafana, Jira, Azure DevOps, or a custom data, observability, or ticketing provider; when host MCP configuration or credential bindings are missing; or when an MCP server fails validation. Do not use to grant write access or run an incident investigation.
+description: Research, propose, configure, and verify a provider-specific read-only MCP connection for Rooty on Codex, Cursor, or Claude. Use when Rooty setup needs SQL Server, MongoDB, Elasticsearch, Grafana, Jira, Azure DevOps, or a custom data, observability, or ticketing provider; when host MCP configuration or local setting keys are missing; or when an MCP server fails validation. Do not use to grant write access or run an incident investigation.
 ---
 
 # Rooty MCP Builder
@@ -32,27 +32,28 @@ Produce a proposal before any mutation. Include:
 - transport, command or URL, exact host config path, and merge scope;
 - a stable logical source ID and one environment-visible rendered MCP name such as `rooty-prod-sql-orders` or `rooty-preprod-sql-orders`; never render two environments for the same logical source at once;
 - generated artifact paths under `.rooty/mcp/<category>/<provider>/`, created on first approved write; environment-specific SQL Server setup adds one catalog folder at `.rooty/mcp/data/sql-server/<environment>/<domain>/dab-config.json` plus the shared `.rooty/start-dab.cjs`;
-- every credential binding name and where its value must be supplied;
+- every local MCP setting key and where its value must be supplied in `.rooty/config/mcp-settings.local.json`;
 - provider-side read-only identity or role and server-side read-only controls;
 - explicit allowed and forbidden tool categories;
 - one harmless initialization/read probe;
 - commands, package executions, image pulls, OAuth, or file writes requiring approval;
 - unresolved facts and readiness state.
 
-Never place a credential value in the proposal. Never represent an unofficial or unverified server as a standard recipe.
+Never place a credential value in the proposal, environment profile, host configuration, command line, logs, or chat. Values are allowed only in the Git-ignored local MCP settings JSON. Never represent an unofficial or unverified server as a standard recipe.
 
 ## Configure only after approval
 
 1. Show the exact proposed diff or host-native add command.
 2. Request approval using the active host's approval experience.
 3. Preserve unrelated host configuration and refuse an ambiguous merge.
-4. Declare every credential reference inside the MCP entry, using the host's environment interpolation, forwarded-variable, secret-manager, or OAuth mechanism.
-5. Do not install Docker, pull an image, run a package, or begin OAuth without separate approval.
-6. Record every reviewed environment target in `.rooty/config/environment-profiles.json`, including host renderings, credential names, artifacts, exact allowed tools, and an identity probe with an expected environment marker. Never store credential values.
+4. Initialize every required key with `rooty settings init --keys <KEY,...>`. Ask the developer to populate the local JSON directly or import a prepared JSON with `rooty settings configure --file <FILE>`; never request values in chat.
+5. Render every settings-backed host entry through `.rooty/start-mcp.cjs`, passing only the absolute settings path and declared key names. Never use host `env_vars`, `${VAR}` interpolation, or machine environment inheritance for MCP values.
+6. Do not install Docker, pull an image, run a package, or begin OAuth without separate approval.
+7. Record every reviewed environment target in `.rooty/config/environment-profiles.json`, including host renderings, setting key names, artifacts, exact allowed tools, and an identity probe with an expected environment marker. Never store values there.
 
 ## Verify
 
-1. Confirm each credential name resolves without printing its value.
+1. Run `rooty settings status` and confirm each required setting key is `AVAILABLE` without printing its value.
 2. Initialize the MCP server and list its tools.
 3. Compare the advertised tools with the allowed and forbidden sets. Block or disable mutation tools; do not rely on names or annotations alone.
 4. Run one bounded, non-sensitive read probe.
