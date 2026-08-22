@@ -84,6 +84,11 @@ test("launcher isolates each catalog under the canonical provider layout and sti
     validateInvocation({ ...invocation, configPath: legacyConfigPath }, env).configDirectory,
     path.dirname(legacyConfigPath)
   );
+  const environmentConfigPath = projectPath(".rooty", "mcp", "data", "sql-server", "preprod", "orders", "dab-config.json");
+  assert.equal(
+    validateInvocation({ ...invocation, configPath: environmentConfigPath }, env).configDirectory,
+    path.dirname(environmentConfigPath)
+  );
   for (const rejected of [
     projectPath(".rooty", "mcp", "data", "orders", "dab-config.json"),
     projectPath(".rooty", "mcp", "observability", "sql-server", "orders", "dab-config.json"),
@@ -93,7 +98,7 @@ test("launcher isolates each catalog under the canonical provider layout and sti
   ]) {
     assert.throws(
       () => validateInvocation({ ...invocation, configPath: rejected }, env),
-      /must be isolated in a \.rooty\/mcp\/data\/sql-server\/<domain> folder/,
+      /must be isolated in a \.rooty\/mcp\/data\/sql-server\/<domain> or \.rooty\/mcp\/data\/sql-server\/<environment>\/<domain> folder/,
       rejected
     );
   }

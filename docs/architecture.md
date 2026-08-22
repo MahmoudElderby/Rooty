@@ -40,7 +40,7 @@ There is no Rooty gateway or central credential store. Each host connects direct
 - records SHA-256 ownership fingerprints in `.rooty/state/install-manifest.json`;
 - stores only confirmed documentation paths in `.rooty/config/project-context.json`;
 - creates `.rooty/memory/{drafts,approved}`, gitignores drafts, and copies non-conflicting legacy `.investigator/memory` cards without deleting the originals;
-- leaves `.rooty/mcp/` to the setup agent, which creates `<category>/<provider>/` on first approved write; approved SQL setup uses `.rooty/mcp/data/sql-server/<domain>/dab-config.json` and one shared `.rooty/start-dab.cjs` launcher;
+- leaves `.rooty/mcp/` to the setup agent, which creates `<category>/<provider>/` on first approved write; approved environment-specific SQL setup uses `.rooty/mcp/data/sql-server/<environment>/<domain>/dab-config.json` and one shared `.rooty/start-dab.cjs` launcher;
 - removes the empty `.rooty/mcp` category folders created by earlier versions and reports skill files left behind by a narrowed host list without deleting them;
 - migrates the two flat version 0.2.0 state files during reinstall;
 - updates unchanged Rooty-owned files and refuses modified/unowned conflicts.
@@ -69,7 +69,7 @@ references/
 
 It researches official setup, creates a reviewable proposal, requests native approvals, declares credential references in host configuration, and verifies a harmless read.
 
-SQL Server has one deliberate cross-host runtime contract: one `rooty-sql-{domain}` process per live catalog. Codex, Cursor, and Claude all call the same hardened launcher with absolute paths; the launcher sets DAB's CWD to the isolated catalog folder and starts only the read-only MCP tool surface. This avoids a provider-by-host divergence while keeping catalog failures independent.
+SQL Server has one deliberate cross-host runtime contract: one stable logical server per catalog and one active `rooty-{environment}-sql-{domain}` process. Codex, Cursor, and Claude all call the same hardened launcher with absolute paths; the launcher sets DAB's CWD to the isolated environment/catalog folder and starts only the read-only MCP tool surface. This avoids provider-by-host divergence, makes the active environment visible, and keeps catalog failures independent without duplicate logical servers.
 
 ### Investigator skill
 

@@ -8,6 +8,7 @@ Rooty uses a mechanical installer followed by agent-led setup. The CLI establish
 |---|---|---|
 | Installed | Confirm manifest and three skills | Installed locations and next prompt |
 | Docs confirmed | Confirm documentation entry points | Paths stored in `.rooty/config/project-context.json` |
+| Environments confirmed | Detect candidates, then confirm aliases, selected targets, and initial active environment | Confirmed choices; discovery remains provisional |
 | Discovered | Read docs first, then targeted current source/config | Evidence for data and observability candidates |
 | Proposed | Build one provider/host MCP proposal | Config path, command/URL, credentials, controls, probe |
 | Approved | Request host-native approval | Exact writes and external actions |
@@ -41,7 +42,9 @@ Only paths are stored. Rooty does not create a map, index, embedding, cached sum
 
 ## 3. Discover providers
 
-The setup agent reads the relevant confirmed documents first. Documentation helps find likely components, communication paths, database technology, telemetry, index patterns, identifiers, and source folders. It remains provisional.
+Before provider discovery, the setup agent runs bounded environment discovery and asks the developer to confirm the result. It confirms environment aliases (for example, `prod` means `production`), which environments should receive complete targets, and which one starts active. A filename or documentation mention is evidence for a candidate, never permission to configure it.
+
+The setup agent then reads the relevant confirmed documents first. Documentation helps find likely components, communication paths, database technology, telemetry, index patterns, identifiers, and source folders. It remains provisional.
 
 The agent inspects current safe project files only to verify material choices or fill gaps. It never recursively scans a filesystem root and never reads credential values.
 
@@ -56,7 +59,7 @@ Ticketing is optional because the developer can paste ticket content.
 
 ## 4. Review the MCP proposal
 
-The `rooty-mcp-builder` skill prepares one proposal per provider and active host. Every proposal includes:
+The `rooty-mcp-builder` skill prepares one logical server proposal per provider and active host, with a reviewed target for every selected environment. Every proposal includes:
 
 - official provider server and documentation checked;
 - supported versions and deployment constraints;
@@ -78,7 +81,7 @@ No configuration or external action occurs before the proposal is visible and ap
 | Cursor | `.agents/skills/` | `.cursor/mcp.json` |
 | Claude | `.claude/skills/` | `.mcp.json` |
 
-The agent configures only the host where setup is running unless the developer requests more. Existing unrelated host configuration is preserved; ambiguous or malformed configuration blocks the merge.
+The agent configures only the host where setup is running unless the developer requests more. Existing unrelated host configuration is preserved; ambiguous or malformed configuration blocks the merge. Each logical source has only one active rendering, and the rendered name visibly includes the environment, such as `rooty-prod-sql-orders` or `rooty-preprod-sql-orders`.
 
 Every MCP entry must declare all required credential references. Values stay in the environment, approved secret manager, or host-managed OAuth. After rendering, the agent reports each missing binding, its config path, its purpose, and the smallest resolution action.
 
@@ -90,9 +93,84 @@ Verification checks:
 2. The MCP server initializes.
 3. The live advertised tool list matches the reviewed allowlist.
 4. Mutation and administration tools are absent, disabled, or blocked.
-5. A bounded non-sensitive read succeeds.
+5. A bounded non-sensitive read succeeds and contains an expected environment identity.
 
 Rooty is ready only when data and observability both pass. Ticketing may remain `NOT_REQUESTED`.
+
+## Switch environments
+
+Preview and apply a switch with the host inferred from current project setup:
+
+```console
+npx rooty-investigator env plan preprod
+npx rooty-investigator env use preprod
+```
+
+`env plan` shows the current environment, removed names, added names, config files, missing artifacts, and missing credential bindings without writing. `env use` revalidates that plan and atomically updates Rooty's entries and local active state. If any selected host cannot be completed, none are changed. Unrelated servers survive the merge.
+
+You normally do not pass `--host`: Rooty infers the only configured host, the active setup host, or the only installed host. If multiple configured hosts exist, choose one with `--host cursor` or explicitly switch all configured hosts with `--all-hosts`.
+
+The installed agent supports the equivalent request in conversation:
+
+```text
+Switch Rooty to preprod.
+```
+
+It calls the same deterministic plan, shows that the environment-visible MCP names will change, asks for approval, applies `env use`, and requests a host reload. It then runs `rooty doctor --environment preprod`. During an active investigation, Rooty starts a new environment context unless the developer explicitly requested a cross-environment comparison.
+
+For example, after switching Orders from production to preprod, Cursor contains one Orders entry—not both:
+
+```json
+{
+  "mcpServers": {
+    "unrelated-team-tool": { "url": "https://example.internal/mcp" },
+    "rooty-preprod-sql-orders": {
+      "type": "stdio",
+      "command": "C:/Program Files/nodejs/node.exe",
+      "args": [
+        "C:/project/.rooty/start-dab.cjs",
+        "--dab", "C:/tools/dab.exe",
+        "--config", "C:/project/.rooty/mcp/data/sql-server/preprod/orders/dab-config.json",
+        "--credential-env", "ROOTY_SQL_ORDERS_PREPROD"
+      ],
+      "env": { "ASPNETCORE_URLS": "http://127.0.0.1:55111" }
+    }
+  }
+}
+```
+
+Claude uses the same `mcpServers` shape in `.mcp.json`; the credential may be explicitly interpolated when that host supports it:
+
+```json
+{
+  "mcpServers": {
+    "rooty-preprod-sql-orders": {
+      "type": "stdio",
+      "command": "C:/Program Files/nodejs/node.exe",
+      "args": ["C:/project/.rooty/start-dab.cjs", "--dab", "C:/tools/dab.exe", "--config", "C:/project/.rooty/mcp/data/sql-server/preprod/orders/dab-config.json", "--credential-env", "ROOTY_SQL_ORDERS_PREPROD"],
+      "env": {
+        "ROOTY_SQL_ORDERS_PREPROD": "${ROOTY_SQL_ORDERS_PREPROD}",
+        "ASPNETCORE_URLS": "http://127.0.0.1:55111"
+      }
+    }
+  }
+}
+```
+
+Codex renders the selected target in `.codex/config.toml`:
+
+```toml
+[mcp_servers."rooty-preprod-sql-orders"]
+type = "stdio"
+command = "C:/Program Files/nodejs/node.exe"
+args = ["C:/project/.rooty/start-dab.cjs", "--dab", "C:/tools/dab.exe", "--config", "C:/project/.rooty/mcp/data/sql-server/preprod/orders/dab-config.json", "--credential-env", "ROOTY_SQL_ORDERS_PREPROD"]
+env_vars = ["ROOTY_SQL_ORDERS_PREPROD"]
+
+[mcp_servers."rooty-preprod-sql-orders".env]
+ASPNETCORE_URLS = "http://127.0.0.1:55111"
+```
+
+The production target remains in `.rooty/config/environment-profiles.json` as reviewed switchable intent, but `rooty-prod-sql-orders` is removed from the active host file. This preserves a single Orders MCP while making the current environment visible to the developer.
 
 ## Provider organization
 
@@ -112,7 +190,7 @@ providers/
 
 SQL Server uses Microsoft's SQL MCP Server through DAB. Elasticsearch 8.19.15 uses Elastic's official standalone Docker image with `ES_VERSION=8` and the `list_indices` readiness probe; Rooty asks separately before installing Docker, pulling the image, or starting a container. MongoDB, Grafana, Azure DevOps, and custom providers require review of current official documentation and the live tool surface.
 
-For SQL Server, Rooty enumerates live catalogs and `INFORMATION_SCHEMA` objects, then creates one `rooty-sql-{domain}` MCP per catalog. Each has an isolated `.rooty/mcp/data/sql-server/{domain}/dab-config.json` with explicit entities, a named credential reference, a unique nonzero loopback port, and absolute paths through `.rooty/start-dab.cjs`. The same pattern applies to Codex, Cursor, and Claude. Readiness is independent MCP initialization, exact read-only tools, non-empty `describe_entities`, and a bounded read per catalog; `dab validate` on 2.0.10 is not a readiness check.
+For SQL Server, Rooty enumerates live catalogs and `INFORMATION_SCHEMA` objects, then creates one logical Orders/Logger/etc. MCP per catalog with a target named `rooty-{environment}-sql-{domain}`. Each target has an isolated `.rooty/mcp/data/sql-server/{environment}/{domain}/dab-config.json` with explicit entities, a named credential reference, a unique nonzero loopback port, and absolute paths through `.rooty/start-dab.cjs`. The same pattern applies to Codex, Cursor, and Claude. Readiness is independent MCP initialization, exact read-only tools, non-empty entity description, and a bounded environment-identity read per catalog; `dab validate` on 2.0.10 is not a readiness check.
 
 ## Advanced compatibility commands
 

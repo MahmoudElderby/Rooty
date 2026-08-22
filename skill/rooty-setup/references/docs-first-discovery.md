@@ -8,11 +8,13 @@ Use project documentation as a navigation aid. Documentation can identify likely
 
 When `.rooty/config/project-context.json` has no confirmed path, perform only a bounded entry-point search in the project root and common documentation folders. Prefer:
 
-- `README*`, `docs/`, `documentation/`, `architecture/`, `adr/`, and `design/`;
+- `knowledge/` first when it exists, then `README*`, `docs/`, `documentation/`, `architecture/`, `adr/`, and `design/`;
 - explicitly linked files from those entry points;
 - a documentation path supplied by the developer, including an external local folder.
 
 Do not recursively open the project root. Do not scan filesystem roots, dependency caches, build output, `.git`, host-generated skill folders, or secret-named files. Present likely paths and ask for confirmation before treating them as Rooty context.
+
+When `knowledge/` is the confirmed entry point, store it with `npx rooty-investigator context set-docs --paths knowledge`.
 
 ## Read selectively
 

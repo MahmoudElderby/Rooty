@@ -115,7 +115,7 @@ Status: implemented on `codex/sql-catalog-mcp-per-ide`.
 
 - Package `assets/start-dab.cjs` with the MCP-builder skill and copy it to `.rooty/start-dab.cjs` only after setup approval.
 - Reject multi-source/autoentity DAB config, mutation tools, `.env` credential files, shell wrappers, relative paths, `DAB_ENVIRONMENT`, and implicit ports at launcher startup.
-- Create `.rooty/mcp/data/sql-server/{domain}/dab-config.json` and `rooty-sql-{domain}` host entries independently. The launcher still accepts the earlier `.rooty/mcp-{domain}/` location so existing installs keep working.
+- Create `.rooty/mcp/data/sql-server/{environment}/{domain}/dab-config.json` targets and one active `rooty-{environment}-sql-{domain}` host entry per logical catalog. The launcher still accepts the earlier environmentless and `.rooty/mcp-{domain}/` locations so existing installs keep working.
 - Declare the credential binding name through `--credential-env`; use Codex forwarding, Claude interpolation, and Cursor process-environment inheritance without committing values.
 - Keep Elasticsearch 8.19.15 on the official Docker image with `ES_VERSION=8` and `list_indices` readiness.
 

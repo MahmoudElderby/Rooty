@@ -16,6 +16,14 @@ rooty doctor --package-only
 
 Use `--json` when you need exact check names and machine-readable output.
 
+Normal output separates three questions:
+
+- `PACKAGE_READY`: is this Rooty package/version healthy?
+- `PROJECT_CONFIGURED`: do current on-disk project files contain the confirmed environment profiles, exact active MCP renderings, artifacts, and local setup state?
+- `INVESTIGATION_READY`: do live data and observability MCPs expose only their reviewed tools and pass bounded environment-identity reads?
+
+A healthy package does not imply that Cursor, Claude, or Codex is configured. Doctor deliberately ignores stale Git history and workspace snapshots when deciding project readiness.
+
 ## Agent-led installation and setup
 
 ### `EPERM: operation not permitted, opendir 'C:\Config.Msi'`
@@ -54,6 +62,26 @@ rooty context set-docs --paths "README.md,docs"
 
 Choose specific documentation files or folders. Filesystem roots and the project root are rejected as too broad. Rooty stores only paths and does not generate a documentation map.
 
+If the project genuinely has no documentation entry point, record that decision with `rooty context set-docs --none`. If setup was skipped or cancelled, `rooty setup status` shows the saved stage and next action.
+
+### Environment switch is ambiguous or still shows the old environment
+
+Preview the switch first:
+
+```console
+rooty env plan preprod
+```
+
+Rooty infers the host when exactly one host is configured. If several are configured, use `--host cursor` for one or `--all-hosts` intentionally. A blocked plan names every missing target, artifact, or credential and writes nothing.
+
+After `rooty env use preprod`, reload/restart the host so it rereads its project MCP file, then run:
+
+```console
+rooty doctor --environment preprod
+```
+
+The active config must contain `rooty-preprod-...` entries and no Rooty-managed production entry for the same logical source. If names are correct but the underlying command, URL, arguments, or environment still differ from the confirmed preprod profile, `PROJECT_CONFIGURED` fails. If the server responds but the bounded identity read does not prove preprod, `INVESTIGATION_READY` fails.
+
 ### A credential is reported missing
 
 Read the setup agent's credential table. It should name the binding, provider, exact host config path, and resolution action without printing a value. Supply the value through the approved environment, secret manager, or host OAuth flow, restart/reload the MCP server when required, and rerun the harmless probe.
@@ -66,13 +94,13 @@ The per-catalog SQL entry is present, but the named connection-string variable i
 
 Open that server's host MCP log and use the launcher message to correct only the named catalog. Confirm:
 
-- absolute Node, `.rooty/start-dab.cjs`, DAB, and `.rooty/mcp/data/sql-server/<domain>/dab-config.json` paths;
+- absolute Node, `.rooty/start-dab.cjs`, DAB, and `.rooty/mcp/data/sql-server/<environment>/<domain>/dab-config.json` paths;
 - a unique explicit `ASPNETCORE_URLS=http://127.0.0.1:<port>` value, not port zero;
 - explicit live-metadata entities and the `rooty-reader` read permission;
 - no `.env`, `data-source-files`, autoentities, `DAB_ENVIRONMENT`, shell wrapper, or mutation-enabled tool;
 - DAB starts through MCP initialize with `describe_entities`, `read_records`, and `aggregate_records`.
 
-Do not add `--no-https-redirect` or use `dab validate` on 2.0.10 as a health workaround. Each `rooty-sql-{domain}` is independent, so leave healthy catalog entries running while fixing the failed one.
+Do not add `--no-https-redirect` or use `dab validate` on 2.0.10 as a health workaround. Each `rooty-{environment}-sql-{domain}` is independent, so leave healthy catalog entries running while fixing the failed one.
 
 ## Advanced source discovery and configuration
 

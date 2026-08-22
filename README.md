@@ -43,7 +43,7 @@ flowchart LR
 | Investigator skill | Provides a portable, versioned investigation method shared across AI hosts |
 | Host adapters | Render reviewed MCP intent into host-specific project configuration |
 | Deterministic safety engine | Validates paths, ownership, trusted recipes, credentials, and safe configuration merges |
-| Doctor | Verifies installed skills, context, credentials, connectors, and harmless read probes |
+| Doctor | Separates package health, project wiring, and live investigation readiness |
 | Evidence model | Separates `REPORTED`, `OBSERVED`, `INFERRED`, `HYPOTHESIS`, and `UNKNOWN` claims |
 | Case artifacts | Produces a hash-chained evidence ledger, case state, and deterministic report for snapshot-backed cases |
 | Learning workflow | Promotes only verified `CONFIRMED` cases through explicit human review and 180-day expiry |
@@ -71,7 +71,7 @@ Then open the project in Codex, Cursor, or Claude and ask:
 Set up Rooty for this project.
 ```
 
-The CLI copies Rooty's skills and creates `.rooty/config/project-context.json`. The active agent reviews documentation, performs targeted discovery, proposes provider access, requests approvals, guides credentials, and verifies readiness.
+The CLI copies Rooty's skills and creates project context plus resumable setup state. The active agent confirms documentation and detected environments, performs targeted discovery, proposes provider access, requests approvals, guides credentials, and verifies readiness.
 
 Name the host to install for, so Rooty writes nothing your editor will not read:
 
@@ -102,9 +102,12 @@ npx rooty-investigator install --docs "README.md,docs,architecture"
 
 .rooty/
 ├── config/
-│   └── project-context.json
+│   ├── project-context.json
+│   └── environment-profiles.json       # after approved setup
 ├── state/
-│   └── install-manifest.json
+│   ├── install-manifest.json
+│   ├── setup-progress.json              # local, resumable
+│   └── active-environments.json         # local active host state
 └── memory/
     ├── drafts/
     └── approved/
@@ -121,8 +124,9 @@ It also merges Rooty's runtime exclusions into `.gitignore`; drafts remain local
 
 ```json
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "documentation": {
+    "status": "confirmed_paths",
     "paths": ["README.md", "docs/"]
   }
 }
@@ -131,6 +135,19 @@ It also merges Rooty's runtime exclusions into `.gitignore`; drafts remain local
 Rooty reads relevant documents on demand to locate likely business flows, components, communication paths, source areas, data stores, telemetry, and identifiers. Documentation guides where Rooty looks; it does not prove how the system currently behaves.
 
 Rooty does not generate or persist a project map, documentation index, embedding, inferred architecture, cached summary, or conclusion. Material findings are verified using current configuration, source, or runtime evidence.
+
+## Switch environments without duplicate MCPs
+
+Setup records one logical server per source and one reviewed target per confirmed environment. A host renders only the active target. The MCP name includes that target environment—for example, switching Orders removes `rooty-prod-sql-orders` and adds `rooty-preprod-sql-orders`; both are never left active together.
+
+```console
+npx rooty-investigator env plan preprod
+npx rooty-investigator env use preprod
+```
+
+The host is inferred when only one is configured. Use `--host` only when several configured hosts make the choice ambiguous, or `--all-hosts` when you intentionally want every configured host changed. You can also ask the installed setup agent: `Switch Rooty to preprod.` It shows the same deterministic plan, asks for approval, calls the CLI, then asks you to reload the host and runs doctor.
+
+See [environment setup and switching](docs/setup.md#switch-environments) for the generated Cursor, Claude, and Codex configuration shapes.
 
 ## Try the offline demo
 
@@ -272,7 +289,7 @@ npm run doctor
 npm run eval
 ```
 
-`npm run doctor` checks package health without requiring project connectors. In an agent-led installation, `rooty doctor --project ...` verifies installed skill ownership and documentation context alongside package safety checks.
+`npm run doctor` checks package health without requiring project connectors. In an agent-led installation, `rooty doctor --project ...` reports `PACKAGE_READY`, `PROJECT_CONFIGURED`, and `INVESTIGATION_READY` independently and prints both the CLI and project versions.
 
 The project uses only Node.js standard-library modules. The 15-case evaluation covers confirmed, probable, and inconclusive outcomes; evidence abstention; prompt injection; bounded source access; and blocked mutation attempts.
 

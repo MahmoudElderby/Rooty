@@ -64,7 +64,7 @@ The installer must:
 - create `.rooty/state/install-manifest.json` with Rooty-owned file hashes and the selected hosts;
 - create `.rooty/config/project-context.json` with only `documentation.paths`;
 - create `.rooty/memory/{drafts,approved}`, gitignore drafts, and safely copy any non-conflicting legacy memory cards while retaining their sources;
-- leave `.rooty/mcp/<category>/<provider>/` to the setup agent's first approved write and remove empty category folders created by earlier versions; SQL Server setup later creates the tested `.rooty/mcp/data/sql-server/<domain>/dab-config.json` folders and shared `.rooty/start-dab.cjs` launcher after approval;
+- leave `.rooty/mcp/<category>/<provider>/` to the setup agent's first approved write and remove empty category folders created by earlier versions; SQL Server setup later creates tested `.rooty/mcp/data/sql-server/<environment>/<domain>/dab-config.json` targets and the shared `.rooty/start-dab.cjs` launcher after approval;
 - report, without deleting, skill files left outside the selected hosts;
 - recognize and migrate the flat version 0.2.0 manifest/context paths;
 - accept optional `--docs PATH,...` values;
@@ -185,7 +185,7 @@ Every proposal must state:
 
 Use Microsoft's SQL MCP Server included with DAB. Automatically enumerate accessible online user databases from live `sys.databases`, then enumerate each catalog's current tables/views from `INFORMATION_SCHEMA`; documentation only orients discovery. Exclude system, offline, snapshot, and inaccessible databases.
 
-Generate one independent MCP server per catalog named `rooty-sql-{domain}`. Each uses `.rooty/mcp/data/sql-server/{domain}/dab-config.json`, one credential reference, explicit entities only, one unique nonzero loopback port, and the shared `.rooty/start-dab.cjs` launcher. Every Codex, Cursor, and Claude entry uses absolute Node, launcher, DAB, and config paths. DAB starts with `--mcp-stdio role:rooty-reader --LogLevel Error`; only describe/read/aggregate tools are enabled and the database identity is `SELECT`-only.
+Generate one stable logical MCP server per catalog with reviewed `rooty-{environment}-sql-{domain}` targets. Each target uses `.rooty/mcp/data/sql-server/{environment}/{domain}/dab-config.json`, one environment-specific credential reference, explicit entities only, one unique nonzero loopback port, and the shared `.rooty/start-dab.cjs` launcher. Render exactly one target per logical catalog in each active host. Every Codex, Cursor, and Claude entry uses absolute Node, launcher, DAB, and config paths. DAB starts with `--mcp-stdio role:rooty-reader --LogLevel Error`; only describe/read/aggregate tools are enabled and the database identity is `SELECT`-only.
 
 Do not use a multi-catalog DAB, `data-source-files`, wildcard autoentities, `dbo.%`, `DAB_ENVIRONMENT`, command-shell wrappers, `--no-https-redirect`, or `ASPNETCORE_URLS=...:0`. Credential values remain outside Git and each host entry visibly names its binding. Verify every catalog independently through MCP initialize, exact tool listing, non-empty `describe_entities`, and a bounded read. Do not use `dab validate` on DAB 2.0.10 as the readiness gate.
 
@@ -271,7 +271,7 @@ Existing deterministic `sources`, host `init`, connector activation, frozen case
 - Setup reads confirmed docs before targeted source and stores no derived map.
 - Data and observability are mandatory; ticketing is optional.
 - All host MCP entries declare credential references and no values.
-- Every SQL catalog has an independent `rooty-sql-{domain}` server, explicit entities, unique port, and per-catalog readiness state on Codex, Cursor, and Claude.
+- Every SQL catalog has one logical server, exactly one active environment-visible target, explicit entities, unique port, and per-catalog readiness state on Codex, Cursor, and Claude.
 - The SQL launcher rejects multi-source, wildcard, shell-wrapper, credential-file, mutation-enabled, and implicit-port startup.
 - Docker/package/OAuth actions require visible separate approval.
 - Elasticsearch 8.19.15 follows the standalone compatibility path.

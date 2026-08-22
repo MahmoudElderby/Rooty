@@ -51,11 +51,15 @@ function trailingSegments(directory, count) {
 }
 
 function isCanonicalConfigDirectory(configDirectory) {
-  const expected = CANONICAL_CONFIG_ANCESTORS.length + 1;
-  const segments = trailingSegments(configDirectory, expected);
-  if (segments.length !== expected) return false;
-  const domain = segments[segments.length - 1];
-  return DOMAIN_PATTERN.test(domain) && CANONICAL_CONFIG_ANCESTORS.every((name, index) => segments[index] === name);
+  for (const suffixCount of [1, 2]) {
+    const expected = CANONICAL_CONFIG_ANCESTORS.length + suffixCount;
+    const segments = trailingSegments(configDirectory, expected);
+    if (segments.length !== expected) continue;
+    if (!CANONICAL_CONFIG_ANCESTORS.every((name, index) => segments[index] === name)) continue;
+    const suffix = segments.slice(CANONICAL_CONFIG_ANCESTORS.length);
+    if (suffix.every((value) => DOMAIN_PATTERN.test(value))) return true;
+  }
+  return false;
 }
 
 function isLegacyConfigDirectory(configDirectory) {
@@ -75,7 +79,7 @@ function validateInvocation({ dabPath, configPath, credentialName }, env = proce
 
   const configDirectory = path.dirname(configPath);
   if (!isCanonicalConfigDirectory(configDirectory) && !isLegacyConfigDirectory(configDirectory)) {
-    fail("dab-config.json must be isolated in a .rooty/mcp/data/sql-server/<domain> folder");
+    fail("dab-config.json must be isolated in a .rooty/mcp/data/sql-server/<domain> or .rooty/mcp/data/sql-server/<environment>/<domain> folder");
   }
   if (!BINDING_PATTERN.test(credentialName)) {
     fail("credential binding must use the ROOTY_SQL_<DOMAIN> naming convention");

@@ -26,16 +26,17 @@ Treat documentation as a reference, never as proof. Verify every material statem
 
 ## Investigate
 
-1. Create a case ID and an append-only evidence ledger. Verify workspace and connector access are read-only. Build a pre-query evidence map of environments, sources, retention, historical coverage, correlation fields, and gaps.
-2. Fetch the ticket. Preserve ticket claims, attachments, and identifiers as `REPORTED`; reconcile conflicting identifiers against independent evidence rather than assuming ticket text or an attachment is authoritative.
-3. Map the expected execution path and invariant at each boundary, using confirmed documentation for orientation and current code/configuration for verification. Enumerate relevant synchronous, asynchronous, and downstream failure surfaces, and trace surfaced errors through wrappers to their origin.
-4. Build testable hypotheses with predicted evidence. Make every costly query test one prediction or named gap.
-5. Pivot from strongest identifiers outward: trace/request ID, entity plus bounded event time, actor plus endpoint and time, fingerprint, then aggregate comparison.
-6. Normalize time to UTC while preserving original timezone. Record event time separately from retrieval or ingestion time.
-7. Find the earliest verified divergence. Separate trigger, root cause or hazard, contributing conditions, detection gap, and symptom.
-8. Falsify the leading hypothesis: test the strongest competitor, compare successful traffic, and verify incident-time version/configuration plus retention, sampling, retries, clock skew, and asynchronous delay.
-9. Apply exactly one outcome: `CONFIRMED`, `PROBABLE`, or `INCONCLUSIVE` using the stopping rules in the workflow reference.
-10. Produce the report only. Propose a sanitized learning card as a draft; never approve or persist it yourself. Classify it as `universal`, `project`, or `case_only`; include a kind, canonical key, statement, applicability, and disposition. Route universal proposals upstream, project proposals through Rooty's reviewed memory command, and case-only facts to case notes. Never merge learning directly into host rule files.
+1. Read `.rooty/state/active-environments.json` and the environment-visible Rooty MCP names. Lock the case to one verified active environment before querying. If the developer requests a switch, pause and invoke the Rooty setup workflow; start a new case after switching unless cross-environment comparison is explicit.
+2. Create a case ID and an append-only evidence ledger. Verify workspace and connector access are read-only. Build a pre-query evidence map of environments, sources, retention, historical coverage, correlation fields, and gaps.
+3. Fetch the ticket. Preserve ticket claims, attachments, and identifiers as `REPORTED`; reconcile conflicting identifiers against independent evidence rather than assuming ticket text or an attachment is authoritative.
+4. Map the expected execution path and invariant at each boundary, using confirmed documentation for orientation and current code/configuration for verification. Enumerate relevant synchronous, asynchronous, and downstream failure surfaces, and trace surfaced errors through wrappers to their origin.
+5. Build testable hypotheses with predicted evidence. Make every costly query test one prediction or named gap.
+6. Pivot from strongest identifiers outward: trace/request ID, entity plus bounded event time, actor plus endpoint and time, fingerprint, then aggregate comparison.
+7. Normalize time to UTC while preserving original timezone. Record event time separately from retrieval or ingestion time.
+8. Find the earliest verified divergence. Separate trigger, root cause or hazard, contributing conditions, detection gap, and symptom.
+9. Falsify the leading hypothesis: test the strongest competitor, compare successful traffic, and verify incident-time version/configuration plus retention, sampling, retries, clock skew, and asynchronous delay.
+10. Apply exactly one outcome: `CONFIRMED`, `PROBABLE`, or `INCONCLUSIVE` using the stopping rules in the workflow reference.
+11. Produce the report only. Propose a sanitized learning card as a draft; never approve or persist it yourself. Classify it as `universal`, `project`, or `case_only`; include a kind, canonical key, statement, applicability, and disposition. Route universal proposals upstream, project proposals through Rooty's reviewed memory command, and case-only facts to case notes. Never merge learning directly into host rule files.
 
 ## Handle missing pivots
 

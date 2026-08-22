@@ -3,4 +3,6 @@
 .investigator/cases/
 .investigator/memory/drafts/
 .rooty/memory/drafts/
+.rooty/state/active-environments.json
+.rooty/state/setup-progress.json
 .rooty-cases/

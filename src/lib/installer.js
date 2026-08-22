@@ -43,6 +43,8 @@ const INSTALLATION_MODE = "agent-led-v3";
 export const ROOTY_PATHS = Object.freeze({
   manifest: ".rooty/state/install-manifest.json",
   context: ".rooty/config/project-context.json",
+  setupProgress: ".rooty/state/setup-progress.json",
+  activeEnvironments: ".rooty/state/active-environments.json",
   legacyManifest: ".rooty/install-manifest.json",
   legacyContext: ".rooty/project-context.json"
 });
@@ -277,24 +279,43 @@ export async function readProjectContext(projectRoot) {
   const canonical = path.join(resolved, ROOTY_PATHS.context);
   const legacy = path.join(resolved, ROOTY_PATHS.legacyContext);
   const file = await exists(canonical) ? canonical : legacy;
-  if (!await exists(file)) return { schema_version: 1, documentation: { paths: [] } };
+  if (!await exists(file)) return { schema_version: 2, documentation: { status: "pending", paths: [] } };
   const details = await lstat(file);
   if (!details.isFile() || details.isSymbolicLink()) throw new Error(`Invalid Rooty project context: ${file}`);
   const context = JSON.parse(await readFile(file, "utf8"));
-  if (context?.schema_version !== 1 || !Array.isArray(context?.documentation?.paths)) {
+  if (![1, 2].includes(context?.schema_version) || !Array.isArray(context?.documentation?.paths)) {
+    throw new Error(`Invalid Rooty project context: ${file}`);
+  }
+  if (context.schema_version === 1) {
+    return {
+      schema_version: 2,
+      documentation: {
+        status: context.documentation.paths.length ? "confirmed_paths" : "pending",
+        paths: context.documentation.paths
+      }
+    };
+  }
+  if (!["pending", "confirmed_paths", "confirmed_none"].includes(context.documentation.status)) {
+    throw new Error(`Invalid Rooty project context: ${file}`);
+  }
+  if (context.documentation.status === "confirmed_paths" && context.documentation.paths.length === 0) {
+    throw new Error(`Invalid Rooty project context: ${file}`);
+  }
+  if (context.documentation.status === "confirmed_none" && context.documentation.paths.length !== 0) {
     throw new Error(`Invalid Rooty project context: ${file}`);
   }
   return context;
 }
 
-export async function setDocumentationPaths({ projectRoot, documentationPaths }) {
+export async function setDocumentationPaths({ projectRoot, documentationPaths, confirmNone = false }) {
   const resolved = await assertProjectRoot(projectRoot);
   const contextFile = path.join(resolved, ROOTY_PATHS.context);
   const legacyContextFile = path.join(resolved, ROOTY_PATHS.legacyContext);
   await assertNoSymlinkSegments(resolved, contextFile);
   await assertNoSymlinkSegments(resolved, legacyContextFile);
-  const paths = await normalizeDocumentationPaths(resolved, documentationPaths);
-  const context = { schema_version: 1, documentation: { paths } };
+  const paths = confirmNone ? [] : await normalizeDocumentationPaths(resolved, documentationPaths);
+  if (!confirmNone && paths.length === 0) throw new Error("At least one documentation path is required; use --none to confirm that none are available");
+  const context = { schema_version: 2, documentation: { status: confirmNone ? "confirmed_none" : "confirmed_paths", paths } };
   await atomicJson(contextFile, context);
   if (await exists(legacyContextFile)) await unlink(legacyContextFile);
   return { file: contextFile, context };
@@ -366,7 +387,7 @@ export async function installRooty({ packageRoot, projectRoot, documentationPath
 
   const suppliedDocs = splitDocumentationPaths(documentationPaths);
   const context = suppliedDocs.length > 0
-    ? { schema_version: 1, documentation: { paths: await normalizeDocumentationPaths(resolved, suppliedDocs) } }
+    ? { schema_version: 2, documentation: { status: "confirmed_paths", paths: await normalizeDocumentationPaths(resolved, suppliedDocs) } }
     : await readProjectContext(resolved);
 
   const memoryMigration = await migrateLegacyMemory(resolved);
@@ -383,6 +404,19 @@ export async function installRooty({ packageRoot, projectRoot, documentationPath
     await writeFile(item.target, item.content);
   }
   await atomicJson(contextFile, context);
+  const setupProgressFile = path.join(resolved, ROOTY_PATHS.setupProgress);
+  await assertNoSymlinkSegments(resolved, setupProgressFile);
+  if (!await exists(setupProgressFile)) {
+    await atomicJson(setupProgressFile, {
+      schema_version: 1,
+      status: "in_progress",
+      stage: context.documentation.status === "pending" ? "INSTALLED" : "DOCS_CONFIRMED",
+      updated_at: new Date().toISOString(),
+      documentation: { status: context.documentation.status },
+      environments: { confirmed: [], selected_for_setup: [] },
+      capabilities: {}
+    });
+  }
   const gitignore = await ensureProjectGitignore(packageRoot, resolved);
 
   // Narrowing the host list leaves previously installed skill files behind. Rooty stops
@@ -489,8 +523,10 @@ export async function inspectRootyInstall(projectRoot) {
   try {
     const ignore = await readFile(path.join(resolved, ".gitignore"), "utf8");
     const lines = new Set(ignore.split(/\r?\n/).map((line) => line.trim()).filter(Boolean));
-    if (!lines.has(`${MEMORY_PATHS.drafts}/`)) throw new Error(`Missing ${MEMORY_PATHS.drafts}/`);
-    add("PASS", "memory-gitignore", "Memory drafts are excluded from Git");
+    const required = [`${MEMORY_PATHS.drafts}/`, ROOTY_PATHS.activeEnvironments, ROOTY_PATHS.setupProgress];
+    const missing = required.filter((entry) => !lines.has(entry));
+    if (missing.length) throw new Error(`Missing ${missing.join(", ")}`);
+    add("PASS", "memory-gitignore", "Memory drafts and local setup/environment state are excluded from Git");
   } catch (error) {
     add("FAIL", "memory-gitignore", `${error.message}. Re-run \`rooty install\`.`);
   }
@@ -498,9 +534,10 @@ export async function inspectRootyInstall(projectRoot) {
   try {
     const context = await readProjectContext(resolved);
     const count = context.documentation.paths.length;
-    add(count ? "PASS" : "WARN", "documentation-context", count
+    if (context.documentation.status === "confirmed_none") add("PASS", "documentation-context", "The developer confirmed that no documentation entry point is available");
+    else add(count ? "PASS" : "WARN", "documentation-context", count
       ? `${count} confirmed documentation path(s) are available to the setup agent`
-      : "No documentation path is confirmed; the setup agent will ask before source inspection");
+      : "No documentation decision is confirmed; the setup agent will ask before source inspection");
   } catch (error) {
     add("FAIL", "documentation-context", error.message);
   }

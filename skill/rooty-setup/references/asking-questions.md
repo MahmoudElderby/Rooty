@@ -34,4 +34,4 @@ A structured question collects a preference. It is not an approval surface. Ever
 
 ## Persisting answers
 
-Store confirmed documentation paths with `rooty context set-docs --paths ...`. Everything else the developer answers stays in the conversation until it becomes reviewed host configuration or a provider artifact under `.rooty/mcp/<category>/<provider>/`. Never write a question log, an inferred architecture file, or a credential value.
+Store confirmed documentation paths with `rooty context set-docs --paths ...` and an explicit no-docs decision with `rooty context set-docs --none`. Store only safe setup checkpoints, confirmed environment IDs/aliases, selected setup coverage, initial environment, active host, and skip/cancel reason codes in `.rooty/state/setup-progress.json`. Provider answers remain conversational until they become reviewed environment profiles, host configuration, or artifacts under `.rooty/mcp/<category>/<provider>/`. Never write a question transcript, free-form answer log, inferred architecture file, extracted documentation, or credential value.

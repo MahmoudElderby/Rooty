@@ -7,7 +7,7 @@ description: Research, propose, configure, and verify a provider-specific read-o
 
 Build one reviewed provider-to-host connection at a time. Separate provider behavior from host syntax.
 
-Read [references/read-only-policy.md](references/read-only-policy.md) for every connection. Read [references/provider-research.md](references/provider-research.md) when official setup or current behavior is not already verified. Then read exactly one host reference and one provider reference from the routing lists below.
+Read [references/read-only-policy.md](references/read-only-policy.md) and [references/environment-profiles.md](references/environment-profiles.md) for every connection. Read [references/provider-research.md](references/provider-research.md) when official setup or current behavior is not already verified. Then read exactly one host reference and one provider reference from the routing lists below.
 
 ## Route by host
 
@@ -30,7 +30,8 @@ Produce a proposal before any mutation. Include:
 - official server identity and documentation URLs checked;
 - support status and any version or deployment constraints;
 - transport, command or URL, exact host config path, and merge scope;
-- generated artifact paths under `.rooty/mcp/<category>/<provider>/`, created on first approved write; SQL Server adds one catalog folder per server at `.rooty/mcp/data/sql-server/<domain>/dab-config.json` plus the shared `.rooty/start-dab.cjs`;
+- a stable logical source ID and one environment-visible rendered MCP name such as `rooty-prod-sql-orders` or `rooty-preprod-sql-orders`; never render two environments for the same logical source at once;
+- generated artifact paths under `.rooty/mcp/<category>/<provider>/`, created on first approved write; environment-specific SQL Server setup adds one catalog folder at `.rooty/mcp/data/sql-server/<environment>/<domain>/dab-config.json` plus the shared `.rooty/start-dab.cjs`;
 - every credential binding name and where its value must be supplied;
 - provider-side read-only identity or role and server-side read-only controls;
 - explicit allowed and forbidden tool categories;
@@ -47,6 +48,7 @@ Never place a credential value in the proposal. Never represent an unofficial or
 3. Preserve unrelated host configuration and refuse an ambiguous merge.
 4. Declare every credential reference inside the MCP entry, using the host's environment interpolation, forwarded-variable, secret-manager, or OAuth mechanism.
 5. Do not install Docker, pull an image, run a package, or begin OAuth without separate approval.
+6. Record every reviewed environment target in `.rooty/config/environment-profiles.json`, including host renderings, credential names, artifacts, exact allowed tools, and an identity probe with an expected environment marker. Never store credential values.
 
 ## Verify
 

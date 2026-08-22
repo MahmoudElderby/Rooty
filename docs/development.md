@@ -23,7 +23,7 @@ Verify:
 - `.rooty/config/project-context.json` stores only documentation paths;
 - `.rooty/memory/{drafts,approved}` exists and draft cards are excluded from Git;
 - `.rooty/mcp/` does not exist until a provider artifact is written, and a pre-existing empty category folder is removed;
-- the packaged MCP-builder skill contains `assets/start-dab.cjs`; approved SQL setup later copies it once and creates `.rooty/mcp/data/sql-server/<domain>/` folders;
+- the packaged MCP-builder skill contains `assets/start-dab.cjs`; approved SQL setup later copies it once and creates `.rooty/mcp/data/sql-server/<environment>/<domain>/` folders;
 - a simulated version 0.2.0 flat layout migrates without losing documentation paths;
 - a second install changes no skill files;
 - a locally modified owned file blocks reinstall before any write;

@@ -12,15 +12,17 @@ For each live catalog, install one independently startable server:
 └── mcp/
     └── data/
         └── sql-server/
-            ├── orders/
-            │   └── dab-config.json
-            └── logger/
-                └── dab-config.json
+            ├── production/
+            │   ├── orders/dab-config.json
+            │   └── logger/dab-config.json
+            └── preprod/
+                ├── orders/dab-config.json
+                └── logger/dab-config.json
 ```
 
-This is the canonical Rooty provider layout, `.rooty/mcp/<category>/<provider>/`, with one folder per catalog. The launcher still accepts the earlier `.rooty/mcp-<domain>/dab-config.json` location so an existing install keeps working; move those folders when convenient and update the host `--config` path in the same approved change.
+This is the canonical environment-aware Rooty provider layout, `.rooty/mcp/<category>/<provider>/<environment>/<domain>/`, with one target folder per environment and catalog. The launcher still accepts `.rooty/mcp/data/sql-server/<domain>/dab-config.json` and the earlier `.rooty/mcp-<domain>/dab-config.json` location so an existing install keeps working; move those folders when convenient and update the environment profile and active host `--config` path in the same approved change.
 
-Host server names are `rooty-sql-orders` and `rooty-sql-logger`. Copy the packaged [launcher asset](../../../assets/start-dab.cjs) to `.rooty/start-dab.cjs` after the exact write is approved. Preserve an identical existing launcher; refuse an unrelated or modified file instead of replacing it.
+Logical server IDs are stable (`sql-orders`, `sql-logger`), while active host names expose the selected target, such as `rooty-prod-sql-orders` or `rooty-preprod-sql-orders`. Only one name for each logical server may be active in a host file. Copy the packaged [launcher asset](../../../assets/start-dab.cjs) to `.rooty/start-dab.cjs` after the exact write is approved. Preserve an identical existing launcher; refuse an unrelated or modified file instead of replacing it.
 
 The launcher makes the DAB config folder its real process CWD. Use it on every host even if a host currently supports `cwd`, because Cursor does not guarantee it and the same process contract should be portable.
 
@@ -34,21 +36,21 @@ The launcher makes the DAB config folder its real process CWD. Use it on every h
 
 ## Credential contract
 
-Each catalog uses one binding such as `ROOTY_SQL_ORDERS`. Its value is a connection string that selects only that catalog and authenticates as a dedicated `SELECT`-only identity.
+Each environment/catalog target uses one binding such as `ROOTY_SQL_ORDERS_PROD` or `ROOTY_SQL_ORDERS_PREPROD`. Its value is a connection string that selects only that environment's catalog and authenticates as a dedicated `SELECT`-only identity.
 
-The binding name must be visible in that catalog's host MCP entry via `--credential-env`, while the value remains in the developer's process environment or an approved host secret facility. The DAB config contains only `@env('ROOTY_SQL_ORDERS')`. Never create a `.env` beside the DAB config, put a literal connection string in Git, or print a resolved value.
+The binding name must be visible in that target's host MCP entry via `--credential-env`, while the value remains in the developer's process environment or an approved host secret facility. A production Orders DAB config contains only `@env('ROOTY_SQL_ORDERS_PROD')`. Never create a `.env` beside the DAB config, put a literal connection string in Git, or print a resolved value.
 
 Before startup, display a table containing server name, catalog, host config path, binding name, `AVAILABLE` or `MISSING`, config path, and next action. Availability checks test only whether the variable exists and is non-empty.
 
 ## DAB config per catalog
 
-Generate one self-contained `.rooty/mcp/data/sql-server/{domain}/dab-config.json` with explicit entities only. Every entity must come from live metadata and explicitly name a table or view. For example:
+Generate one self-contained `.rooty/mcp/data/sql-server/{environment}/{domain}/dab-config.json` per selected target with explicit entities only. Every entity must come from live metadata for that environment and explicitly name a table or view. For example:
 
 ```json
 {
   "data-source": {
     "database-type": "mssql",
-    "connection-string": "@env('ROOTY_SQL_ORDERS')"
+    "connection-string": "@env('ROOTY_SQL_ORDERS_PROD')"
   },
   "runtime": {
     "rest": { "enabled": false },
@@ -93,7 +95,7 @@ Add view primary-key metadata when the current DAB schema requires it. Do not ex
 Every host entry runs the same fixed process:
 
 ```text
-<absolute-node> <absolute-project>/.rooty/start-dab.cjs --dab <absolute-dab> --config <absolute-project>/.rooty/mcp/data/sql-server/<domain>/dab-config.json --credential-env ROOTY_SQL_<DOMAIN>
+<absolute-node> <absolute-project>/.rooty/start-dab.cjs --dab <absolute-dab> --config <absolute-project>/.rooty/mcp/data/sql-server/<environment>/<domain>/dab-config.json --credential-env ROOTY_SQL_<DOMAIN>_<ENVIRONMENT>
 ```
 
 The launcher starts DAB directly with `shell: false`, the catalog folder as CWD, inherited standard I/O, and exactly:
@@ -109,16 +111,16 @@ It removes inherited `DAB_ENVIRONMENT` and rejects `.env`, multi-source, autoent
 Merge one table per catalog into trusted-project `.codex/config.toml`:
 
 ```toml
-[mcp_servers.rooty-sql-orders]
+[mcp_servers."rooty-prod-sql-orders"]
 command = "C:\\Program Files\\nodejs\\node.exe"
-args = ["C:\\project\\.rooty\\start-dab.cjs", "--dab", "C:\\tools\\dab.exe", "--config", "C:\\project\\.rooty\\mcp\\data\\sql-server\\orders\\dab-config.json", "--credential-env", "ROOTY_SQL_ORDERS"]
-env_vars = ["ROOTY_SQL_ORDERS"]
+args = ["C:\\project\\.rooty\\start-dab.cjs", "--dab", "C:\\tools\\dab.exe", "--config", "C:\\project\\.rooty\\mcp\\data\\sql-server\\production\\orders\\dab-config.json", "--credential-env", "ROOTY_SQL_ORDERS_PROD"]
+env_vars = ["ROOTY_SQL_ORDERS_PROD"]
 enabled = true
 required = false
 enabled_tools = ["describe_entities", "read_records", "aggregate_records"]
 default_tools_approval_mode = "prompt"
 
-[mcp_servers.rooty-sql-orders.env]
+[mcp_servers."rooty-prod-sql-orders".env]
 ASPNETCORE_URLS = "http://127.0.0.1:55101"
 ```
 
@@ -131,7 +133,7 @@ Merge one entry per catalog into `.cursor/mcp.json`:
 ```json
 {
   "mcpServers": {
-    "rooty-sql-orders": {
+    "rooty-prod-sql-orders": {
       "type": "stdio",
       "command": "C:/Program Files/nodejs/node.exe",
       "args": [
@@ -139,9 +141,9 @@ Merge one entry per catalog into `.cursor/mcp.json`:
         "--dab",
         "C:/tools/dab.exe",
         "--config",
-        "C:/project/.rooty/mcp/data/sql-server/orders/dab-config.json",
+        "C:/project/.rooty/mcp/data/sql-server/production/orders/dab-config.json",
         "--credential-env",
-        "ROOTY_SQL_ORDERS"
+        "ROOTY_SQL_ORDERS_PROD"
       ],
       "env": {
         "ASPNETCORE_URLS": "http://127.0.0.1:55101"
@@ -151,7 +153,7 @@ Merge one entry per catalog into `.cursor/mcp.json`:
 }
 ```
 
-Launch Cursor from an environment where `ROOTY_SQL_ORDERS` is already set, or use a user-scoped secret facility verified for the installed Cursor version. The `--credential-env` argument makes the required binding navigable in project config and the launcher fails with its exact name when missing. Do not put `${env:...}` into committed configuration unless that installed Cursor build is first proven to resolve it; Cursor's public MCP example does not guarantee interpolation.
+Launch Cursor from an environment where `ROOTY_SQL_ORDERS_PROD` is already set, or use a user-scoped secret facility verified for the installed Cursor version. The `--credential-env` argument makes the required binding navigable in project config and the launcher fails with its exact name when missing. Do not put `${env:...}` into committed configuration unless that installed Cursor build is first proven to resolve it; Cursor's public MCP example does not guarantee interpolation.
 
 ## Claude project entry
 
@@ -160,7 +162,7 @@ Merge one entry per catalog into project `.mcp.json`:
 ```json
 {
   "mcpServers": {
-    "rooty-sql-orders": {
+    "rooty-prod-sql-orders": {
       "type": "stdio",
       "command": "C:/Program Files/nodejs/node.exe",
       "args": [
@@ -168,12 +170,12 @@ Merge one entry per catalog into project `.mcp.json`:
         "--dab",
         "C:/tools/dab.exe",
         "--config",
-        "C:/project/.rooty/mcp/data/sql-server/orders/dab-config.json",
+        "C:/project/.rooty/mcp/data/sql-server/production/orders/dab-config.json",
         "--credential-env",
-        "ROOTY_SQL_ORDERS"
+        "ROOTY_SQL_ORDERS_PROD"
       ],
       "env": {
-        "ROOTY_SQL_ORDERS": "${ROOTY_SQL_ORDERS}",
+        "ROOTY_SQL_ORDERS_PROD": "${ROOTY_SQL_ORDERS_PROD}",
         "ASPNETCORE_URLS": "http://127.0.0.1:55101"
       }
     }
@@ -185,7 +187,7 @@ Claude fails config parsing when a required `${VAR}` has no value, which produce
 
 ## Readiness per catalog
 
-For each `rooty-sql-{domain}` independently:
+For each active `rooty-{environment}-sql-{domain}` independently:
 
 1. Confirm the credential binding exists without reading or displaying it.
 2. Start through the active host and complete MCP initialize.

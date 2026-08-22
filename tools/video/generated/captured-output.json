@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "generator": "tools/video/capture.mjs",
-  "rooty_version": "0.2.3",
+  "rooty_version": "0.3.0",
   "node_version": "v22.14.0",
   "display_project": "~/work/checkout-api",
   "display_case_dir": "~/rooty-cases/INV-20260815-DEMO0001",
@@ -9,25 +9,27 @@
     "projectRoot": "~/work/checkout-api",
     "command": "npx rooty-investigator install",
     "bannerWithoutDocs": [
-      "INSTALLED Rooty skills for Codex, Cursor, and Claude",
+      "INSTALLED Rooty skills for Claude, Codex, Cursor",
+      "HOSTS     claude, codex, cursor (no host detected; installed for all)",
       "PROJECT   ~/work/checkout-api",
-      "SKILLS    rooty-setup, rooty-mcp-builder, root-cause-investigator",
-      "ROOTY     .rooty/{config,state,memory/{drafts,approved},mcp/{data,observability,ticketing,custom}}",
+      "SKILLS    rooty-setup, rooty-mcp-builder, root-cause-investigator in .agents/skills, .claude/skills",
+      "ROOTY     .rooty/{config,state,memory/{drafts,approved}}",
       "MEMORY    ~/work/checkout-api/.rooty/memory/drafts",
       "DOCS      not selected; the setup agent will ask",
       "",
-      "Next: Open Codex, Cursor, or Claude in this project and ask:",
+      "Next: Open Claude, Codex, Cursor in this project and ask:",
       "  Set up Rooty for this project."
     ],
     "bannerWithDocs": [
-      "INSTALLED Rooty skills for Codex, Cursor, and Claude",
+      "INSTALLED Rooty skills for Claude, Codex, Cursor",
+      "HOSTS     claude, codex, cursor (reused from the previous install)",
       "PROJECT   ~/work/checkout-api",
-      "SKILLS    rooty-setup, rooty-mcp-builder, root-cause-investigator",
-      "ROOTY     .rooty/{config,state,memory/{drafts,approved},mcp/{data,observability,ticketing,custom}}",
+      "SKILLS    rooty-setup, rooty-mcp-builder, root-cause-investigator in .agents/skills, .claude/skills",
+      "ROOTY     .rooty/{config,state,memory/{drafts,approved}}",
       "MEMORY    ~/work/checkout-api/.rooty/memory/drafts",
       "DOCS      README.md, docs",
       "",
-      "Next: Open Codex, Cursor, or Claude in this project and ask:",
+      "Next: Open Claude, Codex, Cursor in this project and ask:",
       "  Set up Rooty for this project."
     ],
     "docsCommand": "npx rooty-investigator install --docs \"README.md,docs\"",
@@ -52,6 +54,7 @@
       ".agents/skills/rooty-mcp-builder/assets",
       ".agents/skills/rooty-mcp-builder/assets/start-dab.cjs",
       ".agents/skills/rooty-mcp-builder/references",
+      ".agents/skills/rooty-mcp-builder/references/environment-profiles.md",
       ".agents/skills/rooty-mcp-builder/references/hosts",
       ".agents/skills/rooty-mcp-builder/references/hosts/claude.md",
       ".agents/skills/rooty-mcp-builder/references/hosts/codex.md",
@@ -76,6 +79,7 @@
       ".agents/skills/rooty-setup/agents",
       ".agents/skills/rooty-setup/agents/openai.yaml",
       ".agents/skills/rooty-setup/references",
+      ".agents/skills/rooty-setup/references/asking-questions.md",
       ".agents/skills/rooty-setup/references/docs-first-discovery.md",
       ".agents/skills/rooty-setup/references/setup-lifecycle.md",
       ".agents/skills/rooty-setup/SKILL.md",
@@ -99,6 +103,7 @@
       ".claude/skills/rooty-mcp-builder/assets",
       ".claude/skills/rooty-mcp-builder/assets/start-dab.cjs",
       ".claude/skills/rooty-mcp-builder/references",
+      ".claude/skills/rooty-mcp-builder/references/environment-profiles.md",
       ".claude/skills/rooty-mcp-builder/references/hosts",
       ".claude/skills/rooty-mcp-builder/references/hosts/claude.md",
       ".claude/skills/rooty-mcp-builder/references/hosts/codex.md",
@@ -123,6 +128,7 @@
       ".claude/skills/rooty-setup/agents",
       ".claude/skills/rooty-setup/agents/openai.yaml",
       ".claude/skills/rooty-setup/references",
+      ".claude/skills/rooty-setup/references/asking-questions.md",
       ".claude/skills/rooty-setup/references/docs-first-discovery.md",
       ".claude/skills/rooty-setup/references/setup-lifecycle.md",
       ".claude/skills/rooty-setup/SKILL.md",
@@ -130,16 +136,12 @@
       ".rooty",
       ".rooty/config",
       ".rooty/config/project-context.json",
-      ".rooty/mcp",
-      ".rooty/mcp/custom",
-      ".rooty/mcp/data",
-      ".rooty/mcp/observability",
-      ".rooty/mcp/ticketing",
       ".rooty/memory",
       ".rooty/memory/approved",
       ".rooty/memory/drafts",
       ".rooty/state",
       ".rooty/state/install-manifest.json",
+      ".rooty/state/setup-progress.json",
       "docs",
       "docs/architecture.md",
       "README.md",
@@ -150,11 +152,11 @@
       "skillGroups": [
         {
           "label": ".agents/skills/rooty-setup/",
-          "files": 4
+          "files": 5
         },
         {
           "label": ".agents/skills/rooty-mcp-builder/",
-          "files": 16
+          "files": 17
         },
         {
           "label": ".agents/skills/root-cause-investigator/",
@@ -162,30 +164,26 @@
         },
         {
           "label": ".claude/skills/rooty-setup/",
-          "files": 4
+          "files": 5
         },
         {
           "label": ".claude/skills/rooty-mcp-builder/",
-          "files": 16
+          "files": 17
         },
         {
           "label": ".claude/skills/root-cause-investigator/",
           "files": 8
         }
       ],
-      "skillFileTotal": 56,
+      "skillFileTotal": 60,
       "rootyFiles": [
         ".rooty/config/project-context.json",
-        ".rooty/state/install-manifest.json"
+        ".rooty/state/install-manifest.json",
+        ".rooty/state/setup-progress.json"
       ],
       "rootyDirectories": [
         ".rooty",
         ".rooty/config",
-        ".rooty/mcp",
-        ".rooty/mcp/custom",
-        ".rooty/mcp/data",
-        ".rooty/mcp/observability",
-        ".rooty/mcp/ticketing",
         ".rooty/memory",
         ".rooty/memory/approved",
         ".rooty/memory/drafts",
@@ -202,7 +200,7 @@
       ".claude/skills"
     ],
     "installationMode": "agent-led-v3",
-    "manifestFileCount": 56,
+    "manifestFileCount": 60,
     "trackedFileHashSample": [
       {
         "file": ".agents/skills/root-cause-investigator/agents/openai.yaml",
@@ -218,14 +216,16 @@
       }
     ],
     "context": {
-      "schema_version": 1,
+      "schema_version": 2,
       "documentation": {
+        "status": "pending",
         "paths": []
       }
     },
     "contextWithDocs": {
-      "schema_version": 1,
+      "schema_version": 2,
       "documentation": {
+        "status": "confirmed_paths",
         "paths": [
           "README.md",
           "docs"
@@ -245,22 +245,29 @@
       ".investigator/cases/",
       ".investigator/memory/drafts/",
       ".rooty/memory/drafts/",
+      ".rooty/state/active-environments.json",
+      ".rooty/state/setup-progress.json",
       ".rooty-cases/"
     ],
     "doctorLines": [
-      "PASS install-manifest: Rooty 0.2.3 uses agent-led-v3",
-      "PASS installed-skills: 3 skills are intact in 2 host locations",
-      "PASS rooty-layout: Canonical memory is available at .rooty/memory",
-      "PASS memory-gitignore: Memory drafts are excluded from Git",
-      "PASS documentation-context: 2 confirmed documentation path(s) are available to the setup agent",
+      "PASS package-version: rooty-investigator@0.3.0",
+      "PASS node-version: Node 20 or newer",
       "PASS skill: 3 Rooty skills are discoverable or packaged",
       "PASS connector-recipes: 9 provider recipes have read-only allowlists and probes",
       "PASS mcp-tools: 6 bundled tools are explicitly read-only",
-      "PASS mcp-startup: Bundled connector started as rooty-snapshot-readonly@0.2.3",
+      "PASS mcp-startup: Bundled connector started as rooty-snapshot-readonly@0.3.0",
       "PASS replay-suite: 15 independent frozen replay cases validate",
-      "PASS case-location: No investigation evidence is stored in the source tree",
       "PASS gitignore: Packaged project gitignore template covers Rooty runtime evidence and drafts",
-      "Doctor: healthy"
+      "PASS install-manifest: Rooty 0.3.0 uses agent-led-v3",
+      "PASS installed-skills: 3 skills are intact for Claude, Codex, Cursor",
+      "PASS rooty-layout: Canonical memory is available at .rooty/memory",
+      "PASS memory-gitignore: Memory drafts and local setup/environment state are excluded from Git",
+      "PASS documentation-context: 2 confirmed documentation path(s) are available to the setup agent",
+      "PASS project-version: Project and CLI both use Rooty 0.3.0",
+      "PASS setup-progress: Setup progress is in_progress at INSTALLED",
+      "FAIL environment-profiles: No confirmed environment profiles found",
+      "FAIL host-mcp-config: No active Rooty host MCP config is confirmed",
+      "FAIL investigation-blocked: Project configuration is incomplete; live environment probes were not run"
     ],
     "refusalCommand": "npx rooty-investigator install",
     "refusal": [

@@ -67,7 +67,7 @@ test("agent-led install copies all Rooty skills for supported hosts", async () =
     assert.equal(installedLauncher, packagedLauncher);
   }
 
-  assert.deepEqual(await readProjectContext(projectRoot), { schema_version: 1, documentation: { paths: [] } });
+  assert.deepEqual(await readProjectContext(projectRoot), { schema_version: 2, documentation: { status: "pending", paths: [] } });
   assert.deepEqual((await readdir(path.join(projectRoot, ".rooty"))).sort(), ["config", "memory", "state"]);
   for (const directory of ROOTY_PROJECT_DIRECTORIES) {
     await readdir(path.join(projectRoot, directory));
@@ -298,6 +298,15 @@ test("documentation context rejects missing and dangerously broad paths", async 
   );
 });
 
+test("documentation context can persist an explicit no-docs decision", async () => {
+  const projectRoot = await project("rooty-no-docs");
+  await installRooty({ packageRoot: ROOT, projectRoot, hosts: ["cursor"] });
+  const result = await setDocumentationPaths({ projectRoot, confirmNone: true });
+  assert.deepEqual(result.context.documentation, { status: "confirmed_none", paths: [] });
+  const inspected = await inspectRootyInstall(projectRoot);
+  assert.equal(inspected.checks.find((check) => check.name === "documentation-context")?.status, "PASS");
+});
+
 test("installer refuses symlinked Rooty target paths", async (context) => {
   const projectRoot = await project("rooty-symlink");
   const outside = await project("rooty-symlink-outside");
@@ -317,12 +326,17 @@ test("installer refuses symlinked Rooty target paths", async (context) => {
   );
 });
 
-test("doctor recognizes an agent-led install without requiring the legacy source registry", async () => {
+test("doctor separates a healthy agent-led install from missing project and investigation readiness", async () => {
   const projectRoot = await project("rooty-agent-doctor");
   await installRooty({ packageRoot: ROOT, projectRoot });
   const result = await runDoctor({ packageRoot: ROOT, projectRoot });
   assert.equal(result.setupModel, "agent-led-v3");
-  assert.equal(result.ok, true, JSON.stringify(result.checks));
+  assert.equal(result.ok, false, JSON.stringify(result.checks));
   assert.equal(result.checks.some((check) => check.name === "source-registry"), false);
   assert.equal(result.checks.find((check) => check.name === "installed-skills")?.status, "PASS");
+  assert.equal(result.sections.package.status, "READY");
+  assert.equal(result.sections.project.status, "NOT_READY");
+  assert.equal(result.sections.investigation.status, "NOT_READY");
+  assert.equal(result.checks.find((check) => check.name === "environment-profiles")?.status, "FAIL");
+  assert.equal(result.checks.find((check) => check.name === "host-mcp-config")?.status, "FAIL");
 });

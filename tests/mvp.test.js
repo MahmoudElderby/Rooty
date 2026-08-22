@@ -457,8 +457,11 @@ test("doctor distinguishes production readiness from package-only health", async
   assert.equal(strict.checks.find((check) => check.name === "activated-connectors")?.status, "FAIL");
   const packageOnly = await runDoctor({ packageRoot: ROOT, projectRoot, requireActivatedConnectors: false });
   assert.equal(packageOnly.ok, true, JSON.stringify(packageOnly.checks));
-  assert.equal(packageOnly.checks.find((check) => check.name === "source-registry")?.status, "WARN");
-  assert.equal(packageOnly.checks.find((check) => check.name === "activated-connectors")?.status, "WARN");
+  assert.equal(packageOnly.sections.package.status, "READY");
+  assert.equal(packageOnly.sections.project.status, "NOT_CHECKED");
+  assert.equal(packageOnly.sections.investigation.status, "NOT_CHECKED");
+  assert.equal(packageOnly.checks.some((check) => check.name === "source-registry"), false);
+  assert.equal(packageOnly.checks.some((check) => check.name === "activated-connectors"), false);
   await writeReadySourceRegistry(projectRoot, ["observability"]);
   const partial = await runDoctor({ packageRoot: ROOT, projectRoot });
   assert.equal(partial.ok, false);

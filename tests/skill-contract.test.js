@@ -24,8 +24,8 @@ test("SQL Server skill requires one explicit MCP per live catalog", async () => 
     "sql-server-cursor.md",
     "sys.databases",
     "INFORMATION_SCHEMA.TABLES",
-    "rooty-sql-{domain}",
-    ".rooty/mcp/data/sql-server/{domain}/dab-config.json",
+    "rooty-{environment}-sql-{domain}",
+    ".rooty/mcp/data/sql-server/{environment}/{domain}/dab-config.json",
     "each catalog independently"
   ]);
   requires(recipe, [
@@ -113,5 +113,27 @@ test("setup routes developer questions through the active host's own question ex
     "include an option that escapes the list",
     "It is not an approval surface",
     "rooty context set-docs"
+  ]);
+});
+
+test("setup supports confirmed environment discovery and conversational deterministic switching", async () => {
+  const setup = await content("skill/rooty-setup/SKILL.md");
+  const profiles = await content("skill/rooty-mcp-builder/references/environment-profiles.md");
+  requires(setup, [
+    "rooty env discover --json",
+    "rooty setup selections",
+    "rooty env plan <environment> --json",
+    "rooty env use <environment>",
+    "rooty-prod-sql-orders",
+    "rooty-preprod-sql-orders",
+    "never keep both",
+    "rooty doctor --environment <environment>"
+  ]);
+  requires(profiles, [
+    "logical_servers",
+    "credential_envs",
+    "allowed_tools",
+    "expect_contains",
+    "exactly one target per logical catalog"
   ]);
 });

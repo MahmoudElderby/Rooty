@@ -23,6 +23,7 @@ export async function readCapture(file = CAPTURE_FILE) {
 // NO_COLOR so the tags are re-applied here from the same label vocabulary.
 const INSTALL_LABEL_TONES = {
   INSTALLED: "green",
+  HOSTS: "cyan",
   PROJECT: "cyan",
   SKILLS: "cyan",
   ROOTY: "cyan",
