@@ -3,7 +3,7 @@ import { lstat, readdir, readFile, unlink } from "node:fs/promises";
 import path from "node:path";
 import { assertNoEmbeddedSecrets } from "./core.js";
 import { inspectRootyInstall, ROOTY_HOSTS, ROOTY_HOST_IDS } from "./installer.js";
-import { MCP_SETTINGS_KEY_PATTERN, MCP_SETTINGS_PATH, readMcpSettings, resolveMcpSettingValues } from "./mcp-settings.js";
+import { hasMcpSetting, MCP_SETTINGS_ENV_KEY_PATTERN, MCP_SETTINGS_KEY_PATTERN, MCP_SETTINGS_PATH, readMcpSettings, resolveMcpSettingValues } from "./mcp-settings.js";
 import { atomicWriteJson, atomicWriteText, assertNoSymlinkPath, ensureProjectPath, readOptionalJson, readOptionalText, resolveProjectRoot } from "./project-state.js";
 import { readSetupProgress } from "./setup-progress.js";
 
@@ -92,7 +92,8 @@ function validateSettingsBackedEntry(entry, keys, location) {
   const bindings = String(args[keysIndex + 1] ?? "").split(",").map((item) => item.trim()).filter(Boolean);
   if (bindings.some((binding) => {
     const parts = binding.split("=");
-    return parts.length > 2 || parts.some((part) => !MCP_SETTINGS_KEY_PATTERN.test(part));
+    return parts.length > 2 || !MCP_SETTINGS_KEY_PATTERN.test(parts[0])
+      || (parts.length === 2 && !MCP_SETTINGS_ENV_KEY_PATTERN.test(parts[1]));
   })) throw new Error(`Settings-backed entry has invalid key bindings at ${location}`);
   const declared = new Set(bindings.map((item) => item.split("=")[0]));
   const missing = keys.filter((key) => !declared.has(key));
@@ -572,7 +573,7 @@ export async function inspectEnvironmentProject(projectRoot, host) {
     const requiredSettingKeys = [...new Set(selection.targets.flatMap((item) => item.target.settings_keys ?? []))];
     if (requiredSettingKeys.length) {
       const settings = await readMcpSettings(resolved, { required: false });
-      const absent = requiredSettingKeys.filter((key) => !Object.prototype.hasOwnProperty.call(settings?.settings ?? {}, key));
+      const absent = requiredSettingKeys.filter((key) => !hasMcpSetting(settings, key));
       if (!settings) checks.push({ status: "FAIL", name: `${targetHost}-mcp-settings`, message: `MCP settings file is missing: ${MCP_SETTINGS_PATH}` });
       else if (absent.length) checks.push({ status: "FAIL", name: `${targetHost}-mcp-settings`, message: `MCP settings file does not declare: ${absent.join(", ")}` });
       else checks.push({ status: "PASS", name: `${targetHost}-mcp-settings`, message: `${requiredSettingKeys.length} required MCP setting key(s) are declared locally` });

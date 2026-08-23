@@ -46,7 +46,7 @@ MCP `readOnlyHint` and `destructiveHint` annotations are metadata. They are usef
 
 ## Credential handling
 
-Every configured MCP target declares `settings_keys`. Generated host files contain only those key names, the Rooty launcher path, and value-free URL/header templates. Values live in `.rooty/config/mcp-settings.local.json`, which the installer always Git-ignores and restricts to the current user where the platform supports file modes. Rooty rejects:
+Every configured MCP target declares `settings_keys`. Generated host files contain only those key or nested-path names, the Rooty launcher path, and value-free URL/header templates. Values live in `.rooty/config/mcp-settings.local.json`, which the installer always Git-ignores and restricts to the current user where the platform supports file modes. Rooty rejects:
 
 - Credential values in secret-like object fields
 - Usernames or passwords embedded in MCP URLs

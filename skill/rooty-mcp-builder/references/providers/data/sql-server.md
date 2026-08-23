@@ -35,13 +35,15 @@ For each discovered catalog, query `INFORMATION_SCHEMA.TABLES` and related colum
 Each catalog is one stable logical MCP server with an active target named `rooty-{environment}-sql-{domain}`. Exactly one target per logical catalog is rendered in a host file. Each target has:
 
 - `.rooty/mcp/data/sql-server/{environment}/{domain}/dab-config.json` containing one `mssql` data source and explicit entities verified in that environment;
-- one `ROOTY_SQL_<DOMAIN>` credential reference selecting that exact catalog;
+- one schema-version-2 environment group with shared `sql.server`, `sql.options`, `sql.user`, and `sql.password` values, plus a per-domain `sql.catalogs.<domain>.name`;
 - only `describe_entities`, `read_records`, and bounded `aggregate_records` tools;
 - a dedicated `rooty-reader` database identity with `SELECT` only;
-- one unique explicit loopback `ASPNETCORE_URLS` port;
+- one unique per-domain `sql.catalogs.<domain>.mcp_url`, mapped to the explicit loopback `ASPNETCORE_URLS` port;
 - an absolute Node executable, DAB executable, launcher path, and config path.
 
 Normalize domains to lowercase ASCII kebab case and bindings to uppercase ASCII underscore form. Resolve normalization collisions visibly; never overwrite a catalog entry.
+
+The shared environment identity must be `SELECT`-only in every included catalog. If one shared identity cannot be restricted that way, stop and use separate reviewed identities rather than weakening the database boundary.
 
 ## Independent readiness
 

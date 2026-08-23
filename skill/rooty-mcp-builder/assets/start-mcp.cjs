@@ -8,6 +8,7 @@ const path = require("node:path");
 const readline = require("node:readline");
 
 const KEY_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/;
+const SETTING_PATH_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*$/;
 
 function fail(message) {
   throw new Error(`Rooty MCP launcher: ${message}`);
@@ -16,18 +17,19 @@ function fail(message) {
 function parseKeyBindings(value) {
   const bindings = String(value).split(",").map((item) => item.trim()).filter(Boolean).map((item) => {
     const parts = item.split("=");
-    if (parts.length > 2 || parts.some((part) => !KEY_PATTERN.test(part))) {
-      fail("--keys must contain valid comma-separated NAME or NAME=CHILD_ENV bindings");
+    if (parts.length > 2 || !SETTING_PATH_PATTERN.test(parts[0])
+      || (parts.length === 2 && !KEY_PATTERN.test(parts[1]))) {
+      fail("--keys must contain valid comma-separated SETTING_PATH or SETTING_PATH=CHILD_ENV bindings");
     }
-    return { source: parts[0], target: parts[1] ?? parts[0] };
+    return { source: parts[0], target: parts[1] ?? (KEY_PATTERN.test(parts[0]) ? parts[0] : undefined) };
   });
   if (!bindings.length) fail("--keys must contain at least one setting name");
   const sources = new Set();
   const targets = new Set();
   for (const binding of bindings) {
-    if (sources.has(binding.source) || targets.has(binding.target)) fail("--keys contains a duplicate setting or child environment binding");
+    if (sources.has(binding.source) || (binding.target && targets.has(binding.target))) fail("--keys contains a duplicate setting or child environment binding");
     sources.add(binding.source);
-    targets.add(binding.target);
+    if (binding.target) targets.add(binding.target);
   }
   return bindings;
 }
@@ -55,6 +57,7 @@ function parseArgs(argv) {
   if (!settingsFile || !path.isAbsolute(settingsFile)) fail("--settings must identify an absolute MCP settings file");
   if (!Array.isArray(keys) || !keys.length) fail("--keys is required");
   if (Boolean(url) === Boolean(command)) fail("choose exactly one HTTP --url or stdio command after --");
+  if (command && keys.some(({ target }) => !target)) fail("nested setting paths used with stdio require SETTING_PATH=CHILD_ENV bindings");
   return { settingsFile, keyBindings: keys, keys: keys.map(({ source }) => source), url, headers, command, commandArgs };
 }
 
@@ -69,17 +72,62 @@ function validateSettingsPath(file) {
   return normalized;
 }
 
+function validateSettingsDocument(document) {
+  if (![1, 2].includes(document?.schema_version) || !document.settings || typeof document.settings !== "object" || Array.isArray(document.settings)) {
+    fail("invalid MCP settings schema");
+  }
+  function validateNode(node, prefix = []) {
+    for (const [key, value] of Object.entries(node)) {
+      const settingPath = [...prefix, key].join(".");
+      if (!KEY_PATTERN.test(key)) fail(`invalid MCP setting path: ${settingPath}`);
+      if (typeof value === "string") {
+        if (value.includes("\0")) fail(`MCP setting contains a forbidden null byte: ${settingPath}`);
+      } else if (value && typeof value === "object" && !Array.isArray(value)) validateNode(value, [...prefix, key]);
+      else fail(`MCP setting must be a string or object: ${settingPath}`);
+    }
+  }
+  validateNode(document.settings);
+  if (document.schema_version === 1 && Object.values(document.settings).some((value) => typeof value !== "string")) {
+    fail("schema-version-1 MCP settings must be flat strings");
+  }
+  if (document.schema_version === 2) {
+    for (const [environment, group] of Object.entries(document.settings)) {
+      if (environment.startsWith("ROOTY_SQL_")) fail("schema-version-2 SQL settings must be grouped by environment");
+      if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(environment) || !group || typeof group !== "object" || Array.isArray(group)) {
+        fail(`schema-version-2 settings must be grouped by lowercase environment: ${environment}`);
+      }
+      if (group.sql?.databases !== undefined) fail(`${environment}.sql.databases is deprecated; use ${environment}.sql.catalogs`);
+      const catalogs = group.sql?.catalogs;
+      if (catalogs === undefined) continue;
+      if (!catalogs || typeof catalogs !== "object" || Array.isArray(catalogs)) fail(`${environment}.sql.catalogs must be an object`);
+      const used = new Set();
+      for (const [domain, catalog] of Object.entries(catalogs)) {
+        const mcpUrl = catalog?.mcp_url;
+        if (typeof mcpUrl !== "string" || mcpUrl === "") continue;
+        const match = /^http:\/\/127\.0\.0\.1:(\d{1,5})$/.exec(mcpUrl);
+        const port = match ? Number.parseInt(match[1], 10) : 0;
+        if (!match || port < 1 || port > 65535) fail(`${environment}.sql.catalogs.${domain}.mcp_url must be an explicit loopback URL`);
+        if (used.has(mcpUrl)) fail(`SQL catalog MCP URLs must be unique within ${environment}`);
+        used.add(mcpUrl);
+      }
+    }
+  }
+  return document;
+}
+
 function loadSettings(file, keys) {
   let document;
   try { document = JSON.parse(readFileSync(validateSettingsPath(file), "utf8")); }
   catch (error) { fail(`cannot read MCP settings: ${error.message}`); }
-  if (document?.schema_version !== 1 || !document.settings || typeof document.settings !== "object" || Array.isArray(document.settings)) {
-    fail("invalid MCP settings schema");
-  }
+  validateSettingsDocument(document);
   const selected = {};
   const missing = [];
   for (const key of keys) {
-    const value = document.settings[key];
+    const value = key.split(".").reduce((node, segment) => (
+      node && typeof node === "object" && !Array.isArray(node)
+        ? node[segment]
+        : undefined
+    ), document.settings);
     if (typeof value !== "string" || value === "") missing.push(key);
     else selected[key] = value;
   }
@@ -88,7 +136,7 @@ function loadSettings(file, keys) {
 }
 
 function substitute(template, values) {
-  return template.replace(/\$\{([A-Za-z_][A-Za-z0-9_]*)\}/g, (match, key) => {
+  return template.replace(/\$\{([A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*)\}/g, (match, key) => {
     if (values[key] === undefined) fail(`template references undeclared setting key: ${key}`);
     return values[key];
   });
@@ -167,7 +215,7 @@ async function launch(argv = process.argv.slice(2)) {
   return invocation.url ? runHttpBridge(invocation, values) : runStdio(invocation, values);
 }
 
-module.exports = { KEY_PATTERN, launch, loadSettings, parseArgs, parseHeaders, parseHttpMessage, parseKeyBindings, runStdio, substitute, validateSettingsPath };
+module.exports = { KEY_PATTERN, SETTING_PATH_PATTERN, launch, loadSettings, parseArgs, parseHeaders, parseHttpMessage, parseKeyBindings, runStdio, substitute, validateSettingsDocument, validateSettingsPath };
 
 if (require.main === module) {
   launch().catch((error) => {

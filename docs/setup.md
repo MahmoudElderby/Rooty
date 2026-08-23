@@ -83,7 +83,7 @@ No configuration or external action occurs before the proposal is visible and ap
 
 The agent configures only the host where setup is running unless the developer requests more. Existing unrelated host configuration is preserved; ambiguous or malformed configuration blocks the merge. Each logical source has only one active rendering, and the rendered name visibly includes the environment, such as `rooty-prod-sql-orders` or `rooty-preprod-sql-orders`.
 
-Every MCP entry must invoke `.rooty/start-mcp.cjs` and declare all required local JSON keys. Values stay only in the Git-ignored `.rooty/config/mcp-settings.local.json`; host-managed OAuth remains separate where required. After rendering, the agent reports each missing key, its config path, its purpose, and the smallest resolution action.
+Every MCP entry must invoke `.rooty/start-mcp.cjs` and declare all required local JSON setting paths. New settings use schema version 2 and are grouped by environment. Values stay only in the Git-ignored `.rooty/config/mcp-settings.local.json`; host-managed OAuth remains separate where required. After rendering, the agent reports each missing path, its config path, its purpose, and the smallest resolution action.
 
 ## 6. Verify safely
 
@@ -130,12 +130,17 @@ For example, after switching Orders from production to preprod, Cursor contains 
       "args": [
         "C:/project/.rooty/start-mcp.cjs",
         "--settings", "C:/project/.rooty/config/mcp-settings.local.json",
-        "--keys", "ROOTY_SQL_ORDERS_PREPROD,ROOTY_SQL_ORDERS_PREPROD_URLS=ASPNETCORE_URLS",
+        "--keys", "preprod.sql.server=ROOTY_SQL_PREPROD_SERVER,preprod.sql.user=ROOTY_SQL_PREPROD_USER,preprod.sql.password=ROOTY_SQL_PREPROD_PASSWORD,preprod.sql.options=ROOTY_SQL_PREPROD_OPTIONS,preprod.sql.catalogs.orders.name=ROOTY_SQL_PREPROD_CATALOG,preprod.sql.catalogs.orders.mcp_url=ASPNETCORE_URLS",
         "--", "C:/Program Files/nodejs/node.exe",
         "C:/project/.rooty/start-dab.cjs",
         "--dab", "C:/tools/dab.exe",
         "--config", "C:/project/.rooty/mcp/data/sql-server/preprod/orders/dab-config.json",
-        "--credential-env", "ROOTY_SQL_ORDERS_PREPROD"
+        "--credential-env", "ROOTY_SQL_ORDERS_PREPROD",
+        "--server-env", "ROOTY_SQL_PREPROD_SERVER",
+        "--database-env", "ROOTY_SQL_PREPROD_CATALOG",
+        "--options-env", "ROOTY_SQL_PREPROD_OPTIONS",
+        "--user-env", "ROOTY_SQL_PREPROD_USER",
+        "--password-env", "ROOTY_SQL_PREPROD_PASSWORD"
       ]
     }
   }
@@ -148,7 +153,7 @@ Claude uses the same settings-backed `mcpServers` entry in `.mcp.json`. Codex re
 [mcp_servers."rooty-preprod-sql-orders"]
 type = "stdio"
 command = "C:/Program Files/nodejs/node.exe"
-args = ["C:/project/.rooty/start-mcp.cjs", "--settings", "C:/project/.rooty/config/mcp-settings.local.json", "--keys", "ROOTY_SQL_ORDERS_PREPROD,ROOTY_SQL_ORDERS_PREPROD_URLS=ASPNETCORE_URLS", "--", "C:/Program Files/nodejs/node.exe", "C:/project/.rooty/start-dab.cjs", "--dab", "C:/tools/dab.exe", "--config", "C:/project/.rooty/mcp/data/sql-server/preprod/orders/dab-config.json", "--credential-env", "ROOTY_SQL_ORDERS_PREPROD"]
+args = ["C:/project/.rooty/start-mcp.cjs", "--settings", "C:/project/.rooty/config/mcp-settings.local.json", "--keys", "preprod.sql.server=ROOTY_SQL_PREPROD_SERVER,preprod.sql.user=ROOTY_SQL_PREPROD_USER,preprod.sql.password=ROOTY_SQL_PREPROD_PASSWORD,preprod.sql.options=ROOTY_SQL_PREPROD_OPTIONS,preprod.sql.catalogs.orders.name=ROOTY_SQL_PREPROD_CATALOG,preprod.sql.catalogs.orders.mcp_url=ASPNETCORE_URLS", "--", "C:/Program Files/nodejs/node.exe", "C:/project/.rooty/start-dab.cjs", "--dab", "C:/tools/dab.exe", "--config", "C:/project/.rooty/mcp/data/sql-server/preprod/orders/dab-config.json", "--credential-env", "ROOTY_SQL_ORDERS_PREPROD", "--server-env", "ROOTY_SQL_PREPROD_SERVER", "--database-env", "ROOTY_SQL_PREPROD_CATALOG", "--options-env", "ROOTY_SQL_PREPROD_OPTIONS", "--user-env", "ROOTY_SQL_PREPROD_USER", "--password-env", "ROOTY_SQL_PREPROD_PASSWORD"]
 ```
 
 The production target remains in `.rooty/config/environment-profiles.json` as reviewed switchable intent, but `rooty-prod-sql-orders` is removed from the active host file. This preserves a single Orders MCP while making the current environment visible to the developer.

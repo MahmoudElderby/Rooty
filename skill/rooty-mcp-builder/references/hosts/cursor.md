@@ -17,7 +17,7 @@ For SQL Server, also read the provider's [tested per-catalog pattern](../provide
     "rooty-provider": {
       "type": "stdio",
       "command": "absolute-node",
-      "args": ["C:/project/.rooty/start-mcp.cjs", "--settings", "C:/project/.rooty/config/mcp-settings.local.json", "--keys", "ROOTY_REQUIRED_SETTING", "--", "provider-command", "provider-arguments"]
+      "args": ["C:/project/.rooty/start-mcp.cjs", "--settings", "C:/project/.rooty/config/mcp-settings.local.json", "--keys", "prod.provider.required=ROOTY_REQUIRED_SETTING", "--", "provider-command", "provider-arguments"]
     }
   }
 }
@@ -31,12 +31,12 @@ For SQL Server, also read the provider's [tested per-catalog pattern](../provide
     "rooty-provider": {
       "type": "stdio",
       "command": "absolute-node",
-      "args": ["C:/project/.rooty/start-mcp.cjs", "--settings", "C:/project/.rooty/config/mcp-settings.local.json", "--keys", "ROOTY_PROVIDER_URL,ROOTY_PROVIDER_TOKEN", "--url", "${ROOTY_PROVIDER_URL}", "--header", "Authorization: Bearer ${ROOTY_PROVIDER_TOKEN}"]
+      "args": ["C:/project/.rooty/start-mcp.cjs", "--settings", "C:/project/.rooty/config/mcp-settings.local.json", "--keys", "prod.provider.url,prod.provider.token", "--url", "${prod.provider.url}", "--header", "Authorization: Bearer ${prod.provider.token}"]
     }
   }
 }
 ```
 
-Declare every required value in `settings_keys` and put its value only in the Git-ignored `.rooty/config/mcp-settings.local.json`. Cursor sees the Rooty launcher and key names, never a value or machine-variable dependency. Use `SOURCE_KEY=CHILD_ENV_KEY` in `--keys` when a child expects a fixed name. Cursor supports host approval and enterprise MCP/tool allowlists; still require provider-side read-only access because a client allowlist is not the primary boundary.
+Declare every required environment-grouped path in `settings_keys` and put its value only in the Git-ignored `.rooty/config/mcp-settings.local.json`. Cursor sees the Rooty launcher and path names, never a value or machine-variable dependency. Use `SOURCE_PATH=CHILD_ENV_KEY` in `--keys` when a child expects a fixed name. Cursor supports host approval and enterprise MCP/tool allowlists; still require provider-side read-only access because a client allowlist is not the primary boundary.
 
 Verify from Customize > MCP or the MCP logs. Confirm initialization, advertised tools, mutation restrictions, and the provider's harmless probe.

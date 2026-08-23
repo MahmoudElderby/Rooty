@@ -84,12 +84,12 @@ Setup persists only stage/status, confirmed selections, the active host, and a c
 Initialize placeholders, replace the local document from a private file, or inspect availability without printing values:
 
 ```text
-rooty settings init [--keys KEY,...] [--project PATH] [--json]
+rooty settings init [--keys KEY_OR_DOTTED_PATH,...] [--project PATH] [--json]
 rooty settings configure --file FILE [--project PATH] [--json]
-rooty settings status [--keys KEY,...] [--project PATH] [--json]
+rooty settings status [--keys KEY_OR_DOTTED_PATH,...] [--project PATH] [--json]
 ```
 
-The canonical file is `.rooty/config/mcp-settings.local.json` with schema `{ "schema_version": 1, "settings": { "KEY": "value" } }`. `init` preserves existing values and adds missing keys as empty strings. `configure` validates and atomically copies the whole document. `status` emits only key names and `AVAILABLE` or `MISSING`; it exits nonzero when a requested key is missing. The file is always Git-ignored and must be protected as a local secret store.
+The canonical file is `.rooty/config/mcp-settings.local.json`. New files use schema version 2, with environment-grouped string leaves such as `{ "schema_version": 2, "settings": { "prod": { "provider": { "token": "value" } } } }`; the corresponding path is `prod.provider.token`. Legacy flat schema-version-1 files remain readable. `init` preserves existing values and adds missing paths as empty strings. `configure` validates and atomically copies the whole document. `status` emits only paths and `AVAILABLE` or `MISSING`; it exits nonzero when a requested path is missing. The file is always Git-ignored and must be protected as a local secret store.
 
 ## `rooty env`
 

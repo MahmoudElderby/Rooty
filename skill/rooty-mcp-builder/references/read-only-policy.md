@@ -14,7 +14,7 @@ Forbid create, update, delete, write, execute, transition, comment, upload, expo
 
 ## Credentials
 
-The host MCP entry must declare all required `settings_keys` and invoke `.rooty/start-mcp.cjs`. Values must remain only in the Git-ignored `.rooty/config/mcp-settings.local.json`, outside committed files and chat. A connection string containing a password is a credential value; store it under a declared JSON key. Host-managed OAuth remains separate when a provider requires interactive authorization.
+The host MCP entry must declare all required `settings_keys` paths and invoke `.rooty/start-mcp.cjs`. Values must remain only in the Git-ignored `.rooty/config/mcp-settings.local.json`, outside committed files and chat. New values are grouped by environment. A connection string containing a password is a credential value; for SQL schema version 2, store its reviewed components under the environment group and assemble it only in memory. Host-managed OAuth remains separate when a provider requires interactive authorization.
 
 Report credentials as:
 

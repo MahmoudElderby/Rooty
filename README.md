@@ -1,128 +1,254 @@
 # Rooty
 
-> Evidence-first root-cause investigation for AI coding agents.
+> Evidence-first root-cause investigation for Codex, Claude Code, and Cursor.
 
 [![Node.js 20+](https://img.shields.io/badge/Node.js-20%2B-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
+[![npm package](https://img.shields.io/npm/v/rooty-investigator?logo=npm&label=rooty-investigator)](https://www.npmjs.com/package/rooty-investigator)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![npm package](https://img.shields.io/badge/npm-rooty--investigator-CB3837?logo=npm)](https://www.npmjs.com/package/rooty-investigator)
 
-Rooty gives Codex, Claude Code, Cursor, and other AI hosts a disciplined way to investigate incidents across source code, tickets, documentation, logs, traces, databases, and deployment history. It follows evidence to the earliest verified divergence, tests competing explanations, and reports a root cause only when the proof is strong enough.
+Rooty helps an AI coding agent investigate production incidents across source code, documentation, tickets, logs, traces, databases, and deployment history. It reconstructs the expected path, follows current-case evidence to the first verified divergence, tests competing explanations, and reports only what the evidence supports.
 
-Rooty investigates. It does **not** patch code, change data, mutate tickets, deploy, mitigate, or approve its own memory.
+Rooty investigates. It does **not** patch code, change data, mutate tickets, deploy, mitigate, or approve its own reusable memory.
 
 ![Rooty investigation walkthrough](https://raw.githubusercontent.com/MahmoudElderby/Rooty/main/rooty-how-it-works.gif)
 
-The loop above is a condensed highlight. Full walkthroughs: [how installation works](media/rooty-install.mp4), [how an investigation is done](media/rooty-investigation.mp4), or [both acts in one video](media/rooty-how-it-works.mp4). Every command, banner, file count, evidence item, and hash chain shown in them is captured from a real Rooty run by [`tools/video`](tools/video/README.md).
+Watch the full walkthroughs: [installation](media/rooty-install.mp4), [investigation](media/rooty-investigation.mp4), or [both acts](media/rooty-how-it-works.mp4).
 
-## Why Rooty exists
+## Quick start
 
-Most coding agents see only the repository. Production failures rarely live in only one place: the ticket describes the symptom, code describes the intended path, traces show the executed path, logs expose failures, database history reveals state, and deployments establish what changed.
-
-Rooty connects those sources into one read-only investigation workflow:
-
-```mermaid
-flowchart LR
-    A["Ticket or user report"] --> B["Map expected flow"]
-    B --> C["Form testable hypotheses"]
-    C --> D["Query read-only evidence sources"]
-    D --> E["Find first bad state"]
-    E --> F["Falsify competing causes"]
-    F --> G{"Evidence threshold"}
-    G -->|Complete| H["CONFIRMED"]
-    G -->|Best fit, proof missing| I["PROBABLE"]
-    G -->|Insufficient or conflicting| J["INCONCLUSIVE"]
-    H --> K["Human-reviewed learning draft"]
-```
-
-## What you get
-
-| Component | Purpose |
-|---|---|
-| Setup skill | Guides documentation-first project discovery and provider setup through the active AI agent |
-| MCP builder skill | Researches and proposes read-only provider connections for Codex, Claude Code, and Cursor |
-| Investigator skill | Provides a portable, versioned investigation method shared across AI hosts |
-| Host adapters | Render reviewed MCP intent into host-specific project configuration |
-| Deterministic safety engine | Validates paths, ownership, trusted recipes, credentials, and safe configuration merges |
-| Doctor | Separates package health, project wiring, and live investigation readiness |
-| Evidence model | Separates `REPORTED`, `OBSERVED`, `INFERRED`, `HYPOTHESIS`, and `UNKNOWN` claims |
-| Case artifacts | Produces a hash-chained evidence ledger, case state, and deterministic report for snapshot-backed cases |
-| Learning workflow | Promotes only verified `CONFIRMED` cases through explicit human review and 180-day expiry |
-| Evaluation suite | Replays 15 frozen cases, including abstention, prompt injection, and mutation attempts |
-
-## Requirements
-
-- Node.js 20 or newer
-- Codex, Claude Code, or Cursor
-- Read-only identities for the evidence providers Rooty will use
-- Any provider runtime required by an approved MCP proposal
-- A private local JSON file for MCP settings, or host-managed OAuth where a provider requires it
-
-Rooty has no runtime npm dependencies and no gateway. Each host connects directly to the configured MCP providers.
-
-## Install in a project
+### 1. Install Rooty in the project
 
 ```console
 npx rooty-investigator install
 ```
 
-Then open the project in Codex, Cursor, or Claude and ask:
+Rooty detects Codex, Cursor, and Claude project markers. You can also select hosts explicitly:
+
+```console
+npx rooty-investigator install --cursor
+npx rooty-investigator install --codex --claude
+```
+
+If the project documentation entry point is already known:
+
+```console
+npx rooty-investigator install --docs "README.md,docs"
+```
+
+### 2. Ask the active agent to finish setup
+
+Open the project in an installed host and ask:
 
 ```text
 Set up Rooty for this project.
 ```
 
-The CLI copies Rooty's skills and creates project context plus resumable setup state. The active agent confirms documentation and detected environments, performs targeted discovery, proposes provider access, requests approvals, guides credentials, and verifies readiness.
+The setup agent confirms documentation paths and environments, performs bounded project discovery, identifies required evidence providers, proposes read-only MCP access, and shows every write or external action before it happens.
 
-Name the host to install for, so Rooty writes nothing your editor will not read:
+### 3. Supply local MCP settings
 
-```console
-npx rooty-investigator install --cursor
+Rooty creates a Git-ignored local settings file at:
+
+```text
+.rooty/config/mcp-settings.local.json
 ```
 
-Without a host flag, Rooty reuses the hosts from the previous install, otherwise installs for every host it detects from a `.cursor/`, `.codex/`, `.claude/`, or `CLAUDE.md` marker, otherwise for all three.
-
-If you already know the documentation locations:
+Initialize the keys requested by setup:
 
 ```console
-npx rooty-investigator install --docs "README.md,docs,architecture"
+npx rooty-investigator settings init --keys prod.provider.url,prod.provider.token
 ```
+
+Populate a private JSON file outside the repository, then copy it into Rooty without placing values in shell arguments:
+
+```console
+npx rooty-investigator settings configure --file /private/path/rooty-settings.json
+npx rooty-investigator settings status
+```
+
+`settings status` prints setting paths and `AVAILABLE` or `MISSING`. It never prints values.
+
+### 4. Verify readiness
+
+```console
+npx rooty-investigator doctor
+```
+
+Doctor reports three independent states:
+
+```text
+PACKAGE_READY
+PROJECT_CONFIGURED
+INVESTIGATION_READY
+```
+
+When project configuration and bounded live reads are ready, ask the agent to investigate:
+
+```text
+Investigate PAY-123. Root cause only.
+Do not propose or apply fixes. Validate every assumption with current-case evidence.
+```
+
+## How Rooty is organized
+
+Rooty has no hosted gateway or central credential store. The installed AI host runs a project-local launcher that reads only declared local settings, then starts a reviewed stdio MCP server or bridges stdio to a reviewed Streamable HTTP endpoint.
+
+```mermaid
+flowchart LR
+    U["Developer"] --> I["rooty install"]
+    I --> S["Project-scoped Rooty skills"]
+    I --> L[".rooty/start-mcp.cjs"]
+    U --> A["Codex, Cursor, or Claude"]
+    S --> A
+    A --> D["Documentation-first discovery"]
+    D --> P["Reviewed environment profiles"]
+    P --> H["One active MCP target per logical source"]
+    H --> L
+    J["Git-ignored local settings JSON"] --> L
+    L --> M["stdio MCP server"]
+    L --> R["Streamable HTTP MCP"]
+    M --> E["Read-only evidence providers"]
+    R --> E
+    E --> A
+```
+
+The deterministic CLI owns paths, schemas, installation fingerprints, safe host merges, environment switching, setting-key validation, and readiness checks. The agent owns semantic discovery, provider research, proposals, approvals, and live investigation reasoning.
 
 ## What installation creates
 
 ```text
-.agents/skills/            # Cursor and Codex
+.agents/skills/                         # Codex and Cursor
 ├── rooty-setup/
 ├── rooty-mcp-builder/
 └── root-cause-investigator/
 
-.claude/skills/            # Claude
+.claude/skills/                         # Claude Code
 ├── rooty-setup/
 ├── rooty-mcp-builder/
 └── root-cause-investigator/
 
 .rooty/
-├── start-mcp.cjs                    # settings-backed MCP launcher
+├── start-mcp.cjs                       # managed settings-backed launcher
 ├── config/
-│   ├── project-context.json
-│   ├── environment-profiles.json       # after approved setup
+│   ├── project-context.json            # confirmed documentation paths only
+│   ├── environment-profiles.json       # reviewed switchable targets, after setup
 │   └── mcp-settings.local.json         # local values, always Git-ignored
 ├── state/
-│   ├── install-manifest.json
-│   ├── setup-progress.json              # local, resumable
-│   └── active-environments.json         # local active host state
+│   ├── install-manifest.json           # SHA-256 ownership fingerprints
+│   ├── setup-progress.json              # resumable setup state, Git-ignored
+│   └── active-environments.json         # active target per host, Git-ignored
 └── memory/
-    ├── drafts/
-    └── approved/
+    ├── drafts/                          # Git-ignored
+    └── approved/                        # sanitized, human-reviewed learning
 ```
 
-Only the skill folders of the selected hosts are written. Provider artifacts arrive later at `.rooty/mcp/<category>/<provider>/`, created by the setup agent on first approved write.
+Provider artifacts are created only after approval under `.rooty/mcp/<category>/<provider>/`.
 
-Installation is safe to repeat: Rooty updates unchanged owned skill files and refuses to overwrite modified or unowned ones.
-It also merges Rooty's runtime exclusions into `.gitignore`; MCP setting values and drafts remain local while approved sanitized memory can be shared.
+Installation is safe to repeat. Rooty updates unchanged files it owns and refuses to overwrite modified or unowned files. Narrowing the host selection stops tracking the other host files without deleting them.
 
-## Documentation-first, not documentation-trusting
+## Local MCP settings
 
-`.rooty/config/project-context.json` stores only user-confirmed documentation paths:
+New local settings documents use schema version 2 and group values by environment:
+
+```json
+{
+  "schema_version": 2,
+  "settings": {
+    "prod": {
+      "provider": {
+        "url": "",
+        "token": ""
+      }
+    }
+  }
+}
+```
+
+An empty string is `MISSING`. Rooty accepts only nested objects with string leaves and validates every dot-separated setting path before activation. Existing flat schema-version-1 documents remain supported.
+
+The settings contract is deliberately strict:
+
+- Within Rooty-managed project state, values exist only in `.rooty/config/mcp-settings.local.json`; interactive host OAuth remains a separate flow.
+- The local settings file is always added to `.gitignore` and restricted to the current user where file modes are supported.
+- Host MCP files contain the launcher path, settings path, setting-path names, and value-free templates—never resolved values.
+- Managed profiles cannot forward values through host `env`, `env_vars`, headers, or machine environment interpolation.
+- The launcher reads only the keys declared by the selected environment target.
+- CLI status, doctor output, plans, errors, and JSON output never print setting values.
+
+Treat the local settings JSON as a secret store: protect it, back it up only through an approved secret-management process, and never commit or paste it into chat.
+
+### Mapping a setting to a child-process key
+
+Some MCP servers require a fixed child environment name. Rooty keeps environment-specific keys in JSON and maps the selected value only inside the child process:
+
+```text
+--keys preprod.sql.server=ROOTY_SQL_PREPROD_SERVER,preprod.sql.options=ROOTY_SQL_PREPROD_OPTIONS,preprod.sql.catalogs.orders.mcp_url=ASPNETCORE_URLS
+```
+
+This lets production and preprod coexist in the local settings JSON without depending on machine-level environment variables.
+
+## Host MCP configuration
+
+Rooty maintains one active rendering for each logical source. The rendered name always identifies the selected environment, such as `rooty-prod-sql-orders` or `rooty-preprod-sql-orders`.
+
+### Cursor and Claude JSON
+
+Cursor uses `.cursor/mcp.json`; Claude uses project `.mcp.json`. A settings-backed HTTP provider is exposed to either host as stdio through the Rooty bridge:
+
+```json
+{
+  "mcpServers": {
+    "rooty-preprod-orders": {
+      "type": "stdio",
+      "command": "C:/Program Files/nodejs/node.exe",
+      "args": [
+        "C:/project/.rooty/start-mcp.cjs",
+        "--settings",
+        "C:/project/.rooty/config/mcp-settings.local.json",
+        "--keys",
+        "preprod.orders.url,preprod.orders.token",
+        "--url",
+        "${preprod.orders.url}",
+        "--header",
+        "Authorization: Bearer ${preprod.orders.token}"
+      ]
+    }
+  }
+}
+```
+
+### Codex TOML
+
+Codex uses trusted-project `.codex/config.toml`:
+
+```toml
+[mcp_servers."rooty-preprod-orders"]
+type = "stdio"
+command = "C:/Program Files/nodejs/node.exe"
+args = [
+  "C:/project/.rooty/start-mcp.cjs",
+  "--settings",
+  "C:/project/.rooty/config/mcp-settings.local.json",
+  "--keys",
+  "preprod.orders.url,preprod.orders.token",
+  "--url",
+  "${preprod.orders.url}",
+  "--header",
+  "Authorization: Bearer ${preprod.orders.token}"
+]
+enabled = true
+required = true
+enabled_tools = ["verified_read_tool"]
+default_tools_approval_mode = "prompt"
+```
+
+Rooty preserves unrelated MCP entries and refuses malformed or ambiguous host files. The setup proposal shows the exact merge before it is applied.
+
+Interactive host-managed OAuth remains a separate supported path when a provider requires it. Rooty does not store OAuth refresh tokens.
+
+## Documentation-first setup
+
+`.rooty/config/project-context.json` stores only the developer-confirmed documentation decision and path strings:
 
 ```json
 {
@@ -134,69 +260,95 @@ It also merges Rooty's runtime exclusions into `.gitignore`; MCP setting values 
 }
 ```
 
-Rooty reads relevant documents on demand to locate likely business flows, components, communication paths, source areas, data stores, telemetry, and identifiers. Documentation guides where Rooty looks; it does not prove how the system currently behaves.
+Change the documentation entry point with:
 
-Rooty does not generate or persist a project map, documentation index, embedding, inferred architecture, cached summary, or conclusion. Material findings are verified using current configuration, source, or runtime evidence.
+```console
+npx rooty-investigator context set-docs --paths knowledge
+```
 
-## Switch environments without duplicate MCPs
+Rooty recommends `knowledge/` when that folder exists. You can explicitly confirm that no documentation entry point exists with `context set-docs --none`.
 
-Setup records one logical server per source and one reviewed target per confirmed environment. A host renders only the active target. The MCP name includes that target environment—for example, switching Orders removes `rooty-prod-sql-orders` and adds `rooty-preprod-sql-orders`; both are never left active together.
+Documentation tells Rooty where to look. It never proves current architecture or an incident conclusion. Rooty does not persist a generated project map, documentation index, embedding, inferred architecture, cached summary, or investigation conclusion.
+
+If setup is skipped or cancelled, Rooty saves only the current stage, confirmed selections, active host, and next action. It does not save prompt transcripts, discovered content, inferred architecture, or values.
+
+```console
+npx rooty-investigator setup status
+```
+
+The next setup request resumes from the recorded stage.
+
+## Environment discovery and switching
+
+Setup performs bounded environment discovery across safe documentation and configuration evidence, then asks the developer to confirm which environments are real, which to configure, and which should start active.
+
+Inspect unconfirmed candidates directly with:
+
+```console
+npx rooty-investigator env discover --json
+```
+
+Approved environment profiles keep stable logical sources with reviewed production, preprod, staging, or other targets. Only one target for each logical source appears in a host file.
+
+Preview and apply a switch:
 
 ```console
 npx rooty-investigator env plan preprod
 npx rooty-investigator env use preprod
 ```
 
-The host is inferred when only one is configured. Use `--host` only when several configured hosts make the choice ambiguous, or `--all-hosts` when you intentionally want every configured host changed. You can also ask the installed setup agent: `Switch Rooty to preprod.` It shows the same deterministic plan, asks for approval, calls the CLI, then asks you to reload the host and runs doctor.
+The host is inferred from existing Rooty configuration, setup state, or a single installed host. Use `--host cursor` only when several configured hosts make the choice ambiguous. Use `--all-hosts` only when every configured host should switch atomically.
 
-See [environment setup and switching](docs/setup.md#switch-environments) for the generated Cursor, Claude, and Codex configuration shapes.
+You can ask the installed agent for the same operation:
 
-## Try the offline demo
+```text
+Switch Rooty to preprod.
+```
 
-The demo uses synthetic evidence and the bundled read-only MCP server. It does not need production credentials.
+The agent runs the deterministic plan, shows removed and added environment-visible MCP names, requests approval, applies the switch, asks for a host reload, and reruns doctor. Production and preprod names for the same logical MCP are never left active together.
+
+## Readiness with doctor
 
 ```console
-rooty init --host all --demo --project /path/to/sandbox-project
-rooty run ROOTY-101 \
-  --project /path/to/sandbox-project \
-  --snapshot /path/to/Rooty/evals/mock-sources/confirmed-timeout.json \
-  --case-dir /path/to/rooty-case-demo
-rooty report --project /path/to/sandbox-project --case-dir /path/to/rooty-case-demo
+npx rooty-investigator doctor
+npx rooty-investigator doctor --environment preprod
+npx rooty-investigator doctor --json
 ```
 
-`rooty run` is the MVP's deterministic **frozen-snapshot runner**. It is used for demonstrations, artifact generation, and evaluation; it does not orchestrate live provider calls.
+| State | What it proves |
+|---|---|
+| `PACKAGE_READY` | The installed CLI, Node version, skills, recipes, bundled tools, and replay suite are healthy |
+| `PROJECT_CONFIGURED` | Rooty is installed, local state is safe, environment profiles exist, provider artifacts exist, and active host entries match the selected targets |
+| `INVESTIGATION_READY` | Required local setting values resolve, MCP servers initialize, advertised tools exactly match reviewed allowlists, and bounded environment-identity reads succeed |
 
-## Agent-led setup
+Doctor names missing host configuration, launcher/artifact problems, undeclared or empty setting keys, tool-surface drift, and failed bounded reads without exposing values.
 
-```text
-install
-  -> confirm documentation locations
-  -> read relevant docs as navigation references
-  -> inspect source/config only where needed
-  -> identify data and observability providers
-  -> propose exact read-only MCP access
-  -> request host-native approval
-  -> render host configuration
-  -> show missing local setting keys
-  -> verify tools and harmless probes
+Use package-only health checks in CI or development:
+
+```console
+npm run doctor
 ```
 
-Data and observability are mandatory investigation capabilities. Ticketing is optional because the developer can paste a ticket. Documentation is never treated as guaranteed truth, and Rooty does not generate a persistent project map.
+## Investigation workflow
 
-Every MCP entry declares all local setting keys, but never their values. Rooty shows the exact host config path, each missing key, why it is needed, and the smallest next action. Values live only in `.rooty/config/mcp-settings.local.json` and are never printed.
+Rooty follows evidence rather than the first plausible explanation:
 
-When setup reports data and observability as ready, ask:
-
-```text
-Investigate PAY-123. Root cause only.
-Do not propose or apply fixes. Validate every assumption with current-case evidence.
+```mermaid
+flowchart LR
+    A["Ticket or user report"] --> B["Reconcile identifiers"]
+    B --> C["Map expected flow"]
+    C --> D["Form testable hypotheses"]
+    D --> E["Query bounded read-only evidence"]
+    E --> F["Find first bad state"]
+    F --> G["Falsify competing causes"]
+    G --> H{"Evidence threshold"}
+    H -->|Complete| I["CONFIRMED"]
+    H -->|Best fit, proof missing| J["PROBABLE"]
+    H -->|Insufficient or conflicting| K["INCONCLUSIVE"]
+    I --> L["Human-reviewed learning draft"]
 ```
 
-See [Project and MCP setup](docs/setup.md) and [Investigating an incident](docs/investigation.md).
-
-## Evidence and outcomes
-
-Rooty never treats all statements equally:
+Rooty classifies every material statement:
 
 | Classification | Meaning |
 |---|---|
@@ -206,11 +358,51 @@ Rooty never treats all statements equally:
 | `HYPOTHESIS` | A testable explanation with predicted evidence |
 | `UNKNOWN` | Evidence is missing, inaccessible, expired, sampled, truncated, or contradictory |
 
-`CONFIRMED` requires an established first bad state, distinct observed support for each material causal link, observed elimination of material alternatives, no critical gap, and either independent corroboration or a verified reproduction. Otherwise Rooty must downgrade to `PROBABLE` or `INCONCLUSIVE`.
+`CONFIRMED` requires an established first bad state, observed support for every material causal link, elimination of material alternatives, no critical evidence gap, and independent corroboration or verified reproduction. Rooty downgrades to `PROBABLE` or `INCONCLUSIVE` when that standard is not met.
+
+Read [Investigating an incident](docs/investigation.md) and [Evidence and reporting](docs/evidence-and-reporting.md) for the complete method.
+
+## Supported hosts and provider references
+
+Project installation currently supports:
+
+- Codex
+- Cursor
+- Claude Code
+
+Provider knowledge is separate from host syntax, so one reviewed provider design can render consistently across supported hosts.
+
+| Provider | Capability | Current Rooty reference |
+|---|---|---|
+| Microsoft SQL MCP Server through DAB | Data | One isolated, explicit-entity, read-only MCP per live environment/catalog |
+| Elasticsearch standalone / Agent Builder | Observability | Elasticsearch 8.19.15 compatibility through the official standalone image; newer deployments require current Agent Builder review |
+| Atlassian Rovo for Jira Cloud | Ticketing | Optional ticketing reference with identity and tool-surface review |
+| MongoDB official MCP server | Data | Official-server reference; live read-only controls and tool review required |
+| Grafana official MCP server | Observability | Official-server reference; live viewer access and tool review required |
+| Azure DevOps official MCP server | Ticketing | Official-server reference; live scope and tool review required |
+| Other official or custom server | Any | Starts as `REVIEW_REQUIRED` |
+
+Data and observability are mandatory investigation capabilities. Ticketing is optional because a developer can paste ticket content.
+
+## Security model
+
+Connecting an AI agent to production evidence is privileged. Rooty is one layer in a defense-in-depth design.
+
+- Use dedicated provider-side read-only identities, roles, replicas, scopes, and network controls.
+- Keep `.rooty/config/mcp-settings.local.json` Git-ignored and protected as a local secret file.
+- Keep values out of environment profiles, host MCP files, command arguments, plans, logs, doctor output, and chat.
+- Require HTTPS for remote endpoints; unauthenticated MCP is loopback-only.
+- Require explicit read-tool allowlists and fail closed when live tools are missing or unexpected.
+- Bound time windows, row counts, result sizes, and query cost.
+- Store case evidence outside the investigated source tree.
+- Treat tickets, documentation, logs, traces, database text, connector output, and prior memory as untrusted evidence—not instructions.
+- Require human review before reusable learning is approved.
+
+MCP annotations and host allowlists are useful controls, but provider permissions remain the real authorization boundary. Read the full [Security and threat model](docs/security.md) before connecting Rooty to production.
 
 ## Memory and learning
 
-Rooty learns reusable investigation shortcuts—not unreviewed conclusions or raw production data.
+Rooty learns reusable investigation shortcuts, not unreviewed conclusions or raw production evidence.
 
 ```console
 rooty memory propose \
@@ -224,49 +416,57 @@ rooty memory approve \
   --reviewed-by team-payments
 ```
 
-Only a currently verified `CONFIRMED` case can become a draft. Approval re-verifies the source case and evidence hash chain, requires a human or accountable team, rejects sensitive fields, and sets an expiry. Stable concern keys and reusable-content fingerprints reject duplicate or overlapping learning. Approved memory may suggest pivots and hypotheses in a later case; it can never prove the new case. Reinstall copies legacy `.investigator/memory` cards into `.rooty/memory` without deleting the originals.
+Only a currently verified `CONFIRMED` case can become a draft. Approval re-verifies the evidence hash chain, requires an accountable reviewer, rejects sensitive fields, and assigns an expiry. Approved memory can suggest later pivots and hypotheses; it can never prove a new case.
 
 Read [Memory and learning](docs/memory-and-learning.md) for lifecycle and governance details.
 
-## Supported hosts and providers
+## Offline demo and deterministic artifacts
 
-| Provider | Capability | Current setup status |
-|---|---|---|
-| Microsoft SQL MCP Server through DAB | Data | One isolated read-only MCP per live catalog on Codex, Cursor, and Claude |
-| Elastic standalone / Agent Builder | Observability | Elasticsearch 8.19.15 uses the official Docker image, `ES_VERSION=8`, and `list_indices` probe |
-| Atlassian Rovo for Jira Cloud | Ticketing | Standard Rooty reference; optional capability |
-| MongoDB official MCP server | Data | Agent reference; live tool review required |
-| Grafana official MCP server | Observability | Agent reference; live tool review required |
-| Azure DevOps official MCP server | Ticketing | Agent reference; live tool review required |
-| Other official or custom server | Any | Custom review required |
+The bundled snapshot uses synthetic evidence and requires no production access:
 
-Rooty supports project installation on Codex, Claude Code, and Cursor. Provider knowledge remains separate from host syntax so new providers do not require a provider-by-host implementation matrix. See [Architecture and integrations](docs/architecture.md).
+```console
+rooty init --host all --demo --project /path/to/sandbox-project
+rooty run ROOTY-101 \
+  --project /path/to/sandbox-project \
+  --snapshot /path/to/Rooty/evals/mock-sources/confirmed-timeout.json \
+  --case-dir /path/to/rooty-case-demo
+rooty report \
+  --project /path/to/sandbox-project \
+  --case-dir /path/to/rooty-case-demo
+```
 
-## Safety model
+This frozen-snapshot pipeline creates deterministic case state, a hash-chained evidence ledger, and a report. It is used for demonstrations, regression tests, and evaluation. Live investigations are performed by the configured AI host; automatic capture of a live host conversation into the persisted case pipeline is not yet implemented.
 
-Rooty uses defense in depth:
+## Current boundaries
 
-- Read-only agent instructions and host policies
-- Explicit MCP tool allowlists
-- HTTPS-only remote endpoints; unauthenticated access is loopback-only
-- Credential names in files, credential values outside files
-- Bounded log/trace windows, result limits, and `SELECT`-only demo database queries
-- Case evidence stored outside the investigated source tree
-- Append-only, hash-chained evidence ledgers
-- Prompt-injection resistance for tickets, docs, logs, database text, memory, and connector output
-- Human approval before reusable memory promotion
+- Rooty has no hosted gateway or central credential service.
+- Rooty installs project skills and its local launcher; it does not silently install provider runtimes, pull containers, or start OAuth.
+- The setup agent discovers provider signals from confirmed documentation and targeted safe project evidence; developers approve material choices and external actions.
+- Non-standard and version-dependent providers remain `REVIEW_REQUIRED` until current official documentation, read-only controls, and live tools are verified.
+- Live investigations run through the configured AI host and MCP connections.
+- Rooty reports investigation findings only. Remediation belongs to a separate workflow and accountable owner.
 
-The provider identity, database role or replica, and infrastructure policy remain the real security boundary. Read [Security and threat model](docs/security.md) before connecting Rooty to production.
+## Command map
 
-## MVP scope and current limits
+| Goal | Command |
+|---|---|
+| Install project skills | `rooty install` |
+| Show confirmed documentation | `rooty context show` |
+| Update documentation paths | `rooty context set-docs --paths knowledge` |
+| Inspect resumable setup | `rooty setup status` |
+| Discover environment candidates | `rooty env discover --json` |
+| List configured environments | `rooty env list` |
+| Preview an environment switch | `rooty env plan preprod` |
+| Apply an environment switch | `rooty env use preprod` |
+| Initialize local setting paths | `rooty settings init --keys prod.provider.url,prod.provider.token` |
+| Copy a private settings document | `rooty settings configure --file FILE` |
+| Check setting availability | `rooty settings status` |
+| Check package, project, and live readiness | `rooty doctor` |
+| Print the CLI version | `rooty --version` or `rooty -V` |
+| Run the frozen-snapshot pipeline | `rooty run TICKET --snapshot FILE --case-dir PATH` |
+| Render an existing case report | `rooty report --case-dir PATH` |
 
-- Rooty does not include a gateway; hosts connect directly to MCP servers.
-- The setup agent discovers provider signals from confirmed documentation and targeted current project evidence; the developer approves material choices and external actions.
-- The CLI does not install provider runtimes, pull containers, start OAuth, or persist credential values.
-- Provider references for MongoDB, Grafana, and Azure DevOps require live official-documentation and tool-surface review before use.
-- Live investigations are performed by the configured AI host using the installed skill and connectors.
-- The CLI's persisted case/ledger/memory pipeline currently consumes frozen investigation snapshots; automatic capture of a live host conversation into that pipeline is not yet implemented.
-- Rooty produces investigation findings only. Remediation belongs to a separate workflow and owner.
+See the complete [CLI reference](docs/cli-reference.md), including compatibility commands for earlier source-registry workflows.
 
 ## Documentation
 
@@ -281,7 +481,6 @@ The provider identity, database role or replica, and infrastructure policy remai
 - [CLI reference](docs/cli-reference.md)
 - [Troubleshooting](docs/troubleshooting.md)
 - [Agent-led setup requirements](docs/automatic-mcp-setup-requirements.md)
-- [Implementation plan](docs/automatic-mcp-setup-implementation-plan.md)
 
 ## Development
 
@@ -291,11 +490,9 @@ npm run doctor
 npm run eval
 ```
 
-`npm run doctor` checks package health without requiring project connectors. In an agent-led installation, `rooty doctor --project ...` reports `PACKAGE_READY`, `PROJECT_CONFIGURED`, and `INVESTIGATION_READY` independently and prints both the CLI and project versions.
+Rooty uses only Node.js standard-library modules at runtime. The evaluation suite replays 15 independent frozen cases covering confirmed, probable, and inconclusive outcomes; evidence abstention; prompt injection; bounded source access; and blocked mutation attempts.
 
-The project uses only Node.js standard-library modules. The 15-case evaluation covers confirmed, probable, and inconclusive outcomes; evidence abstention; prompt injection; bounded source access; and blocked mutation attempts.
-
-The explainer video and README GIF are regenerated from real CLI output with `node tools/video/generate.mjs`; see [`tools/video/README.md`](tools/video/README.md). The pipeline needs `ffmpeg` and Chrome but adds no npm dependencies, and neither it nor `media/` ships in the npm package.
+The explainer media is generated from captured CLI output with `node tools/video/generate.mjs`; see [`tools/video/README.md`](tools/video/README.md). The pipeline requires `ffmpeg` and Chrome, adds no package runtime dependencies, and is excluded from the npm tarball.
 
 ## License
 

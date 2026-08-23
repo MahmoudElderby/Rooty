@@ -9,6 +9,7 @@ const require = createRequire(import.meta.url);
 const {
   childEnvironment,
   dabArgs,
+  materializeSqlCredential,
   parseArgs,
   prepareLaunch,
   validateDabConfig,
@@ -73,6 +74,43 @@ test("launcher parses one fixed absolute per-catalog invocation", () => {
       ASPNETCORE_URLS: "http://127.0.0.1:55101"
     }),
     { configDirectory: path.dirname(configPath), port: 55101 }
+  );
+});
+
+test("launcher assembles one in-memory connection string from grouped environment settings", () => {
+  const invocation = parseArgs([
+    "--dab", dabPath,
+    "--config", configPath,
+    "--credential-env", "ROOTY_SQL_ORDERS_PROD",
+    "--server-env", "ROOTY_SQL_PROD_SERVER",
+    "--database-env", "ROOTY_SQL_PROD_CATALOG",
+    "--options-env", "ROOTY_SQL_PROD_OPTIONS",
+    "--user-env", "ROOTY_SQL_PROD_USER",
+    "--password-env", "ROOTY_SQL_PROD_PASSWORD"
+  ]);
+  const env = {
+    ROOTY_SQL_PROD_SERVER: "sql-ecm-prd-san-1.database.windows.net",
+    ROOTY_SQL_PROD_CATALOG: "StoreCloud_Orders",
+    ROOTY_SQL_PROD_OPTIONS: "TrustServerCertificate=True;Trusted_Connection=False;Encrypt=True;MultipleActiveResultSets=true;",
+    ROOTY_SQL_PROD_USER: "rooty_reader",
+    ROOTY_SQL_PROD_PASSWORD: "p;ass\"word"
+  };
+  materializeSqlCredential(invocation, env);
+  assert.equal(
+    env.ROOTY_SQL_ORDERS_PROD,
+    'Server="sql-ecm-prd-san-1.database.windows.net";Database="StoreCloud_Orders";TrustServerCertificate=True;Trusted_Connection=False;Encrypt=True;MultipleActiveResultSets=true;User ID="rooty_reader";Password="p;ass""word"'
+  );
+  assert.equal(env.ROOTY_SQL_PROD_SERVER, undefined);
+  assert.equal(env.ROOTY_SQL_PROD_CATALOG, undefined);
+  assert.equal(env.ROOTY_SQL_PROD_OPTIONS, undefined);
+  assert.throws(
+    () => parseArgs([
+      "--dab", dabPath,
+      "--config", configPath,
+      "--credential-env", "ROOTY_SQL_ORDERS_PROD",
+      "--server-env", "ROOTY_SQL_PROD_SERVER"
+    ]),
+    /require --server-env, --database-env, --options-env, --user-env, and --password-env together/
   );
 });
 

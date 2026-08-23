@@ -88,14 +88,14 @@ Run `rooty settings status` and read the setup agent's settings table. Both name
 
 ### `Rooty DAB launcher: credential setting ... was not injected`
 
-The inner DAB launcher did not receive a declared connection setting from `.rooty/start-mcp.cjs`. Confirm that the target lists the key in `settings_keys`, the host entry includes it in `--keys`, and `.rooty/config/mcp-settings.local.json` contains a non-empty value. Restart the host after correcting it. Never put the connection string into committed MCP JSON/TOML or `dab-config.json`.
+The inner DAB launcher did not receive every declared grouped SQL component from `.rooty/start-mcp.cjs`. Confirm that the target lists the environment's `sql.server`, `sql.options`, `sql.user`, `sql.password`, catalog `name`, and catalog `mcp_url` paths in `settings_keys`; the host entry maps them in `--keys`; and `.rooty/config/mcp-settings.local.json` contains non-empty values. Restart the host after correcting it. Never put the assembled connection string into committed MCP JSON/TOML or `dab-config.json`.
 
 ### A per-catalog SQL MCP closes or advertises zero tools
 
 Open that server's host MCP log and use the launcher message to correct only the named catalog. Confirm:
 
 - absolute Node, `.rooty/start-dab.cjs`, DAB, and `.rooty/mcp/data/sql-server/<environment>/<domain>/dab-config.json` paths;
-- a unique JSON port setting mapped as `SOURCE_KEY=ASPNETCORE_URLS`, with an explicit `http://127.0.0.1:<port>` value rather than port zero;
+- a unique catalog `mcp_url` path mapped as `SOURCE_PATH=ASPNETCORE_URLS`, with an explicit `http://127.0.0.1:<port>` value rather than port zero;
 - explicit live-metadata entities and the `rooty-reader` read permission;
 - no `.env`, `data-source-files`, autoentities, `DAB_ENVIRONMENT`, shell wrapper, or mutation-enabled tool;
 - DAB starts through MCP initialize with `describe_entities`, `read_records`, and `aggregate_records`.

@@ -24,18 +24,71 @@ function fail(message) {
 }
 
 function parseArgs(argv) {
-  const expected = ["--dab", "--config", "--credential-env"];
-  if (argv.length !== 6) {
-    fail("expected --dab <absolute-dab> --config <absolute-dab-config> --credential-env <binding-name>");
+  const allowed = new Set([
+    "--dab", "--config", "--credential-env", "--server-env", "--database-env", "--options-env", "--user-env", "--password-env"
+  ]);
+  if (!argv.length || argv.length % 2 !== 0) {
+    fail("expected option/value pairs for DAB, config, and credential bindings");
   }
-  for (let index = 0; index < expected.length; index += 1) {
-    if (argv[index * 2] !== expected[index]) fail(`expected ${expected[index]}`);
+  const values = {};
+  for (let index = 0; index < argv.length; index += 2) {
+    const flag = argv[index];
+    const value = argv[index + 1];
+    if (!allowed.has(flag)) fail(`unsupported argument: ${flag}`);
+    if (!value) fail(`${flag} requires a value`);
+    if (Object.prototype.hasOwnProperty.call(values, flag)) fail(`duplicate argument: ${flag}`);
+    values[flag] = value;
   }
-  return {
-    dabPath: argv[1],
-    configPath: argv[3],
-    credentialName: argv[5]
+  for (const flag of ["--dab", "--config", "--credential-env"]) {
+    if (!values[flag]) fail(`expected ${flag}`);
+  }
+  const componentFlags = ["--server-env", "--database-env", "--options-env", "--user-env", "--password-env"];
+  const componentCount = componentFlags.filter((flag) => values[flag]).length;
+  if (componentCount !== 0 && componentCount !== componentFlags.length) {
+    fail("grouped SQL settings require --server-env, --database-env, --options-env, --user-env, and --password-env together");
+  }
+  const invocation = {
+    dabPath: values["--dab"],
+    configPath: values["--config"],
+    credentialName: values["--credential-env"]
   };
+  if (componentCount) {
+    invocation.serverName = values["--server-env"];
+    invocation.databaseName = values["--database-env"];
+    invocation.optionsName = values["--options-env"];
+    invocation.userName = values["--user-env"];
+    invocation.passwordName = values["--password-env"];
+  }
+  return invocation;
+}
+
+function quoteConnectionValue(value, name) {
+  if (typeof value !== "string" || value === "") fail(`SQL ${name} setting was not injected by the Rooty MCP launcher`);
+  if (/[\0\r\n]/.test(value)) fail(`SQL ${name} setting contains a forbidden control character`);
+  return `"${value.replaceAll('"', '""')}"`;
+}
+
+function sqlOptions(value) {
+  if (typeof value !== "string" || value === "") fail("SQL options setting was not injected by the Rooty MCP launcher");
+  if (/[\0\r\n]/.test(value)) fail("SQL options setting contains a forbidden control character");
+  return value.endsWith(";") ? value.slice(0, -1) : value;
+}
+
+function materializeSqlCredential(invocation, env) {
+  const components = [invocation.serverName, invocation.databaseName, invocation.optionsName, invocation.userName, invocation.passwordName];
+  if (components.every((name) => name === undefined)) return env;
+  if (components.some((name) => !BINDING_PATTERN.test(name ?? ""))) {
+    fail("grouped SQL component bindings must use the ROOTY_SQL_<NAME> naming convention");
+  }
+  env[invocation.credentialName] = [
+    `Server=${quoteConnectionValue(env[invocation.serverName], "server")}`,
+    `Database=${quoteConnectionValue(env[invocation.databaseName], "catalog")}`,
+    sqlOptions(env[invocation.optionsName]),
+    `User ID=${quoteConnectionValue(env[invocation.userName], "user")}`,
+    `Password=${quoteConnectionValue(env[invocation.passwordName], "password")}`
+  ].join(";");
+  for (const name of components) delete env[name];
+  return env;
 }
 
 function trailingSegments(directory, count) {
@@ -177,7 +230,9 @@ function dabArgs(configPath) {
 
 function prepareLaunch(argv = process.argv.slice(2), env = process.env) {
   const invocation = parseArgs(argv);
-  const { configDirectory } = validateInvocation(invocation, env);
+  const runtimeEnv = childEnvironment(env);
+  materializeSqlCredential(invocation, runtimeEnv);
+  const { configDirectory } = validateInvocation(invocation, runtimeEnv);
   for (const file of [invocation.dabPath, invocation.configPath]) {
     if (!existsSync(file) || !statSync(file).isFile()) fail(`required file is unavailable: ${file}`);
   }
@@ -198,7 +253,7 @@ function prepareLaunch(argv = process.argv.slice(2), env = process.env) {
     args: dabArgs(invocation.configPath),
     options: {
       cwd: configDirectory,
-      env: childEnvironment(env),
+      env: runtimeEnv,
       shell: false,
       stdio: "inherit",
       windowsHide: true
@@ -229,6 +284,7 @@ module.exports = {
   isCanonicalConfigDirectory,
   isLegacyConfigDirectory,
   launch,
+  materializeSqlCredential,
   parseArgs,
   prepareLaunch,
   validateDabConfig,

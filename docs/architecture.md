@@ -92,7 +92,7 @@ The next engine contract will accept a canonical agent-authored provider proposa
 
 ## Credentials
 
-Every active-host MCP entry declares all required JSON setting keys and invokes `.rooty/start-mcp.cjs`. Values belong only in `.rooty/config/mcp-settings.local.json`, never in committed state, host files, profiles, proposals, logs, or chat. Host-managed OAuth remains separate when a provider requires interactive authorization.
+Every active-host MCP entry declares all required JSON setting paths and invokes `.rooty/start-mcp.cjs`. New settings are grouped by environment under schema version 2; legacy flat schema-version-1 files remain readable. Values belong only in `.rooty/config/mcp-settings.local.json`, never in committed state, host files, profiles, proposals, logs, or chat. Host-managed OAuth remains separate when a provider requires interactive authorization.
 
 Provider-side read-only identities are the security boundary. Server read-only modes and host tool allowlists provide additional layers.
 

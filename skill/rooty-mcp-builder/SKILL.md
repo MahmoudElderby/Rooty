@@ -33,6 +33,7 @@ Produce a proposal before any mutation. Include:
 - a stable logical source ID and one environment-visible rendered MCP name such as `rooty-prod-sql-orders` or `rooty-preprod-sql-orders`; never render two environments for the same logical source at once;
 - generated artifact paths under `.rooty/mcp/<category>/<provider>/`, created on first approved write; environment-specific SQL Server setup adds one catalog folder at `.rooty/mcp/data/sql-server/<environment>/<domain>/dab-config.json` plus the shared `.rooty/start-dab.cjs`;
 - every local MCP setting key and where its value must be supplied in `.rooty/config/mcp-settings.local.json`;
+- for every detected data source, the schema-version-2 grouped setting paths under the target environment: shared provider metadata once, placeholders for sensitive leaves, and per-resource entries only where the provider needs them; for SQL Server this means shared `sql.server`, `sql.options`, `sql.user`, and `sql.password`, plus one `sql.catalogs.<domain>.name` and unique `sql.catalogs.<domain>.mcp_url` per catalog;
 - provider-side read-only identity or role and server-side read-only controls;
 - explicit allowed and forbidden tool categories;
 - one harmless initialization/read probe;
@@ -46,10 +47,12 @@ Never place a credential value in the proposal, environment profile, host config
 1. Show the exact proposed diff or host-native add command.
 2. Request approval using the active host's approval experience.
 3. Preserve unrelated host configuration and refuse an ambiguous merge.
-4. Initialize every required key with `rooty settings init --keys <KEY,...>`. Ask the developer to populate the local JSON directly or import a prepared JSON with `rooty settings configure --file <FILE>`; never request values in chat.
+4. Initialize every required key or nested setting path with `rooty settings init --keys <KEY_OR_PATH,...>`. Ask the developer to populate the local JSON directly or import a prepared JSON with `rooty settings configure --file <FILE>`; never request values in chat. New SQL settings must use schema version 2 and group shared connection fields by environment.
 5. Render every settings-backed host entry through `.rooty/start-mcp.cjs`, passing only the absolute settings path and declared key names. Never use host `env_vars`, `${VAR}` interpolation, or machine environment inheritance for MCP values.
 6. Do not install Docker, pull an image, run a package, or begin OAuth without separate approval.
 7. Record every reviewed environment target in `.rooty/config/environment-profiles.json`, including host renderings, setting key names, artifacts, exact allowed tools, and an identity probe with an expected environment marker. Never store values there.
+
+For grouped SQL settings, map nested paths to child-process names explicitly in `--keys`, for example `prod.sql.server=ROOTY_SQL_PROD_SERVER`. Map the catalog's unique `mcp_url` to `ASPNETCORE_URLS`. Invoke `.rooty/start-dab.cjs` with all five component bindings (`--server-env`, `--database-env`, `--options-env`, `--user-env`, and `--password-env`) so it assembles the DAB connection string only in memory. A shared user is allowed only when that identity is independently restricted to `SELECT` in every included catalog.
 
 ## Verify
 

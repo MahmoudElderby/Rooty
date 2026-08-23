@@ -204,13 +204,15 @@ MongoDB, Grafana, and Azure DevOps must be configured from current official guid
 
 ## 11. MCP settings and credentials
 
-Every active-host MCP entry must invoke `.rooty/start-mcp.cjs` and declare every key it requires. The canonical local document is:
+Every active-host MCP entry must invoke `.rooty/start-mcp.cjs` and declare every key or dot-separated path it requires. New local documents group values by environment:
 
 ```json
-{ "schema_version": 1, "settings": { "ROOTY_PROVIDER_TOKEN": "<local value>" } }
+{ "schema_version": 2, "settings": { "prod": { "provider": { "token": "<local value>" } } } }
 ```
 
 The file is always Git-ignored and is the only Rooty project-state exception permitted to contain credential values. Values must never be stored in Git, profiles, proposals, generated host files, logs, doctor output, command arguments, or chat. Host-managed OAuth metadata remains acceptable when interactive OAuth is required.
+
+SQL Server setup must use one group per environment with shared `sql.server`, `sql.options`, `sql.user`, and `sql.password` leaves. Each discovered catalog keeps only `sql.catalogs.<domain>.name` and a unique `sql.catalogs.<domain>.mcp_url`. The launcher constructs the catalog connection string in memory. Flat per-catalog connection strings must not be generated for new setup.
 
 After rendering, Rooty must show:
 

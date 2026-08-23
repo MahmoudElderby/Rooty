@@ -14,7 +14,7 @@ For SQL Server, also read the provider's [tested per-catalog pattern](../provide
 ```toml
 [mcp_servers.rooty_provider]
 command = "absolute-node"
-args = ["C:/project/.rooty/start-mcp.cjs", "--settings", "C:/project/.rooty/config/mcp-settings.local.json", "--keys", "ROOTY_REQUIRED_SETTING", "--", "provider-command", "provider-arguments"]
+args = ["C:/project/.rooty/start-mcp.cjs", "--settings", "C:/project/.rooty/config/mcp-settings.local.json", "--keys", "prod.provider.required=ROOTY_REQUIRED_SETTING", "--", "provider-command", "provider-arguments"]
 enabled = true
 required = true
 enabled_tools = ["verified_read_tool"]
@@ -28,7 +28,7 @@ Declare every required value in `settings_keys` and put the local value only in 
 ```toml
 [mcp_servers.rooty_provider]
 command = "absolute-node"
-args = ["C:/project/.rooty/start-mcp.cjs", "--settings", "C:/project/.rooty/config/mcp-settings.local.json", "--keys", "ROOTY_PROVIDER_URL,ROOTY_PROVIDER_TOKEN", "--url", "${ROOTY_PROVIDER_URL}", "--header", "Authorization: Bearer ${ROOTY_PROVIDER_TOKEN}"]
+args = ["C:/project/.rooty/start-mcp.cjs", "--settings", "C:/project/.rooty/config/mcp-settings.local.json", "--keys", "prod.provider.url,prod.provider.token", "--url", "${prod.provider.url}", "--header", "Authorization: Bearer ${prod.provider.token}"]
 enabled = true
 required = true
 enabled_tools = ["verified_read_tool"]

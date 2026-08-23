@@ -87,12 +87,12 @@ npx rooty-investigator context set-docs --paths knowledge
 Populate settings without exposing values in shell arguments:
 
 ```console
-npx rooty-investigator settings init --keys ROOTY_PROVIDER_URL,ROOTY_PROVIDER_TOKEN
+npx rooty-investigator settings init --keys prod.provider.url,prod.provider.token
 npx rooty-investigator settings configure --file C:/private/rooty-settings.json
 npx rooty-investigator settings status
 ```
 
-The private source and `.rooty/config/mcp-settings.local.json` use `{ "schema_version": 1, "settings": { ... } }`. Neither should be committed; status output contains key names only.
+The private source and `.rooty/config/mcp-settings.local.json` use schema version 2 with settings grouped by environment. Existing flat schema-version-1 files remain compatible. Neither should be committed; status output contains setting paths only.
 
 Rooty recommends `knowledge/` when that folder exists; otherwise confirm the actual project entry points such as `README.md,docs`. To explicitly confirm there is no documentation entry point, use `context set-docs --none`. Inspect resumable setup with `setup status`.
 

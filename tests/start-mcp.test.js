@@ -13,12 +13,12 @@ const LAUNCHER = path.join(ROOT, "skill/rooty-mcp-builder/assets/start-mcp.cjs")
 const require = createRequire(import.meta.url);
 const { loadSettings, parseArgs, runStdio, substitute } = require(LAUNCHER);
 
-async function settingsFile(values) {
+async function settingsFile(values, schemaVersion = 1) {
   const projectRoot = await mkdtemp(path.join(os.tmpdir(), "rooty-mcp-settings-"));
   const directory = path.join(projectRoot, ".rooty/config");
   await mkdir(directory, { recursive: true });
   const file = path.join(directory, "mcp-settings.local.json");
-  await writeFile(file, `${JSON.stringify({ schema_version: 1, settings: values }, null, 2)}\n`);
+  await writeFile(file, `${JSON.stringify({ schema_version: schemaVersion, settings: values }, null, 2)}\n`);
   return file;
 }
 
@@ -50,6 +50,48 @@ test("MCP launcher can map a JSON setting to the child process key a server expe
   });
   assert.equal(options.env.ASPNETCORE_URLS, "http://127.0.0.1:5101");
   assert.equal(options.env.ROOTY_ORDERS_PROD_URLS, undefined);
+});
+
+test("MCP launcher resolves grouped environment paths and maps them to child keys", async () => {
+  const file = await settingsFile({
+    prod: {
+      sql: {
+        server: "sql-ecm-prd-san-1.database.windows.net",
+        user: "rooty_reader",
+        password: "secret-value",
+        options: "TrustServerCertificate=True;Trusted_Connection=False;Encrypt=True;MultipleActiveResultSets=true",
+        catalogs: { orders: { name: "StoreCloud_Orders", mcp_url: "http://127.0.0.1:55104" } },
+        elasticsearch: { ignored: "provider nesting is explicit under prod, not sql" }
+      },
+      elasticsearch: {
+        url: "https://els-ecm-prd-san-1.example.test",
+        username: "elastic",
+        password: "elastic-secret"
+      }
+    }
+  }, 2);
+  const bindings = [
+    "prod.sql.server=ROOTY_SQL_PROD_SERVER",
+    "prod.sql.user=ROOTY_SQL_PROD_USER",
+    "prod.sql.password=ROOTY_SQL_PROD_PASSWORD",
+    "prod.sql.options=ROOTY_SQL_PROD_OPTIONS",
+    "prod.sql.catalogs.orders.name=ROOTY_SQL_PROD_CATALOG",
+    "prod.sql.catalogs.orders.mcp_url=ASPNETCORE_URLS",
+    "prod.elasticsearch.url=ROOTY_ES_PROD_URL",
+    "prod.elasticsearch.password=ROOTY_ES_PROD_PASSWORD"
+  ].join(",");
+  const invocation = parseArgs(["--settings", file, "--keys", bindings, "--", process.execPath]);
+  let options;
+  runStdio(invocation, loadSettings(file, invocation.keys), (_command, _args, received) => {
+    options = received;
+    return { once() {}, kill() {} };
+  });
+  assert.equal(options.env.ROOTY_SQL_PROD_SERVER, "sql-ecm-prd-san-1.database.windows.net");
+  assert.equal(options.env.ROOTY_SQL_PROD_CATALOG, "StoreCloud_Orders");
+  assert.equal(options.env.ROOTY_SQL_PROD_OPTIONS, "TrustServerCertificate=True;Trusted_Connection=False;Encrypt=True;MultipleActiveResultSets=true");
+  assert.equal(options.env.ROOTY_ES_PROD_URL, "https://els-ecm-prd-san-1.example.test");
+  assert.equal(options.env.ROOTY_ES_PROD_PASSWORD, "elastic-secret");
+  assert.equal(options.env.ASPNETCORE_URLS, "http://127.0.0.1:55104");
 });
 
 test("HTTP MCP bridge resolves URL and authorization from local JSON settings", async () => {
