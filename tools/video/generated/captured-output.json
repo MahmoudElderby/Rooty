@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "generator": "tools/video/capture.mjs",
-  "rooty_version": "0.4.0",
-  "node_version": "v20.20.0",
+  "rooty_version": "0.4.1",
+  "node_version": "v24.19.0",
   "display_project": "~/work/checkout-api",
   "display_case_dir": "~/rooty-cases/INV-20260815-DEMO0001",
   "install": {
@@ -12,7 +12,7 @@
       "INSTALLED Rooty skills for Claude, Codex, Cursor",
       "HOSTS     claude, codex, cursor (no host detected; installed for all)",
       "PROJECT   ~/work/checkout-api",
-      "SKILLS    rooty-setup, rooty-mcp-builder, root-cause-investigator in .agents/skills, .claude/skills",
+      "SKILLS    rooty-setup, rooty-mcp-builder, root-cause-investigator, log-storage-review in .agents/skills, .claude/skills",
       "ROOTY     .rooty/start-mcp.cjs + {config,state,memory/{drafts,approved}}",
       "SETTINGS  .rooty/config/mcp-settings.local.json (local, Git-ignored)",
       "MEMORY    ~/work/checkout-api\\.rooty\\memory\\drafts",
@@ -25,7 +25,7 @@
       "INSTALLED Rooty skills for Claude, Codex, Cursor",
       "HOSTS     claude, codex, cursor (reused from the previous install)",
       "PROJECT   ~/work/checkout-api",
-      "SKILLS    rooty-setup, rooty-mcp-builder, root-cause-investigator in .agents/skills, .claude/skills",
+      "SKILLS    rooty-setup, rooty-mcp-builder, root-cause-investigator, log-storage-review in .agents/skills, .claude/skills",
       "ROOTY     .rooty/start-mcp.cjs + {config,state,memory/{drafts,approved}}",
       "SETTINGS  .rooty/config/mcp-settings.local.json (local, Git-ignored)",
       "MEMORY    ~/work/checkout-api\\.rooty\\memory\\drafts",
@@ -38,6 +38,14 @@
     "tree": [
       ".agents",
       ".agents/skills",
+      ".agents/skills/log-storage-review",
+      ".agents/skills/log-storage-review/agents",
+      ".agents/skills/log-storage-review/agents/openai.yaml",
+      ".agents/skills/log-storage-review/references",
+      ".agents/skills/log-storage-review/references/analysis-playbook.md",
+      ".agents/skills/log-storage-review/references/identity-normalization.md",
+      ".agents/skills/log-storage-review/references/provider-adapters.md",
+      ".agents/skills/log-storage-review/SKILL.md",
       ".agents/skills/root-cause-investigator",
       ".agents/skills/root-cause-investigator/agents",
       ".agents/skills/root-cause-investigator/agents/openai.yaml",
@@ -88,6 +96,14 @@
       ".agents/skills/rooty-setup/SKILL.md",
       ".claude",
       ".claude/skills",
+      ".claude/skills/log-storage-review",
+      ".claude/skills/log-storage-review/agents",
+      ".claude/skills/log-storage-review/agents/openai.yaml",
+      ".claude/skills/log-storage-review/references",
+      ".claude/skills/log-storage-review/references/analysis-playbook.md",
+      ".claude/skills/log-storage-review/references/identity-normalization.md",
+      ".claude/skills/log-storage-review/references/provider-adapters.md",
+      ".claude/skills/log-storage-review/SKILL.md",
       ".claude/skills/root-cause-investigator",
       ".claude/skills/root-cause-investigator/agents",
       ".claude/skills/root-cause-investigator/agents/openai.yaml",
@@ -169,6 +185,10 @@
           "files": 8
         },
         {
+          "label": ".agents/skills/log-storage-review/",
+          "files": 5
+        },
+        {
           "label": ".claude/skills/rooty-setup/",
           "files": 5
         },
@@ -179,9 +199,13 @@
         {
           "label": ".claude/skills/root-cause-investigator/",
           "files": 8
+        },
+        {
+          "label": ".claude/skills/log-storage-review/",
+          "files": 5
         }
       ],
-      "skillFileTotal": 62,
+      "skillFileTotal": 72,
       "rootyFiles": [
         ".rooty/config/mcp-settings.local.json",
         ".rooty/config/project-context.json",
@@ -201,26 +225,27 @@
     "skills": [
       "rooty-setup",
       "rooty-mcp-builder",
-      "root-cause-investigator"
+      "root-cause-investigator",
+      "log-storage-review"
     ],
     "skillTargets": [
       ".agents/skills",
       ".claude/skills"
     ],
     "installationMode": "agent-led-v3",
-    "manifestFileCount": 63,
+    "manifestFileCount": 73,
     "trackedFileHashSample": [
       {
-        "file": ".agents/skills/root-cause-investigator/agents/openai.yaml",
-        "hash": "b12f857a59611b91c457464593bbf968e658c258ef83e3a22368d76c8f3c8fc1"
+        "file": ".agents/skills/log-storage-review/agents/openai.yaml",
+        "hash": "527555f4c93c464ddc68f19bac79899ca0c1ccebf6ca988d6ba32cc99d9b67ed"
       },
       {
-        "file": ".agents/skills/root-cause-investigator/references/evidence-standard.md",
-        "hash": "0a56c7e64a2d0ef833fba0e958789f89515fe0b78a40c8c22d9de3f8ba7e79e9"
+        "file": ".agents/skills/log-storage-review/references/analysis-playbook.md",
+        "hash": "c1be7def96bdc6f67776742a407cf9b4f84b38cd0b5a329f0e1782d933cc92c0"
       },
       {
-        "file": ".agents/skills/root-cause-investigator/references/investigation-workflow.md",
-        "hash": "8af8fcbd5d540919880e8eaf2f05721de0a54b0deb453e8b06345cd94527b787"
+        "file": ".agents/skills/log-storage-review/references/identity-normalization.md",
+        "hash": "ee07154be8d250aa0541756073da9bfd14ff9d6bf6faa98d025d935c5b9bfd26"
       }
     ],
     "context": {
@@ -259,24 +284,24 @@
       ".rooty-cases/"
     ],
     "doctorLines": [
-      "VERSION 0.4.0 (project 0.4.0)",
+      "VERSION 0.4.1 (project 0.4.1)",
       "PACKAGE_READY READY",
-      "  PASS package-version: rooty-investigator@0.4.0",
-      "  PASS node-version: Node 20.20.0; Rooty requires Node 20 or newer",
-      "  PASS skill: 3 Rooty skills are discoverable or packaged",
+      "  PASS package-version: rooty-investigator@0.4.1",
+      "  PASS node-version: Node 24.19.0; Rooty requires Node 20 or newer",
+      "  PASS skill: 4 Rooty skills are discoverable or packaged",
       "  PASS connector-recipes: 9 provider recipes have read-only allowlists and probes",
       "  PASS mcp-tools: 6 bundled tools are explicitly read-only",
-      "  PASS mcp-startup: Bundled connector started as rooty-snapshot-readonly@0.4.0",
+      "  PASS mcp-startup: Bundled connector started as rooty-snapshot-readonly@0.4.1",
       "  PASS replay-suite: 15 independent frozen replay cases validate",
       "  PASS gitignore: Packaged project gitignore template covers Rooty runtime evidence and drafts",
       "PROJECT_CONFIGURED NOT_READY",
-      "  PASS install-manifest: Rooty 0.4.0 uses agent-led-v3",
-      "  PASS installed-skills: 3 skills are intact for Claude, Codex, Cursor",
+      "  PASS install-manifest: Rooty 0.4.1 uses agent-led-v3",
+      "  PASS installed-skills: 4 skills are intact for Claude, Codex, Cursor",
       "  PASS rooty-layout: Canonical memory is available at .rooty/memory",
       "  PASS memory-gitignore: MCP settings, memory drafts, and local setup/environment state are excluded from Git",
       "  PASS documentation-context: 2 confirmed documentation path(s) are available to the setup agent",
       "  PASS mcp-settings: .rooty/config/mcp-settings.local.json is available and valid",
-      "  PASS project-version: Project and CLI both use Rooty 0.4.0",
+      "  PASS project-version: Project and CLI both use Rooty 0.4.1",
       "  PASS setup-progress: Setup progress is in_progress at INSTALLED",
       "  FAIL environment-profiles: No confirmed environment profiles found",
       "  FAIL host-mcp-config: No active Rooty host MCP config is confirmed; expected one of: .mcp.json, .codex/config.toml, .cursor/mcp.json",

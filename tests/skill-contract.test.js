@@ -139,3 +139,30 @@ test("setup supports confirmed environment discovery and conversational determin
     "exactly one target per logical catalog"
   ]);
 });
+
+test("log storage review stays scoped, provider-neutral, file-capable, and report-only", async () => {
+  const skill = await content("skill/log-storage-review/SKILL.md");
+  const playbook = await content("skill/log-storage-review/references/analysis-playbook.md");
+  const normalization = await content("skill/log-storage-review/references/identity-normalization.md");
+  const adapters = await content("skill/log-storage-review/references/provider-adapters.md");
+
+  requires(skill, [
+    "Store-wide",
+    "Target-scoped",
+    "lightweight parent baseline",
+    "Repeated calls",
+    "Payload size",
+    "Daily growth",
+    "Report only"
+  ]);
+  requires(playbook, ["Lock the scope", "compatible totals", "Do not silently widen"]);
+  requires(normalization, ["do not carry discovered project rules back into this skill", "raw-to-canonical mapping"]);
+  requires(adapters, [
+    "Scoped execution",
+    "File-based logs",
+    "stream records",
+    "event timestamps",
+    "Never truncate",
+    "Target filter is unavailable or ambiguous"
+  ]);
+});

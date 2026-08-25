@@ -1,0 +1,6 @@
+interface:
+  display_name: "Log Storage Review"
+  short_description: "Rank what is filling the log store and what to cut"
+  default_prompt: "Use $log-storage-review to review an entire log store or a named service, API, response, or file family, then rank read-only reduction priorities."
+policy:
+  allow_implicit_invocation: true

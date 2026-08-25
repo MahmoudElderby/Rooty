@@ -1,14 +1,14 @@
 # Rooty
 
-> Evidence-first root-cause investigation for Codex, Claude Code, and Cursor.
+> Evidence-first production investigation and log-storage review for Codex, Claude Code, and Cursor.
 
 [![Node.js 20+](https://img.shields.io/badge/Node.js-20%2B-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
 [![npm package](https://img.shields.io/npm/v/rooty-investigator?logo=npm&label=rooty-investigator)](https://www.npmjs.com/package/rooty-investigator)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-Rooty helps an AI coding agent investigate production incidents across source code, documentation, tickets, logs, traces, databases, and deployment history. It reconstructs the expected path, follows current-case evidence to the first verified divergence, tests competing explanations, and reports only what the evidence supports.
+Rooty helps an AI coding agent investigate production incidents across source code, documentation, tickets, logs, traces, databases, and deployment history. It also reviews provider-backed or file-based log storage to rank repeated calls, payload volume, and daily growth across a whole store or a named service, API, response, or log family.
 
-Rooty investigates. It does **not** patch code, change data, mutate tickets, deploy, mitigate, or approve its own reusable memory.
+Rooty investigates and reviews. It does **not** patch code, change data, mutate tickets, deploy, mitigate, or approve its own reusable memory.
 
 ![Rooty investigation walkthrough](https://raw.githubusercontent.com/MahmoudElderby/Rooty/main/rooty-how-it-works.gif)
 
@@ -89,6 +89,12 @@ Investigate PAY-123. Root cause only.
 Do not propose or apply fixes. Validate every assumption with current-case evidence.
 ```
 
+Or ask which logs consume storage and what to reduce first:
+
+```text
+Use $log-storage-review to review this log store. Report the repeated-call, payload-size, and daily-growth rankings. Do not make changes.
+```
+
 ## How Rooty is organized
 
 Rooty has no hosted gateway or central credential store. The installed AI host runs a project-local launcher that reads only declared local settings, then starts a reviewed stdio MCP server or bridges stdio to a reviewed Streamable HTTP endpoint.
@@ -120,12 +126,14 @@ The deterministic CLI owns paths, schemas, installation fingerprints, safe host 
 .agents/skills/                         # Codex and Cursor
 ├── rooty-setup/
 ├── rooty-mcp-builder/
-└── root-cause-investigator/
+├── root-cause-investigator/
+└── log-storage-review/
 
 .claude/skills/                         # Claude Code
 ├── rooty-setup/
 ├── rooty-mcp-builder/
-└── root-cause-investigator/
+├── root-cause-investigator/
+└── log-storage-review/
 
 .rooty/
 ├── start-mcp.cjs                       # managed settings-backed launcher

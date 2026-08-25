@@ -1,12 +1,14 @@
 {
   "name": "rooty-investigator",
   "version": "0.4.1",
-  "description": "Agent-led, read-only root-cause investigation skills and setup CLI",
+  "description": "Agent-led, read-only root-cause investigation and log-storage review skills with setup CLI",
   "keywords": [
     "ai-agent",
     "debugging",
     "incident-investigation",
+    "log-analysis",
     "mcp",
+    "observability",
     "root-cause-analysis",
     "agent-skills"
   ],
