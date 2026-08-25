@@ -340,7 +340,11 @@ export async function setDocumentationPaths({ projectRoot, documentationPaths, c
   return { file: contextFile, context };
 }
 
-export async function installRooty({ packageRoot, projectRoot, documentationPaths = [], hosts = [] }) {
+export async function installRooty({ packageRoot, projectRoot, documentationPaths = [], hosts = [], onProgress }) {
+  const progress = (current, total, label) => {
+    if (typeof onProgress === "function") onProgress({ current, total, label });
+  };
+  progress(0, 1, "Validating project");
   const resolved = await assertProjectRoot(projectRoot);
   for (const relative of [
     ROOTY_PATHS.manifest,
@@ -353,6 +357,9 @@ export async function installRooty({ packageRoot, projectRoot, documentationPath
   const manifest = await readManifest(resolved);
   const { hosts: selectedHosts, selection } = await resolveInstallHosts(resolved, hosts, manifest);
   const targets = skillTargetsForHosts(selectedHosts);
+  const progressTotal = targets.length * ROOTY_SKILLS.length + 4;
+  let progressCurrent = 1;
+  progress(progressCurrent, progressTotal, "Checking managed launcher");
   const planned = [];
   const nextFiles = {};
 
@@ -400,6 +407,8 @@ export async function installRooty({ packageRoot, projectRoot, documentationPath
         }
         nextFiles[key] = sourceHash;
       }
+      progressCurrent += 1;
+      progress(progressCurrent, progressTotal, `Checking ${skill} for ${targetRoot}`);
     }
   }
 
@@ -427,6 +436,9 @@ export async function installRooty({ packageRoot, projectRoot, documentationPath
     : await readProjectContext(resolved);
 
   const memoryMigration = await migrateLegacyMemory(resolved);
+
+  progressCurrent += 1;
+  progress(progressCurrent, progressTotal, "Writing skills and local state");
 
   for (const directory of ROOTY_PROJECT_DIRECTORIES) {
     await mkdir(path.join(resolved, directory), { recursive: true });
@@ -456,6 +468,9 @@ export async function installRooty({ packageRoot, projectRoot, documentationPath
   }
   const gitignore = await ensureProjectGitignore(packageRoot, resolved);
 
+  progressCurrent += 1;
+  progress(progressCurrent, progressTotal, "Finalizing ownership manifest");
+
   // Narrowing the host list leaves previously installed skill files behind. Rooty stops
   // tracking them and reports them instead of deleting anything the developer may still use.
   const unmanagedFiles = [];
@@ -479,6 +494,7 @@ export async function installRooty({ packageRoot, projectRoot, documentationPath
   await atomicJson(manifestFile, nextManifest);
   if (await exists(legacyContextFile)) await unlink(legacyContextFile);
   if (await exists(legacyManifestFile)) await unlink(legacyManifestFile);
+  progress(progressTotal, progressTotal, "Installation complete");
 
   return {
     installation: INSTALLATION_MODE,

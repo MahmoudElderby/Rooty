@@ -23,10 +23,12 @@ The CLI writes MCP values only when explicitly copying a private settings JSON i
 Install Rooty's project-scoped skills and context files.
 
 ```text
-rooty install [--cursor] [--claude] [--codex] [--project PATH] [--docs PATH,...] [--json]
+rooty install [--cursor] [--claude] [--codex] [--project PATH] [--docs PATH,...] [--no-progress] [--json]
 ```
 
-Bare `rooty setup` is an install alias. The command copies all three skills to the skill folders of the selected hosts, installs `.rooty/start-mcp.cjs`, writes `.rooty/state/install-manifest.json`, creates or preserves `.rooty/config/project-context.json`, initializes `.rooty/config/mcp-settings.local.json` and `.rooty/state/setup-progress.json`, and creates `.rooty/memory/{drafts,approved}`. It also merges Rooty's runtime exclusions into `.gitignore`. Reinstall preserves local setting values, migrates the two flat state files written by version 0.2.0, and safely copies legacy `.investigator/memory` cards without deleting their sources.
+Bare `rooty setup` is an install alias. The command copies all packaged skills to the skill folders of the selected hosts, installs `.rooty/start-mcp.cjs`, writes `.rooty/state/install-manifest.json`, creates or preserves `.rooty/config/project-context.json`, initializes `.rooty/config/mcp-settings.local.json` and `.rooty/state/setup-progress.json`, and creates `.rooty/memory/{drafts,approved}`. It also merges Rooty's runtime exclusions into `.gitignore`. Reinstall preserves local setting values, migrates the two flat state files written by version 0.2.0, and safely copies legacy `.investigator/memory` cards without deleting their sources.
+
+Interactive terminals show a progress bar for validation, per-skill ownership checks, writes, and manifest finalization. The bar uses `stderr`, is disabled for JSON or redirected output, and can be disabled explicitly with `--no-progress`. npm/npx resolves and starts the package before Rooty can render this bar, so npm's own pre-start interval is not represented.
 
 Provider artifact folders under `.rooty/mcp/<category>/<provider>/` are created by the setup agent on first approved write, so an unconfigured project carries no empty placeholders. Installation removes the empty `.rooty/mcp/{data,observability,ticketing,custom}` folders created by earlier versions and never touches one that holds files.
 
@@ -36,6 +38,7 @@ Provider artifact folders under `.rooty/mcp/<category>/<provider>/` are created 
 | `--host` | Comma-separated host list, or `all` |
 | `--project` | Existing project folder; defaults to the current folder |
 | `--docs` | Comma-separated confirmed documentation files/folders |
+| `--no-progress` | Disable the interactive installation progress bar |
 | `--json` | Emit the structured result |
 
 ### Host selection

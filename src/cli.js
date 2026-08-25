@@ -27,12 +27,13 @@ import { checkpointSetup, readSetupProgress, updateSetupSelections } from "./lib
 import { configureMcpSettings, initializeMcpSettings, MCP_SETTINGS_PATH, readMcpSettings, settingsStatus } from "./lib/mcp-settings.js";
 import { reviewSession } from "./lib/session-review.js";
 import { evaluateHealth } from "./lib/health.js";
+import { createProgressBar } from "./lib/progress.js";
 
 const HELP = `Rooty Investigator — evidence-first, read-only root-cause analysis
 
 Usage:
-  rooty install [--cursor] [--claude] [--codex] [--project PATH] [--docs PATH,...] [--json]
-  rooty setup [--cursor] [--claude] [--codex] [--project PATH] [--docs PATH,...] [--json]
+  rooty install [--cursor] [--claude] [--codex] [--project PATH] [--docs PATH,...] [--no-progress] [--json]
+  rooty setup [--cursor] [--claude] [--codex] [--project PATH] [--docs PATH,...] [--no-progress] [--json]
   rooty context show [--project PATH] [--json]
   rooty context set-docs (--paths PATH,... | --none) [--project PATH] [--json]
   rooty setup status [--project PATH] [--json]
@@ -78,6 +79,7 @@ const BOOLEAN_OPTIONS = new Set([
   "activate-connectors",
   "json",
   "package-only",
+  "no-progress",
   "all-hosts",
   "none",
   ...ROOTY_HOST_IDS
@@ -198,15 +200,27 @@ export async function main(argv) {
   }
 
   if (command === "install" || (command === "setup" && !subcommand)) {
-    const result = await installRooty({
-      packageRoot: PACKAGE_ROOT,
-      projectRoot: projectFrom(options),
-      documentationPaths: splitDocumentationPaths(options.docs),
-      hosts: [
-        ...ROOTY_HOST_IDS.filter((host) => options[host] !== undefined),
-        ...(options.host === undefined ? [] : [String(options.host)])
-      ]
+    const progress = createProgressBar({
+      stream: process.stderr,
+      enabled: Boolean(process.stderr.isTTY && !options.json && !options["no-progress"] && !process.env.CI)
     });
+    let result;
+    try {
+      result = await installRooty({
+        packageRoot: PACKAGE_ROOT,
+        projectRoot: projectFrom(options),
+        documentationPaths: splitDocumentationPaths(options.docs),
+        hosts: [
+          ...ROOTY_HOST_IDS.filter((host) => options[host] !== undefined),
+          ...(options.host === undefined ? [] : [String(options.host)])
+        ],
+        onProgress: (event) => progress.update(event)
+      });
+      progress.finish();
+    } catch (error) {
+      progress.fail();
+      throw error;
+    }
     if (options.json) process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
     else process.stdout.write(installOutput(result));
     return;

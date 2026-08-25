@@ -22,6 +22,8 @@ Watch the full walkthroughs: [installation](media/rooty-install.mp4), [investiga
 npx rooty-investigator install
 ```
 
+In an interactive terminal, Rooty displays a progress bar while it validates ownership, checks each packaged skill, writes local state, and finalizes the manifest. Use `--no-progress` to disable it. JSON and redirected output never include progress. npm/npx package resolution happens before Rooty's process starts, so that earlier download/startup interval remains controlled by npm.
+
 Rooty detects Codex, Cursor, and Claude project markers. You can also select hosts explicitly:
 
 ```console

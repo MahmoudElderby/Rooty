@@ -46,9 +46,15 @@ async function cliJson(argv) {
 
 test("agent-led install copies all Rooty skills for supported hosts", async () => {
   const projectRoot = await project("rooty-install");
-  const result = await installRooty({ packageRoot: ROOT, projectRoot });
+  const progress = [];
+  const result = await installRooty({ packageRoot: ROOT, projectRoot, onProgress: (event) => progress.push(event) });
 
   assert.equal(result.installation, "agent-led-v3");
+  assert.deepEqual(progress[0], { current: 0, total: 1, label: "Validating project" });
+  assert.deepEqual(progress.at(-1), { current: progress.at(-1).total, total: progress.at(-1).total, label: "Installation complete" });
+  assert.ok(progress.some((event) => event.label.startsWith("Checking rooty-session-review")));
+  assert.ok(progress.some((event) => event.label === "Writing skills and local state"));
+  for (let index = 2; index < progress.length; index += 1) assert.ok(progress[index].current >= progress[index - 1].current);
   assert.deepEqual(result.skills, ROOTY_SKILLS);
   for (const target of ROOTY_SKILL_TARGETS) {
     for (const skill of ROOTY_SKILLS) {
