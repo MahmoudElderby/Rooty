@@ -36,11 +36,11 @@ There is no Rooty gateway or central credential store. Each host invokes the pro
 - validates the project and target paths;
 - refuses filesystem roots and symlinked installation targets;
 - resolves the target hosts from explicit flags, then the previous install, then project markers, then all hosts;
-- copies `rooty-setup`, `rooty-mcp-builder`, and `root-cause-investigator` into `.agents/skills/` for Cursor and Codex and `.claude/skills/` for Claude, writing only the selected hosts and recording them in the manifest;
+- copies all packaged Rooty skills into `.agents/skills/` for Cursor and Codex and `.claude/skills/` for Claude, writing only the selected hosts and recording them in the manifest;
 - records SHA-256 ownership fingerprints in `.rooty/state/install-manifest.json`;
 - stores only confirmed documentation paths in `.rooty/config/project-context.json`;
 - installs `.rooty/start-mcp.cjs` and initializes the Git-ignored `.rooty/config/mcp-settings.local.json` without overwriting existing values;
-- creates `.rooty/memory/{drafts,approved}`, gitignores drafts, and copies non-conflicting legacy `.investigator/memory` cards without deleting the originals;
+- creates `.rooty/memory/{drafts,approved}` plus Git-ignored handoff drafts, improvement drafts, health reports, and session reviews; and copies non-conflicting legacy `.investigator/memory` cards without deleting the originals;
 - leaves `.rooty/mcp/` to the setup agent, which creates `<category>/<provider>/` on first approved write; approved environment-specific SQL setup uses `.rooty/mcp/data/sql-server/<environment>/<domain>/dab-config.json` and one shared `.rooty/start-dab.cjs` launcher;
 - removes the empty `.rooty/mcp` category folders created by earlier versions and reports skill files left behind by a narrowed host list without deleting them;
 - migrates the two flat version 0.2.0 state files during reinstall;
@@ -75,6 +75,10 @@ SQL Server has one deliberate cross-host runtime contract: one stable logical se
 ### Investigator skill
 
 `skill/root-cause-investigator/` retains Rooty's investigation method: pre-query evidence mapping, reported-identifier reconciliation, expected-flow reconstruction, failure-surface enumeration, wrapper-to-origin tracing, testable hypotheses, bounded evidence queries, first-bad-state analysis, competing-cause falsification, and `CONFIRMED`, `PROBABLE`, or `INCONCLUSIVE` outcomes. Confirmed project docs orient the search but never prove a claim. Universal methodology remains in this canonical skill rather than duplicated in always-on host rules.
+
+### Session review, RCA handoff, and health skills
+
+`skill/rooty-session-review/` normalizes one explicitly selected Codex, Cursor, or Claude export into sanitized event references and supported metrics. `skill/rooty-case-handoff/` accepts only ticket-based `CONFIRMED` RCA and renders a new neutral QC case plus local Jira proposals after developer selection. `skill/rooty-health-check/` proposes a project-specific profile for confirmation and uses read-only MCP transports to assess the actual project components. None of these skills publishes tickets, executes reproductions, schedules work, or sends alerts.
 
 ## Deterministic safety engine
 

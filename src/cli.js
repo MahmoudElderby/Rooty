@@ -25,6 +25,8 @@ import {
 } from "./lib/environments.js";
 import { checkpointSetup, readSetupProgress, updateSetupSelections } from "./lib/setup-progress.js";
 import { configureMcpSettings, initializeMcpSettings, MCP_SETTINGS_PATH, readMcpSettings, settingsStatus } from "./lib/mcp-settings.js";
+import { reviewSession } from "./lib/session-review.js";
+import { evaluateHealth } from "./lib/health.js";
 
 const HELP = `Rooty Investigator — evidence-first, read-only root-cause analysis
 
@@ -50,6 +52,8 @@ Usage:
   rooty sources configure [--project PATH] [--discovery FILE] [--<capability>-provider ID] [--<capability>-mcp-url URL] [--<capability>-auth oauth|bearer-env|none] [--<capability>-oauth-token-env NAME] [--<capability>-bearer-token-env NAME]
   rooty sources list <service> --environment <name> [--project PATH]
   rooty doctor [--project PATH] [--host HOST] [--environment NAME] [--json] [--package-only]
+  rooty session review --host codex|cursor|claude (--session-id ID | --input FILE) [--project PATH] [--output DIR] [--json]
+  rooty health evaluate --profile FILE --observations FILE --output DIR [--json]
   rooty run <ticket> --snapshot FILE [--project PATH] [--case-dir PATH]
   rooty evidence add --case-dir PATH --file FILE [--project PATH]
   rooty report --case-dir PATH [--project PATH]
@@ -418,6 +422,41 @@ export async function main(argv) {
       }
     }
     if (!result.ok) process.exitCode = 1;
+    return;
+  }
+
+  if (command === "session" && subcommand === "review") {
+    if (!options.host) throw new Error("session review requires --host codex|cursor|claude");
+    const result = await reviewSession({
+      host: String(options.host),
+      sessionId: options["session-id"] ? String(options["session-id"]) : undefined,
+      inputFile: options.input ? path.resolve(String(options.input)) : undefined,
+      projectRoot: projectFrom(options),
+      outputDir: options.output ? path.resolve(String(options.output)) : undefined
+    });
+    if (options.json) process.stdout.write(`${JSON.stringify({ review: result.review, files: result.files }, null, 2)}\n`);
+    else {
+      process.stdout.write(`SESSION_REVIEW ${result.review.host}:${result.review.session.id}\n`);
+      process.stdout.write(`REPORT ${result.files.review_markdown}\n`);
+      process.stdout.write(`IMPROVEMENTS ${result.files.improvement_draft}\n`);
+    }
+    return;
+  }
+
+  if (command === "health" && subcommand === "evaluate") {
+    try {
+      const result = await evaluateHealth({
+        profileFile: options.profile ? path.resolve(String(options.profile)) : undefined,
+        observationsFile: options.observations ? path.resolve(String(options.observations)) : undefined,
+        outputDir: options.output ? path.resolve(String(options.output)) : undefined
+      });
+      if (options.json) process.stdout.write(`${JSON.stringify({ report: result.report, files: result.files }, null, 2)}\n`);
+      else process.stdout.write(`HEALTH ${result.report.overall_status}\nREPORT ${result.files.markdown}\n`);
+      process.exitCode = result.exitCode;
+    } catch (error) {
+      process.stderr.write(`Invalid health input: ${error.message}\n`);
+      process.exitCode = 3;
+    }
     return;
   }
 

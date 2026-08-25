@@ -19,7 +19,10 @@ export const ROOTY_SKILLS = [
   "rooty-setup",
   "rooty-mcp-builder",
   "root-cause-investigator",
-  "log-storage-review"
+  "log-storage-review",
+  "rooty-session-review",
+  "rooty-case-handoff",
+  "rooty-health-check"
 ];
 
 export const ROOTY_HOSTS = Object.freeze({
@@ -51,6 +54,10 @@ export const ROOTY_PATHS = Object.freeze({
   context: ".rooty/config/project-context.json",
   setupProgress: ".rooty/state/setup-progress.json",
   activeEnvironments: ".rooty/state/active-environments.json",
+  handoffDrafts: ".rooty/handoffs/drafts",
+  healthReports: ".rooty/health-reports",
+  improvementDrafts: ".rooty/improvements/drafts",
+  sessionReviews: ".rooty/session-reviews",
   mcpSettings: MCP_SETTINGS_PATH,
   mcpLauncher: ".rooty/start-mcp.cjs",
   legacyManifest: ".rooty/install-manifest.json",
@@ -59,6 +66,10 @@ export const ROOTY_PATHS = Object.freeze({
 export const ROOTY_PROJECT_DIRECTORIES = Object.freeze([
   ".rooty/config",
   ".rooty/state",
+  ROOTY_PATHS.handoffDrafts,
+  ROOTY_PATHS.healthReports,
+  ROOTY_PATHS.improvementDrafts,
+  ROOTY_PATHS.sessionReviews,
   MEMORY_PATHS.drafts,
   MEMORY_PATHS.approved
 ]);
@@ -549,10 +560,19 @@ export async function inspectRootyInstall(projectRoot) {
   try {
     const ignore = await readFile(path.join(resolved, ".gitignore"), "utf8");
     const lines = new Set(ignore.split(/\r?\n/).map((line) => line.trim()).filter(Boolean));
-    const required = [`${MEMORY_PATHS.drafts}/`, ROOTY_PATHS.activeEnvironments, ROOTY_PATHS.setupProgress, ROOTY_PATHS.mcpSettings];
+    const required = [
+      `${MEMORY_PATHS.drafts}/`,
+      `${ROOTY_PATHS.handoffDrafts}/`,
+      `${ROOTY_PATHS.healthReports}/`,
+      `${ROOTY_PATHS.improvementDrafts}/`,
+      `${ROOTY_PATHS.sessionReviews}/`,
+      ROOTY_PATHS.activeEnvironments,
+      ROOTY_PATHS.setupProgress,
+      ROOTY_PATHS.mcpSettings
+    ];
     const missing = required.filter((entry) => !lines.has(entry));
     if (missing.length) throw new Error(`Missing ${missing.join(", ")}`);
-    add("PASS", "memory-gitignore", "MCP settings, memory drafts, and local setup/environment state are excluded from Git");
+    add("PASS", "memory-gitignore", "MCP settings, handoff/improvement drafts, health/session reports, memory drafts, and local setup/environment state are excluded from Git");
   } catch (error) {
     add("FAIL", "memory-gitignore", `${error.message}. Re-run \`rooty install\`.`);
   }

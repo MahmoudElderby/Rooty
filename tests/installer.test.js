@@ -77,7 +77,7 @@ test("agent-led install copies all Rooty skills for supported hosts", async () =
   }
 
   assert.deepEqual(await readProjectContext(projectRoot), { schema_version: 2, documentation: { status: "pending", paths: [] } });
-  assert.deepEqual((await readdir(path.join(projectRoot, ".rooty"))).sort(), ["config", "memory", "start-mcp.cjs", "state"]);
+  assert.deepEqual((await readdir(path.join(projectRoot, ".rooty"))).sort(), ["config", "handoffs", "health-reports", "improvements", "memory", "session-reviews", "start-mcp.cjs", "state"]);
   assert.equal(
     await readFile(path.join(projectRoot, ".rooty/start-mcp.cjs"), "utf8"),
     await readFile(path.join(ROOT, "skill/rooty-mcp-builder/assets/start-mcp.cjs"), "utf8")
@@ -86,6 +86,10 @@ test("agent-led install copies all Rooty skills for supported hosts", async () =
     await readdir(path.join(projectRoot, directory));
   }
   assert.match(await readFile(path.join(projectRoot, ".gitignore"), "utf8"), /\.rooty\/memory\/drafts\//);
+  assert.match(await readFile(path.join(projectRoot, ".gitignore"), "utf8"), /\.rooty\/improvements\/drafts\//);
+  assert.match(await readFile(path.join(projectRoot, ".gitignore"), "utf8"), /\.rooty\/session-reviews\//);
+  assert.match(await readFile(path.join(projectRoot, ".gitignore"), "utf8"), /\.rooty\/handoffs\/drafts\//);
+  assert.match(await readFile(path.join(projectRoot, ".gitignore"), "utf8"), /\.rooty\/health-reports\//);
   const manifest = JSON.parse(await readFile(path.join(projectRoot, ROOTY_PATHS.manifest), "utf8"));
   assert.equal(manifest.project_context, ROOTY_PATHS.context);
   assert.deepEqual(manifest.hosts, [...ROOTY_HOST_IDS]);

@@ -200,6 +200,35 @@ rooty doctor [--project PATH] [--host HOST] [--environment NAME] [--json] [--pac
 
 Normal human output always includes the CLI version, followed by `PACKAGE_READY`, `PROJECT_CONFIGURED`, and `INVESTIGATION_READY`. Project configuration is based on current files, not Git history or stale workspace snapshots: it checks host config presence, exact environment-profile renderings, provider artifacts, and setup state. Investigation readiness independently initializes the live data and observability MCPs, compares their advertised tools with the reviewed allowlists, rejects mutation surfaces, and performs bounded reads containing the expected environment identity. For a legacy connector project, doctor retains the strict source-registry and activation checks. Package-only mode checks only the distributed kit and marks the other two sections `NOT_CHECKED`.
 
+## `rooty session review`
+
+Analyze one explicitly selected Codex, Cursor, or Claude session and write sanitized local artifacts.
+
+```text
+rooty session review
+  --host codex|cursor|claude
+  (--session-id ID | --input FILE)
+  [--project PATH]
+  [--output DIR]
+  [--json]
+```
+
+The command never selects the latest session and never scans session content implicitly. It writes `session-review.json`, `session-review.md`, and `improvement-draft.json`; the improvement draft is also placed in the separate Git-ignored `.rooty/improvements/drafts/` queue. Output inside the project is accepted only under `.rooty/session-reviews/`; otherwise choose an external directory. Unsupported host telemetry is `UNAVAILABLE`. The Codex adapter treats local JSONL as version-sensitive, Cursor accepts structured exports or Markdown, and Claude requires an explicit JSON or stream-JSON export for session review.
+
+## `rooty health evaluate`
+
+Evaluate confirmed project-component probes from two local schema-version-1 documents.
+
+```text
+rooty health evaluate
+  --profile FILE
+  --observations FILE
+  --output DIR
+  [--json]
+```
+
+The profile must already be developer-confirmed and contain only bounded read-only probes. MCP servers are transports, not measured project components. Output is `health-report.json/md`; project-local output belongs under Git-ignored `.rooty/health-reports/`. Exit codes are 0 for `HEALTHY`, 1 for `DEGRADED` or `UNKNOWN`, 2 for `CRITICAL`, and 3 for invalid input. Critical alerts and unknown visibility gaps are report entries only; Rooty sends no notification.
+
 ## `rooty run`
 
 Create a deterministic case from a frozen investigation snapshot.
@@ -294,4 +323,5 @@ npm run eval     # Default replay suite
 
 - Successful commands exit with code 0.
 - `doctor` and `eval` set a non-zero exit code when their result is unhealthy.
+- `health evaluate` uses 0 healthy, 1 degraded/unknown, 2 critical, and 3 invalid input.
 - Validation errors are printed by the executable entry point and exit non-zero.

@@ -37,6 +37,7 @@ Treat documentation as a reference, never as proof. Verify every material statem
 9. Falsify the leading hypothesis: test the strongest competitor, compare successful traffic, and verify incident-time version/configuration plus retention, sampling, retries, clock skew, and asynchronous delay.
 10. Apply exactly one outcome: `CONFIRMED`, `PROBABLE`, or `INCONCLUSIVE` using the stopping rules in the workflow reference.
 11. Produce the report only. Propose a sanitized learning card as a draft; never approve or persist it yourself. Classify it as `universal`, `project`, or `case_only`; include a kind, canonical key, statement, applicability, and disposition. Route universal proposals upstream, project proposals through Rooty's reviewed memory command, and case-only facts to case notes. Never merge learning directly into host rule files.
+12. For a ticket-based `CONFIRMED` result only, ask whether the developer wants to invoke `$rooty-case-handoff` for a new QC case and local Jira proposals. Do not offer the full handoff for `PROBABLE` or `INCONCLUSIVE`, and do not create it without the developer's answer.
 
 ## Handle missing pivots
 

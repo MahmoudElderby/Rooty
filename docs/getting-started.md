@@ -24,7 +24,7 @@ If the documentation locations are already known:
 npx rooty-investigator install --docs "README.md,docs,architecture"
 ```
 
-Installation creates project-scoped copies of `rooty-setup`, `rooty-mcp-builder`, and `root-cause-investigator` under `.agents/skills/` for Cursor and Codex, `.claude/skills/` for Claude. It also creates:
+Installation creates project-scoped copies of Rooty's setup, MCP builder, investigator, log-storage review, session-review, confirmed-RCA handoff, and health-check skills under `.agents/skills/` for Cursor and Codex and `.claude/skills/` for Claude. It also creates:
 
 ```text
 .rooty/

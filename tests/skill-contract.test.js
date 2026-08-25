@@ -166,3 +166,28 @@ test("log storage review stays scoped, provider-neutral, file-capable, and repor
     "Target filter is unavailable or ambiguous"
   ]);
 });
+
+test("session review requires one explicit sanitized host target", async () => {
+  const skill = await content("skill/rooty-session-review/SKILL.md");
+  const contract = await content("skill/rooty-session-review/references/session-contract.md");
+  const hosts = await content("skill/rooty-session-review/references/host-inputs.md");
+  requires(skill, ["exactly one explicit", "Never infer", "UNAVAILABLE", ".rooty/improvements/drafts", "raw tool output"]);
+  requires(contract, ["interval union", "never estimate", "hashed normalized signatures"]);
+  requires(hosts, ["Codex", "Cursor", "Claude", "version-sensitive", "telemetry parity"]);
+});
+
+test("confirmed RCA handoff remains draft-only and developer-selectable", async () => {
+  const skill = await content("skill/rooty-case-handoff/SKILL.md");
+  const qc = await content("skill/rooty-case-handoff/references/qc-standard.md");
+  const investigator = await content("skill/root-cause-investigator/SKILL.md");
+  requires(skill, ["CONFIRMED", "Always create a new", "SELECTED", "EXCLUDED", "COMBINED", "Never invoke a Jira mutation tool"]);
+  requires(qc, ["ISTQB", "ISO/IEC/IEEE 29119", "repeatability", "independence", "NOT_RUN"]);
+  requires(investigator, ["$rooty-case-handoff", "Do not offer the full handoff for `PROBABLE` or `INCONCLUSIVE`"]);
+});
+
+test("health check measures project components through confirmed bounded read-only probes", async () => {
+  const skill = await content("skill/rooty-health-check/SKILL.md");
+  const workflow = await content("skill/rooty-health-check/references/profile-workflow.md");
+  requires(skill, ["project components", "MCP transports", "developer to confirm", "HEALTHY", "DEGRADED", "CRITICAL", "UNKNOWN", "does not deliver notifications"]);
+  requires(workflow, ["Discovery is a proposal", "read-only probes", "120 seconds", "provider or connector"]);
+});

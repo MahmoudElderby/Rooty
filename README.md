@@ -1,12 +1,12 @@
 # Rooty
 
-> Evidence-first production investigation and log-storage review for Codex, Claude Code, and Cursor.
+> Evidence-first production investigation, session review, RCA handoff, and project health for Codex, Claude Code, and Cursor.
 
 [![Node.js 20+](https://img.shields.io/badge/Node.js-20%2B-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
 [![npm package](https://img.shields.io/npm/v/rooty-investigator?logo=npm&label=rooty-investigator)](https://www.npmjs.com/package/rooty-investigator)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-Rooty helps an AI coding agent investigate production incidents across source code, documentation, tickets, logs, traces, databases, and deployment history. It also reviews provider-backed or file-based log storage to rank repeated calls, payload volume, and daily growth across a whole store or a named service, API, response, or log family.
+Rooty helps an AI coding agent investigate production incidents across source code, documentation, tickets, logs, traces, databases, and deployment history. It also reviews provider-backed or file-based log storage, analyzes one explicitly selected AI session, drafts QC/Jira handoffs from confirmed RCA, and manually evaluates project-component health through read-only MCP probes.
 
 Rooty investigates and reviews. It does **not** patch code, change data, mutate tickets, deploy, mitigate, or approve its own reusable memory.
 
@@ -95,6 +95,14 @@ Or ask which logs consume storage and what to reduce first:
 Use $log-storage-review to review this log store. Report the repeated-call, payload-size, and daily-growth rankings. Do not make changes.
 ```
 
+Review one selected agent session without preserving prompts or raw tool output:
+
+```console
+rooty session review --host codex --input /private/export/session.jsonl --project .
+```
+
+After a ticket RCA is `CONFIRMED`, the investigator can offer `$rooty-case-handoff` to create a new `DRAFT`/`NOT_RUN` QC case and local Jira proposals. For a manual project-health pass, invoke `$rooty-health-check`; confirm its project-specific profile, collect bounded read-only observations, then evaluate them with `rooty health evaluate`.
+
 ## How Rooty is organized
 
 Rooty has no hosted gateway or central credential store. The installed AI host runs a project-local launcher that reads only declared local settings, then starts a reviewed stdio MCP server or bridges stdio to a reviewed Streamable HTTP endpoint.
@@ -127,13 +135,19 @@ The deterministic CLI owns paths, schemas, installation fingerprints, safe host 
 ├── rooty-setup/
 ├── rooty-mcp-builder/
 ├── root-cause-investigator/
-└── log-storage-review/
+├── log-storage-review/
+├── rooty-session-review/
+├── rooty-case-handoff/
+└── rooty-health-check/
 
 .claude/skills/                         # Claude Code
 ├── rooty-setup/
 ├── rooty-mcp-builder/
 ├── root-cause-investigator/
-└── log-storage-review/
+├── log-storage-review/
+├── rooty-session-review/
+├── rooty-case-handoff/
+└── rooty-health-check/
 
 .rooty/
 ├── start-mcp.cjs                       # managed settings-backed launcher
@@ -149,6 +163,8 @@ The deterministic CLI owns paths, schemas, installation fingerprints, safe host 
     ├── drafts/                          # Git-ignored
     └── approved/                        # sanitized, human-reviewed learning
 ```
+
+Session reviews and health reports live under Git-ignored `.rooty/session-reviews/` and `.rooty/health-reports/`. Confirmed-RCA handoff drafts use `.rooty/handoffs/drafts/`. Product-improvement drafts are kept separately under `.rooty/improvements/drafts/`; they are never incident memory.
 
 Provider artifacts are created only after approval under `.rooty/mcp/<category>/<provider>/`.
 

@@ -1,7 +1,7 @@
 {
   "name": "rooty-investigator",
   "version": "0.4.1",
-  "description": "Agent-led, read-only root-cause investigation and log-storage review skills with setup CLI",
+  "description": "Agent-led, read-only investigation, session review, RCA handoff, and project health skills with setup CLI",
   "keywords": [
     "ai-agent",
     "debugging",

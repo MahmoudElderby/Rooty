@@ -8,6 +8,10 @@ coverage/
 .investigator/discovery.json
 .investigator/cases/
 .investigator/memory/drafts/
+.rooty/improvements/drafts/
+.rooty/session-reviews/
+.rooty/handoffs/drafts/
+.rooty/health-reports/
 .rooty-cases/
 tools/video/generated/frames/
 tools/video/generated/check/

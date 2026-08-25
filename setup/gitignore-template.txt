@@ -3,6 +3,10 @@
 .investigator/cases/
 .investigator/memory/drafts/
 .rooty/memory/drafts/
+.rooty/handoffs/drafts/
+.rooty/health-reports/
+.rooty/improvements/drafts/
+.rooty/session-reviews/
 .rooty/state/active-environments.json
 .rooty/state/setup-progress.json
 .rooty/config/mcp-settings.local.json
