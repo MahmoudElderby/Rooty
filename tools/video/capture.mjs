@@ -78,9 +78,11 @@ function summarizeTree(entries) {
     { label: ".agents/skills/rooty-setup/", prefix: ".agents/skills/rooty-setup/" },
     { label: ".agents/skills/rooty-mcp-builder/", prefix: ".agents/skills/rooty-mcp-builder/" },
     { label: ".agents/skills/root-cause-investigator/", prefix: ".agents/skills/root-cause-investigator/" },
+    { label: ".agents/skills/log-storage-review/", prefix: ".agents/skills/log-storage-review/" },
     { label: ".claude/skills/rooty-setup/", prefix: ".claude/skills/rooty-setup/" },
     { label: ".claude/skills/rooty-mcp-builder/", prefix: ".claude/skills/rooty-mcp-builder/" },
-    { label: ".claude/skills/root-cause-investigator/", prefix: ".claude/skills/root-cause-investigator/" }
+    { label: ".claude/skills/root-cause-investigator/", prefix: ".claude/skills/root-cause-investigator/" },
+    { label: ".claude/skills/log-storage-review/", prefix: ".claude/skills/log-storage-review/" }
   ];
   const summary = groups.map((group) => ({
     label: group.label,

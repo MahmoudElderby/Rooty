@@ -15,7 +15,12 @@ import path from "node:path";
 import { MEMORY_PATHS, migrateLegacyMemory } from "./memory-store.js";
 import { initializeMcpSettings, MCP_SETTINGS_PATH, readMcpSettings } from "./mcp-settings.js";
 
-export const ROOTY_SKILLS = ["rooty-setup", "rooty-mcp-builder", "root-cause-investigator"];
+export const ROOTY_SKILLS = [
+  "rooty-setup",
+  "rooty-mcp-builder",
+  "root-cause-investigator",
+  "log-storage-review"
+];
 
 export const ROOTY_HOSTS = Object.freeze({
   claude: Object.freeze({

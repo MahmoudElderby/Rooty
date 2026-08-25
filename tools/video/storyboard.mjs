@@ -151,7 +151,7 @@ function installScenes(capture) {
       id: "install-tree",
       act: ACT_INSTALL,
       kicker: "02 \u00b7 What lands on disk",
-      title: `${summary.skillFileTotal} owned files, three skills, two host locations`,
+      title: `${summary.skillFileTotal} owned files, four skills, two host locations`,
       sub: "Codex and Cursor read .agents/skills; Claude Code reads .claude/skills. Every file is fingerprinted so reinstalling is safe.",
       durationMs: 5000,
       layout: "wide-left",
@@ -235,7 +235,7 @@ function installScenes(capture) {
           at: 2600,
           stagger: 420,
           items: [
-            { label: "Installed", detail: "Manifest and three skills confirmed", states: [{ at: 2600, value: "active" }, { at: 3020, value: "done" }] },
+            { label: "Installed", detail: "Manifest and four skills confirmed", states: [{ at: 2600, value: "active" }, { at: 3020, value: "done" }] },
             { label: "Docs confirmed", detail: "Paths stored in project-context.json", states: [{ at: 3020, value: "active" }, { at: 3440, value: "done" }] },
             { label: "Discovered", detail: "Evidence for data and observability candidates", states: [{ at: 3440, value: "active" }, { at: 3860, value: "done" }] },
             { label: "Proposed", detail: "Config path, command, credentials, controls, probe", states: [{ at: 3860, value: "active" }, { at: 4280, value: "done" }] },
