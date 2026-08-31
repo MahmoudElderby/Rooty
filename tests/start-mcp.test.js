@@ -52,6 +52,26 @@ test("MCP launcher can map a JSON setting to the child process key a server expe
   assert.equal(options.env.ROOTY_ORDERS_PROD_URLS, undefined);
 });
 
+test("MCP launcher does not leak undeclared parent environment values to providers", async () => {
+  const file = await settingsFile({ ROOTY_TOKEN: "declared-value" });
+  const invocation = parseArgs(["--settings", file, "--keys", "ROOTY_TOKEN", "--", process.execPath]);
+  const previous = process.env.ROOTY_UNDECLARED_CANARY;
+  process.env.ROOTY_UNDECLARED_CANARY = "must-not-reach-provider";
+  let options;
+  try {
+    runStdio(invocation, loadSettings(file, invocation.keys), (_command, _args, received) => {
+      options = received;
+      return { once() {}, kill() {} };
+    });
+  } finally {
+    if (previous === undefined) delete process.env.ROOTY_UNDECLARED_CANARY;
+    else process.env.ROOTY_UNDECLARED_CANARY = previous;
+  }
+  assert.equal(options.env.ROOTY_TOKEN, "declared-value");
+  assert.equal(options.env.ROOTY_UNDECLARED_CANARY, undefined);
+  assert.ok(options.env.PATH ?? options.env.Path, "runtime PATH should remain available");
+});
+
 test("MCP launcher resolves grouped environment paths and maps them to child keys", async () => {
   const file = await settingsFile({
     prod: {

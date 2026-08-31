@@ -53,6 +53,12 @@
       ".agents/skills/root-cause-investigator/references/evidence-standard.md",
       ".agents/skills/root-cause-investigator/references/investigation-workflow.md",
       ".agents/skills/root-cause-investigator/references/report-schema.md",
+      ".agents/skills/root-cause-investigator/references/schemas",
+      ".agents/skills/root-cause-investigator/references/schemas/analysis-submission.schema.json",
+      ".agents/skills/root-cause-investigator/references/schemas/live-case-header.schema.json",
+      ".agents/skills/root-cause-investigator/references/schemas/live-evidence.schema.json",
+      ".agents/skills/root-cause-investigator/references/schemas/provider-receipt.schema.json",
+      ".agents/skills/root-cause-investigator/references/schemas/verification.schema.json",
       ".agents/skills/root-cause-investigator/references/source-catalog-schema.md",
       ".agents/skills/root-cause-investigator/scripts",
       ".agents/skills/root-cause-investigator/scripts/render-report.mjs",
@@ -128,6 +134,12 @@
       ".claude/skills/root-cause-investigator/references/evidence-standard.md",
       ".claude/skills/root-cause-investigator/references/investigation-workflow.md",
       ".claude/skills/root-cause-investigator/references/report-schema.md",
+      ".claude/skills/root-cause-investigator/references/schemas",
+      ".claude/skills/root-cause-investigator/references/schemas/analysis-submission.schema.json",
+      ".claude/skills/root-cause-investigator/references/schemas/live-case-header.schema.json",
+      ".claude/skills/root-cause-investigator/references/schemas/live-evidence.schema.json",
+      ".claude/skills/root-cause-investigator/references/schemas/provider-receipt.schema.json",
+      ".claude/skills/root-cause-investigator/references/schemas/verification.schema.json",
       ".claude/skills/root-cause-investigator/references/source-catalog-schema.md",
       ".claude/skills/root-cause-investigator/scripts",
       ".claude/skills/root-cause-investigator/scripts/render-report.mjs",
@@ -222,7 +234,7 @@
         },
         {
           "label": ".agents/skills/root-cause-investigator/",
-          "files": 8
+          "files": 13
         },
         {
           "label": ".agents/skills/log-storage-review/",
@@ -238,14 +250,14 @@
         },
         {
           "label": ".claude/skills/root-cause-investigator/",
-          "files": 8
+          "files": 13
         },
         {
           "label": ".claude/skills/log-storage-review/",
           "files": 5
         }
       ],
-      "skillFileTotal": 72,
+      "skillFileTotal": 82,
       "rootyFiles": [
         ".rooty/config/mcp-settings.local.json",
         ".rooty/config/project-context.json",
@@ -282,7 +294,7 @@
       ".claude/skills"
     ],
     "installationMode": "agent-led-v3",
-    "manifestFileCount": 93,
+    "manifestFileCount": 103,
     "trackedFileHashSample": [
       {
         "file": ".agents/skills/log-storage-review/agents/openai.yaml",

@@ -1,6 +1,7 @@
-import { appendFile, mkdir, readFile, realpath, writeFile } from "node:fs/promises";
+import { mkdir, readFile, realpath } from "node:fs/promises";
 import path from "node:path";
-import { canonicalJson, isoNow, makeCaseId, pathExists, readJson, sha256, VALID_CLASSIFICATIONS, writeJson } from "./core.js";
+import { appendLedgerEntry, atomicWriteCaseJson, atomicWriteCaseText, readNdjson } from "./case-store.js";
+import { canonicalJson, isoNow, makeCaseId, parseRfc3339Instant, parseRfc3339Range, pathExists, readJson, sha256, VALID_CLASSIFICATIONS } from "./core.js";
 
 const REQUIRED_EVIDENCE_FIELDS = ["evidence_id", "classification", "source_type", "source_system", "environment", "event_time_range", "retrieved_at", "query_or_locator", "observation", "limitations"];
 
@@ -10,8 +11,8 @@ export function validateEvidence(evidence) {
   if (missing.length > 0) throw new Error(`Evidence ${evidence.evidence_id ?? "<unknown>"} is missing: ${missing.join(", ")}`);
   if (!/^E[0-9]+$/.test(evidence.evidence_id)) throw new Error(`Invalid evidence_id: ${evidence.evidence_id}`);
   if (!VALID_CLASSIFICATIONS.has(evidence.classification)) throw new Error(`Invalid classification: ${evidence.classification}`);
-  if (!Number.isFinite(Date.parse(evidence.retrieved_at))) throw new Error(`Invalid retrieved_at for ${evidence.evidence_id}`);
-  if (!String(evidence.event_time_range).includes("/")) throw new Error(`event_time_range must preserve a bounded range for ${evidence.evidence_id}`);
+  parseRfc3339Instant(evidence.retrieved_at, `retrieved_at for ${evidence.evidence_id}`);
+  parseRfc3339Range(evidence.event_time_range, `event_time_range for ${evidence.evidence_id}`);
 }
 
 export function assessCase(snapshot) {
@@ -109,15 +110,7 @@ function nextLedgerEntry(evidence, sequence, previousHash, caseId) {
 }
 
 export async function readLedger(caseDir) {
-  const ledgerFile = path.join(caseDir, "evidence.ndjson");
-  const content = await readFile(ledgerFile, "utf8");
-  return content.split(/\r?\n/).filter(Boolean).map((line, index) => {
-    try {
-      return JSON.parse(line);
-    } catch {
-      throw new Error(`Invalid ledger JSON at line ${index + 1}`);
-    }
-  });
+  return readNdjson(path.join(caseDir, "evidence.ndjson"));
 }
 
 export function verifyLedgerEntries(entries) {
@@ -139,14 +132,12 @@ export function verifyLedgerEntries(entries) {
 }
 
 export async function appendEvidence(caseDir, evidence) {
-  const manifest = await readJson(path.join(caseDir, "case.json"));
   validateEvidence(evidence);
-  const entries = await readLedger(caseDir);
-  const verification = verifyLedgerEntries(entries);
-  if (entries.some((entry) => entry.evidence_id === evidence.evidence_id)) throw new Error(`Duplicate evidence ID: ${evidence.evidence_id}`);
-  const entry = nextLedgerEntry(evidence, entries.length + 1, verification.head, manifest.case_id);
-  await appendFile(path.join(caseDir, "evidence.ndjson"), `${JSON.stringify(entry)}\n`, "utf8");
-  return entry;
+  return appendLedgerEntry(caseDir, "evidence.ndjson", async ({ entries, verification, caseDir: resolved }) => {
+    const manifest = await readJson(path.join(resolved, "case.json"));
+    if (entries.some((entry) => entry.evidence_id === evidence.evidence_id)) throw new Error(`Duplicate evidence ID: ${evidence.evidence_id}`);
+    return nextLedgerEntry(evidence, entries.length + 1, verification.head, manifest.case_id);
+  }, verifyLedgerEntries);
 }
 
 export async function runFrozenCase({ projectRoot, ticket, snapshotFile, caseDir }) {
@@ -170,7 +161,7 @@ export async function runFrozenCase({ projectRoot, ticket, snapshotFile, caseDir
     assessment,
     source_snapshot_sha256: sha256(await readFile(snapshotFile, "utf8"))
   };
-  await writeJson(path.join(target, "case.json"), state);
+  await atomicWriteCaseJson(path.join(target, "case.json"), state);
   let previousHash = "GENESIS";
   const ledger = [];
   for (let index = 0; index < (snapshot.evidence ?? []).length; index += 1) {
@@ -178,7 +169,7 @@ export async function runFrozenCase({ projectRoot, ticket, snapshotFile, caseDir
     ledger.push(entry);
     previousHash = entry.entry_hash;
   }
-  await writeFile(path.join(target, "evidence.ndjson"), `${ledger.map((entry) => JSON.stringify(entry)).join("\n")}\n`, "utf8");
+  await atomicWriteCaseText(path.join(target, "evidence.ndjson"), `${ledger.map((entry) => JSON.stringify(entry)).join("\n")}\n`);
   verifyLedgerEntries(ledger);
   const reportFile = await writeReport(target, state, ledger);
   return { caseId, status: assessment.status, caseDir: target, reportFile };
@@ -274,7 +265,7 @@ Rooty does not propose or apply remediation. A separate owner should decide corr
 
 async function writeReport(caseDir, state, entries) {
   const reportFile = path.join(caseDir, "report.md");
-  await writeFile(reportFile, renderReport(state, entries), "utf8");
+  await atomicWriteCaseText(reportFile, renderReport(state, entries));
   return reportFile;
 }
 

@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rooty.dev/schemas/live-evidence.schema.json",
+  "title": "Rooty live evidence entry",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "evidence_id", "case_id", "sequence", "classification", "source_type", "source_system", "environment", "event_time_range", "retrieved_at", "query_or_locator", "observation", "limitations", "receipt_refs", "capture_grade", "content_hash", "previous_hash", "entry_hash"],
+  "properties": {
+    "schema_version": { "const": 1 }, "evidence_id": { "type": "string", "pattern": "^E[1-9][0-9]*$" }, "case_id": { "type": "string", "pattern": "^INV-[A-Z0-9-]+$" }, "sequence": { "type": "integer", "minimum": 1 },
+    "classification": { "enum": ["REPORTED", "OBSERVED", "INFERRED", "HYPOTHESIS", "UNKNOWN"] }, "source_type": { "type": "string", "minLength": 1 }, "source_system": { "type": "string", "minLength": 1 }, "environment": { "type": "string", "minLength": 1 }, "event_time_range": { "type": "string", "minLength": 1 }, "retrieved_at": { "type": "string", "format": "date-time" }, "query_or_locator": { "type": "string", "minLength": 1 }, "observation": { "type": "string", "minLength": 1 }, "limitations": { "type": "string", "minLength": 1 },
+    "receipt_refs": { "type": "array", "uniqueItems": true, "items": { "type": "string", "pattern": "^R[1-9][0-9]*$" } }, "selector": { "type": "object", "additionalProperties": false, "required": ["kind", "value"], "properties": { "kind": { "enum": ["json-pointer", "text-range"] }, "value": { "type": "string", "minLength": 1 } } }, "capture_grade": { "enum": ["VERIFIED", "PROVIDER_ATTESTED", "AGENT_RECORDED", "HUMAN_ATTESTED", "FIXTURE_VERIFIED"] }, "content_hash": { "$ref": "#/$defs/hash" }, "previous_hash": { "anyOf": [{ "const": "GENESIS" }, { "$ref": "#/$defs/hash" }] }, "entry_hash": { "$ref": "#/$defs/hash" }
+  },
+  "$defs": { "hash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" } }
+}

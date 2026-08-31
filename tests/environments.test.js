@@ -240,6 +240,17 @@ test("agent-led doctor separates package, project, and live environment readines
   assert.equal(result.sections.investigation.status, "READY", JSON.stringify(result.checks));
   assert.equal(result.ok, true, JSON.stringify(result.checks));
   assert.ok(result.sections.investigation.checks.some((check) => check.name.endsWith("identity-read") && check.status === "PASS"));
+  assert.equal(result.identity_verifications.length, 1);
+  const identity = result.identity_verifications[0];
+  assert.equal(identity.status, "READY");
+  assert.equal(identity.host.id, "cursor");
+  assert.equal(identity.environment.id, "preprod");
+  assert.match(identity.project.root_fingerprint, /^sha256:[a-f0-9]{64}$/);
+  assert.match(identity.host.config_generation, /^sha256:[a-f0-9]{64}$/);
+  assert.match(identity.environment.profile_hash, /^sha256:[a-f0-9]{64}$/);
+  assert.match(identity.verification_hash, /^sha256:[a-f0-9]{64}$/);
+  assert.ok(identity.providers.every((provider) => provider.allowed_tools.length > 0));
+  assert.doesNotMatch(JSON.stringify(identity), /secret-value/);
 });
 
 test("CLI supports standard version flags", async () => {
