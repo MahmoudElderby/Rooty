@@ -4,10 +4,10 @@ import path from "node:path";
 import { readLedger, verifyLedgerEntries } from "./cases.js";
 import { runEvaluation } from "./evaluate.js";
 import { TOOLS } from "./mcp.js";
-import { assertNoEmbeddedSecrets, pathExists, readJson } from "./core.js";
+import { assertNoEmbeddedSecrets, fingerprint, isoNow, minimalRuntimeEnvironment, pathExists, readJson } from "./core.js";
 import { inspectRootyInstall, ROOTY_HOSTS, ROOTY_PATHS, ROOTY_SKILLS } from "./installer.js";
 import { detectSetupModel } from "./setup-model.js";
-import { inspectEnvironmentProject, readActiveEnvironments, readEnvironmentProfiles, resolveEnvironmentId, targetsForEnvironment } from "./environments.js";
+import { buildLockedEnvironmentIdentity, inspectEnvironmentProject, readActiveEnvironments, readEnvironmentProfiles, resolveEnvironmentId, targetsForEnvironment } from "./environments.js";
 import { readSetupProgress } from "./setup-progress.js";
 import { readMcpSettings, resolveMcpSettingValues } from "./mcp-settings.js";
 
@@ -103,13 +103,25 @@ export async function runDoctor({ packageRoot, projectRoot, connectorTimeoutMs =
     investigation: section(statusFor(investigationChecks), investigationChecks)
   };
   const checks = Object.entries(sections).flatMap(([name, value]) => value.checks.map((check) => ({ ...check, section: name })));
-  return {
+  const result = {
     ok: sections.package.ok && sections.project.ok && sections.investigation.ok,
     setupModel,
     version: { cli: packageManifest.version, ...(projectVersion ? { project_install: projectVersion } : {}) },
     sections,
     checks
   };
+  if (result.ok && setupModel === "agent-led-v3") {
+    const active = await readActiveEnvironments(projectRoot);
+    const hosts = host ? [host] : Object.keys(active.hosts).sort();
+    result.identity_verifications = [];
+    for (const targetHost of hosts) {
+      const identity = await buildLockedEnvironmentIdentity({ projectRoot, host: targetHost, environment });
+      const artifact = { ...identity, verified_at: isoNow(), status: "READY" };
+      artifact.verification_hash = fingerprint(artifact);
+      result.identity_verifications.push(artifact);
+    }
+  }
+  return result;
 }
 
 async function runCompatibilityDoctor({ packageRoot, projectRoot, connectorTimeoutMs = 3000, requireActivatedConnectors = true }) {
@@ -228,10 +240,11 @@ function resolveEnvironmentValue(value) {
 }
 
 function environmentForEntry(entry) {
-  const env = { ...process.env };
+  const env = minimalRuntimeEnvironment();
   for (const name of entry.env_vars ?? []) {
     const variable = typeof name === "string" ? name : name?.name;
     if (variable && !process.env[variable]) throw new Error(`Credential environment variable is unavailable: ${variable}`);
+    if (variable) env[variable] = process.env[variable];
   }
   for (const [key, value] of Object.entries(entry.env ?? {})) env[key] = resolveEnvironmentValue(value);
   return env;

@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rooty.dev/schemas/provider-receipt.schema.json",
+  "title": "Rooty provider receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "receipt_id", "case_id", "sequence", "capture_grade", "provider_instance_id", "capability", "environment", "tool", "request", "response", "event_time_coverage", "started_at", "completed_at", "configuration_hash", "allowlist_hash", "previous_hash", "entry_hash"],
+  "properties": {
+    "schema_version": { "const": 1 }, "receipt_id": { "type": "string", "pattern": "^R[1-9][0-9]*$" }, "case_id": { "type": "string", "pattern": "^INV-[A-Z0-9-]+$" }, "sequence": { "type": "integer", "minimum": 1 },
+    "capture_grade": { "enum": ["VERIFIED", "PROVIDER_ATTESTED", "AGENT_RECORDED", "HUMAN_ATTESTED", "FIXTURE_VERIFIED"] },
+    "provider_instance_id": { "type": "string", "minLength": 1 }, "capability": { "type": "string", "minLength": 1 }, "environment": { "type": "string", "minLength": 1 }, "tool": { "type": "string", "minLength": 1 },
+    "request": { "type": "object", "additionalProperties": false, "required": ["canonical_hash", "bounds"], "properties": { "canonical_hash": { "$ref": "#/$defs/hash" }, "bounds": { "type": "object" } } },
+    "response": { "type": "object", "additionalProperties": false, "required": ["canonical_hash", "bytes_seen", "bytes_retained", "truncated", "sampled", "page", "next_receipt_id", "is_error"], "properties": { "canonical_hash": { "$ref": "#/$defs/hash" }, "bytes_seen": { "type": "integer", "minimum": 0 }, "bytes_retained": { "type": "integer", "minimum": 0 }, "truncated": { "type": "boolean" }, "sampled": { "type": "boolean" }, "page": { "type": "integer", "minimum": 1 }, "next_receipt_id": { "type": ["string", "null"], "pattern": "^R[1-9][0-9]*$" }, "is_error": { "type": "boolean" } } },
+    "event_time_coverage": { "type": "string", "minLength": 1 }, "started_at": { "type": "string", "format": "date-time" }, "completed_at": { "type": "string", "format": "date-time" }, "configuration_hash": { "$ref": "#/$defs/hash" }, "allowlist_hash": { "$ref": "#/$defs/hash" }, "previous_hash": { "anyOf": [{ "const": "GENESIS" }, { "$ref": "#/$defs/hash" }] }, "entry_hash": { "$ref": "#/$defs/hash" }, "extract_hash": { "$ref": "#/$defs/hash" }
+  },
+  "$defs": { "hash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" } }
+}

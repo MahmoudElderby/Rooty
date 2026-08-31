@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { lstat, readdir, readFile, unlink } from "node:fs/promises";
 import path from "node:path";
-import { assertNoEmbeddedSecrets } from "./core.js";
+import { assertNoEmbeddedSecrets, fingerprint } from "./core.js";
 import { inspectRootyInstall, ROOTY_HOSTS, ROOTY_HOST_IDS } from "./installer.js";
 import { hasMcpSetting, MCP_SETTINGS_ENV_KEY_PATTERN, MCP_SETTINGS_KEY_PATTERN, MCP_SETTINGS_PATH, readMcpSettings, resolveMcpSettingValues } from "./mcp-settings.js";
 import { atomicWriteJson, atomicWriteText, assertNoSymlinkPath, ensureProjectPath, readOptionalJson, readOptionalText, resolveProjectRoot } from "./project-state.js";
@@ -598,4 +598,60 @@ export async function inspectEnvironmentProject(projectRoot, host) {
 
 export function targetsForEnvironment(profiles, environment, host) {
   return selectedTargets(profiles, environment, host);
+}
+
+function normalizedProjectIdentity(projectRoot) {
+  const normalized = slash(path.resolve(projectRoot));
+  return process.platform === "win32" ? normalized.toLowerCase() : normalized;
+}
+
+function prefixedSha256(value) {
+  return String(value).startsWith("sha256:") ? String(value) : `sha256:${value}`;
+}
+
+export async function buildLockedEnvironmentIdentity({ projectRoot, host, environment }) {
+  if (!ROOTY_HOST_IDS.includes(host)) throw new Error(`Unsupported host for locked identity: ${host}`);
+  const resolved = await resolveProjectRoot(projectRoot);
+  const profiles = await readEnvironmentProfiles(resolved);
+  const active = await readActiveEnvironments(resolved);
+  const activeState = active.hosts[host];
+  if (!activeState) throw new Error(`No active environment is recorded for ${host}`);
+  const canonicalEnvironment = environment ? resolveEnvironmentId(profiles, environment) : activeState.environment;
+  if (canonicalEnvironment !== activeState.environment) {
+    throw new Error(`Requested ${canonicalEnvironment}, but ${host} targets ${activeState.environment}`);
+  }
+  if (!activeState.configuration_generation) throw new Error(`Active ${host} configuration has no generation fingerprint`);
+  const selection = selectedTargets(profiles, canonicalEnvironment, host);
+  if (selection.missing.length) throw new Error(`Cannot lock incomplete provider identity: ${selection.missing.join("; ")}`);
+  const providers = selection.targets.map((item) => ({
+    instance_id: item.target.name,
+    capability: item.capability,
+    configuration_hash: fingerprint({
+      logical_id: item.logicalId,
+      environment: canonicalEnvironment,
+      name: item.target.name,
+      artifacts: [...(item.target.artifacts ?? [])].sort(),
+      settings_keys: [...(item.target.settings_keys ?? [])].sort(),
+      probe: item.target.probe,
+      host: item.entry
+    }),
+    allowlist_hash: fingerprint([...(item.target.allowed_tools ?? [])].sort()),
+    allowed_tools: [...(item.target.allowed_tools ?? [])].sort()
+  })).sort((left, right) => left.instance_id.localeCompare(right.instance_id));
+  const environmentProfile = {
+    id: canonicalEnvironment,
+    definition: profiles.environments[canonicalEnvironment],
+    providers: selection.targets.map((item) => ({
+      logical_id: item.logicalId,
+      capability: item.capability,
+      target: item.target
+    })).sort((left, right) => left.logical_id.localeCompare(right.logical_id))
+  };
+  return {
+    schema_version: 1,
+    project: { root_fingerprint: fingerprint({ root: normalizedProjectIdentity(resolved) }) },
+    host: { id: host, config_generation: prefixedSha256(activeState.configuration_generation) },
+    environment: { id: canonicalEnvironment, profile_hash: fingerprint(environmentProfile) },
+    providers
+  };
 }

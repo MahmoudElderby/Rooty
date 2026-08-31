@@ -9,6 +9,9 @@ const readline = require("node:readline");
 
 const KEY_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/;
 const SETTING_PATH_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*$/;
+const RUNTIME_ENVIRONMENT_KEYS = new Set([
+  "PATH", "PATHEXT", "SYSTEMROOT", "WINDIR", "COMSPEC", "TEMP", "TMP", "TMPDIR", "LANG", "LC_ALL", "LC_CTYPE", "TZ"
+]);
 
 function fail(message) {
   throw new Error(`Rooty MCP launcher: ${message}`);
@@ -142,6 +145,12 @@ function substitute(template, values) {
   });
 }
 
+function minimalRuntimeEnvironment(source = process.env) {
+  return Object.fromEntries(Object.entries(source).filter(([key, value]) =>
+    value !== undefined && RUNTIME_ENVIRONMENT_KEYS.has(key.toUpperCase())
+  ));
+}
+
 function parseHeaders(items, values) {
   const headers = {};
   for (const item of items) {
@@ -195,7 +204,7 @@ async function runHttpBridge(invocation, values) {
 function runStdio(invocation, values, spawnImpl = spawn) {
   const childSettings = Object.fromEntries(invocation.keyBindings.map(({ source, target }) => [target, values[source]]));
   const child = spawnImpl(invocation.command, invocation.commandArgs, {
-    env: { ...process.env, ...childSettings },
+    env: { ...minimalRuntimeEnvironment(), ...childSettings },
     shell: false,
     stdio: "inherit",
     windowsHide: true
@@ -215,7 +224,7 @@ async function launch(argv = process.argv.slice(2)) {
   return invocation.url ? runHttpBridge(invocation, values) : runStdio(invocation, values);
 }
 
-module.exports = { KEY_PATTERN, SETTING_PATH_PATTERN, launch, loadSettings, parseArgs, parseHeaders, parseHttpMessage, parseKeyBindings, runStdio, substitute, validateSettingsDocument, validateSettingsPath };
+module.exports = { KEY_PATTERN, SETTING_PATH_PATTERN, launch, loadSettings, minimalRuntimeEnvironment, parseArgs, parseHeaders, parseHttpMessage, parseKeyBindings, runStdio, substitute, validateSettingsDocument, validateSettingsPath };
 
 if (require.main === module) {
   launch().catch((error) => {

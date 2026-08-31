@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rooty.dev/schemas/analysis-submission.schema.json",
+  "title": "Rooty analysis submission",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "revision", "root_cause", "trigger", "first_bad_state", "contributing_conditions", "causal_chain", "competing_hypotheses", "reproduction", "evidence_gaps", "handoff_notes"],
+  "properties": {
+    "schema_version": { "const": 1 }, "revision": { "type": "integer", "minimum": 1 }, "root_cause": { "type": "string" }, "trigger": { "type": "string" }, "first_bad_state": { "type": "string" }, "contributing_conditions": { "$ref": "#/$defs/strings" },
+    "causal_chain": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["step", "evidence_refs"], "properties": { "step": { "type": "string", "minLength": 1 }, "evidence_refs": { "$ref": "#/$defs/evidenceRefs" } } } },
+    "competing_hypotheses": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["statement", "status", "evidence_refs"], "properties": { "statement": { "type": "string", "minLength": 1 }, "status": { "enum": ["open", "eliminated", "contradicted"] }, "evidence_refs": { "$ref": "#/$defs/evidenceRefs" } } } },
+    "reproduction": { "type": "object", "additionalProperties": false, "required": ["status", "evidence_refs"], "properties": { "status": { "enum": ["not_attempted", "failed", "reproduced"] }, "evidence_refs": { "$ref": "#/$defs/evidenceRefs" } } },
+    "evidence_gaps": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["description", "critical"], "properties": { "description": { "type": "string", "minLength": 1 }, "critical": { "type": "boolean" } } }, "handoff_notes": { "$ref": "#/$defs/strings" }, "best_fit": { "type": "boolean" }
+  },
+  "$defs": { "strings": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } }, "evidenceRefs": { "type": "array", "uniqueItems": true, "items": { "type": "string", "pattern": "^E[1-9][0-9]*$" } } }
+}

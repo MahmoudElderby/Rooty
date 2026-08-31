@@ -47,7 +47,59 @@ export function canonicalJson(value) {
 }
 
 export function sha256(value) {
-  return createHash("sha256").update(typeof value === "string" ? value : canonicalJson(value)).digest("hex");
+  const input = typeof value === "string" || ArrayBuffer.isView(value) ? value : canonicalJson(value);
+  return createHash("sha256").update(input).digest("hex");
+}
+
+export function fingerprint(value) {
+  return `sha256:${sha256(canonicalJson(value))}`;
+}
+
+const RFC3339_INSTANT = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,9}))?(Z|[+-]\d{2}:\d{2})$/;
+
+export function parseRfc3339Instant(value, name = "timestamp") {
+  const text = String(value ?? "");
+  const match = RFC3339_INSTANT.exec(text);
+  if (!match) throw new Error(`${name} must be an RFC 3339 instant with an explicit offset`);
+  const [, yearText, monthText, dayText, hourText, minuteText, secondText, , offset] = match;
+  const year = Number(yearText);
+  const month = Number(monthText);
+  const day = Number(dayText);
+  const hour = Number(hourText);
+  const minute = Number(minuteText);
+  const second = Number(secondText);
+  const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  if (month < 1 || month > 12 || day < 1 || day > daysInMonth || hour > 23 || minute > 59 || second > 59) {
+    throw new Error(`${name} is not a valid RFC 3339 calendar instant`);
+  }
+  if (offset !== "Z") {
+    const offsetHour = Number(offset.slice(1, 3));
+    const offsetMinute = Number(offset.slice(4, 6));
+    if (offsetHour > 23 || offsetMinute > 59) throw new Error(`${name} has an invalid RFC 3339 offset`);
+  }
+  const milliseconds = Date.parse(text);
+  if (!Number.isFinite(milliseconds)) throw new Error(`${name} is not a valid RFC 3339 instant`);
+  return milliseconds;
+}
+
+export function parseRfc3339Range(value, name = "time range") {
+  const text = String(value ?? "");
+  const parts = text.split("/");
+  if (parts.length !== 2 || !parts[0] || !parts[1]) throw new Error(`${name} must contain two bounded RFC 3339 instants`);
+  const start = parseRfc3339Instant(parts[0], `${name} start`);
+  const end = parseRfc3339Instant(parts[1], `${name} end`);
+  if (start > end) throw new Error(`${name} start must not be after its end`);
+  return { start, end, from: parts[0], to: parts[1] };
+}
+
+const RUNTIME_ENVIRONMENT_KEYS = new Set([
+  "PATH", "PATHEXT", "SYSTEMROOT", "WINDIR", "COMSPEC", "TEMP", "TMP", "TMPDIR", "LANG", "LC_ALL", "LC_CTYPE", "TZ"
+]);
+
+export function minimalRuntimeEnvironment(source = process.env) {
+  return Object.fromEntries(Object.entries(source).filter(([key, value]) =>
+    value !== undefined && RUNTIME_ENVIRONMENT_KEYS.has(key.toUpperCase())
+  ));
 }
 
 export async function readJson(filePath) {

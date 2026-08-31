@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rooty.dev/schemas/verification.schema.json",
+  "title": "Rooty deterministic case verification",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "case_id", "verified_at", "valid", "outcome", "failures", "ledger_heads", "input_fingerprints"],
+  "properties": {
+    "schema_version": { "const": 1 }, "case_id": { "type": "string", "pattern": "^INV-[A-Z0-9-]+$" }, "verified_at": { "type": "string", "format": "date-time" }, "valid": { "type": "boolean" }, "outcome": { "enum": ["CONFIRMED", "PROBABLE", "INCONCLUSIVE"] }, "failures": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "ledger_heads": { "type": "object", "additionalProperties": { "$ref": "#/$defs/head" } }, "input_fingerprints": { "type": "object", "additionalProperties": { "$ref": "#/$defs/head" } }
+  },
+  "$defs": { "hash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" }, "head": { "anyOf": [{ "const": "GENESIS" }, { "$ref": "#/$defs/hash" }] } }
+}
